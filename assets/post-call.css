@@ -241,6 +241,31 @@
   .mt12{margin-top:12px}
   .hint-p{font-size:12.5px;color:var(--muted);margin-top:8px}
   .u-warn{color:var(--red-text)}
+
+  /* ---- templates ----
+     Deliberately not chips: a chip reads as a filter you can toggle, and this
+     rewrites four fields and nineteen scope rows. Bigger target, a subtitle
+     saying what it is, and a note afterwards saying what it changed. */
+  .tplbox{border-right:3px solid var(--copper)}
+  .tpl-h{font-size:15px;font-weight:600;color:var(--copper);margin-bottom:4px}
+  .tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:12px}
+  .tpl{display:flex;flex-direction:column;gap:3px;text-align:right;background:#0f1216;
+       border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-height:44px;
+       cursor:pointer;font-family:inherit;color:var(--ink);transition:.15s}
+  .tpl:hover{border-color:var(--copper-dim)}
+  .tpl.on{border-color:var(--copper);background:#1b1f25}
+  .tpl-n{font-size:14.5px;font-weight:600}
+  .tpl-b{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .tpl-note{background:#1b1f25;border-right:3px solid var(--turq);border-radius:4px;
+            padding:12px 15px;margin-top:12px;font-size:13.5px;color:#c9cdd3;line-height:1.65}
+  /* the caveat is part of the note, never a separate thing to dismiss —
+     numbers that arrive prefilled are read as measured unless told otherwise */
+  .tpl-caveat{display:block;margin-top:8px;font-size:12.5px;color:var(--muted)}
+
+  /* ---- error boundary ---- */
+  .errbound{background:#2a1d20;border:1px solid #7a3b45;border-right:3px solid var(--red-text);
+            border-radius:6px;padding:12px 16px;margin:12px 0;font-size:13.5px;
+            color:#e8c9cd;line-height:1.65}
   .out .fine{font-size:13px;color:#5f6673}
   .mt4{margin-top:4px}
   .mt8{margin-top:8px}

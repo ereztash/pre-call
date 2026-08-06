@@ -4,143 +4,120 @@
    which is empty for anyone who hasn't closed one yet. Here every number
    comes from the client's own process plus published vertical benchmarks,
    so a first-timer gets a defensible price on their first call.
+
+   This file is the shell: it reads the DOM, holds the selection state, and
+   wires events. Everything with rules in it lives elsewhere and is tested
+   without a browser —
+
+     model.js       the pricing arithmetic
+     deals.js       the ledger's storage and calibration
+     pc-catalog.js  systems, scope rows, presets, templates
+     pc-proposal.js the document, as a pure function
+     pc-gate.js     the paid export
+     pc-ledger.js   stage 4 on screen
+     pc-dom.js      el/show/esc/guard
    ============================================================ */
 
-const SYSTEMS = ['וואטסאפ','אימייל','גיליונות Google','Excel','CRM','חשבונית ירוקה / מורנינג',
-                 'מערכת סליקה','אתר / טפסים','ERP','Monday / Asana','מערכת ייעודית','אחר'];
-
-const METHODS = {
-  value:      { name: 'ערך / ROI',    hint: 'המחיר נגזר ממה שהתהליך עולה ללקוח בשנה. הכי חזק בשיחה, אבל דורש שהוא ייתן לך מספרים. אם הוא מנחש אותם, המחיר מנחש איתו.' },
-  market:     { name: 'מחירון שוק',   hint: 'המחיר לפי טווח מקובל לעבודה מהסוג הזה. תמיד זמין, לא דורש היסטוריה ולא מספרים מהלקוח. חלש כשהעבודה חריגה.' },
-  cost:       { name: 'עלות + מרווח', hint: 'אומדן השעות שלך × התעריף שלך, ועוד מרווח. הכי בטוח מבחינתך, אבל תקוע על הוותק שלך ולא על מה שהעבודה שווה.' },
-  comparable: { name: 'עסקה דומה',    hint: 'מה שגבית על עבודה דומה, מותאם להיקף. מדויק כשבאמת עשית משהו דומה. דורש היסטוריה.' }
-};
-
-const el = id => document.getElementById(id);
-
-/* Everything that hides is hidden by the .hidden class, and everything that
-   shows goes through here.
-
-   This exists because of a bug worth remembering: those elements used to
-   carry style="display:none", and the code un-hid them with style.display=''.
-   Removing the inline styles for the CSP left the class behind — and clearing
-   an inline style cannot beat a class rule, so the paywall stopped opening
-   and three of the four pricing methods lost their inputs, all without a
-   single error. One mechanism, used both ways, cannot drift like that. */
-const show = (id, on) => { const n = el(id); if (n) n.classList.toggle('hidden', !on); };
-const num = id => { const v = parseFloat(el(id).value); return isFinite(v) && v > 0 ? v : 0; };
-const txt = id => el(id).value.trim();
+const { SYSTEMS, METHODS, SCOPE_ITEMS, SCOPE_LABEL, PRESETS, EXAMPLES, TEMPLATES,
+        visibleScope, defaultScopeState, scopeStateFor } = PC.catalog;
 const ils = PC.model.ils;
 
-/* ---------- system chips ---------- */
+/* ---------- selection state ---------- */
 const chosenSystems = new Set();
+let scopeState = defaultScopeState();
+let activeTemplate = null;
+
+function clearSystems(){
+  chosenSystems.clear();
+  [...el('sysChips').children].forEach(c => {
+    c.classList.remove('on'); c.setAttribute('aria-pressed','false');
+  });
+}
+function selectSystems(names){
+  clearSystems();
+  [...el('sysChips').children].forEach(c => {
+    if (names.indexOf(c.textContent) === -1) return;
+    c.classList.add('on'); c.setAttribute('aria-pressed','true');
+    chosenSystems.add(c.textContent);
+  });
+}
+function resetScope(){ scopeState = defaultScopeState(); }
+function scopeList(state){
+  return visibleScope(chosenSystems).filter(i => scopeState[i.id] === state);
+}
+
+/* ---------- system chips ---------- */
 SYSTEMS.forEach(s => {
-  // a real button, not a styled div: a div with onclick is unreachable by keyboard
-  // and announces nothing to a screen reader
+  // a real button, not a styled div: a div with a click handler is unreachable
+  // by keyboard and announces nothing to a screen reader
   const c = document.createElement('button');
   c.type = 'button'; c.className = 'chip'; c.textContent = s;
   c.setAttribute('aria-pressed', 'false');
-  c.onclick = () => { c.classList.toggle('on');
+  c.onclick = () => {
+    c.classList.toggle('on');
     const on = c.classList.contains('on');
     c.setAttribute('aria-pressed', String(on));
     on ? chosenSystems.add(s) : chosenSystems.delete(s);
     renderScope(); // system-conditional scope rows appear and disappear with this
-    recompute(); };
+    recompute();
+  };
   el('sysChips').appendChild(c);
 });
 
-/* ---------- scope decisions ----------
-   Boilerplate in/out lists look like they solve this and don't: the hard part
-   is deciding, per job, what you are committing to. Each row carries a default
-   and the reason behind it, so the work becomes confirming rather than
-   composing. `extra` is a third state on purpose — most of what a beginner
-   silently absorbs is sellable, not merely excludable.
-   `when` hides rows that don't apply to the systems actually selected. */
-const SCOPE_ITEMS = [
-  { id:'map',      t:'מיפוי התהליך הקיים ותיעוד שלו',                         d:'in' },
-  { id:'build',    t:'בנייה והטמעה של האוטומציה בסביבת הלקוח',                 d:'in' },
-  { id:'errors',   t:'טיפול בשגיאות והתראה כשתהליך נופל',                      d:'in',
-    why:'בלי זה הלקוח מגלה תקלות מהלקוחות שלו, ומאשים אותך.' },
-  { id:'test',     t:'בדיקה על נתונים אמיתיים לפני מעבר לייצור',                d:'in' },
-  { id:'train',    t:'הדרכה אחת לצוות, עד שעה',                                d:'in',
-    why:'תחום את זה למספר. "הדרכה" בלי גבול היא סעיף פתוח.' },
-  { id:'support',  t:'שבועיים ליווי אחרי העלייה לאוויר',                        d:'in' },
-
-  { id:'license',  t:'מנוי לכלי האוטומציה ועלות המשימות (tasks)',              d:'out',
-    why:'אין תמחור משווק ואין תתי-חשבונות ללקוחות. עדיף שהחשבון יהיה על שם הלקוח ובכרטיס שלו.' },
-  { id:'overage',  t:'חריגה ממכסת המשימות בשימוש בפועל',                       d:'out',
-    why:'כל שלב נספר כמשימה. תהליך בן 5 שלבים צורך 5 בכל הרצה, והצריכה בפועל גבוהה מההערכה בכ-50%.' },
-  { id:'premium',  t:'תוספת עלות לאפליקציות פרימיום בכלי האוטומציה',           d:'out',
-    when:s=>['CRM','ERP','מערכת סליקה','מערכת ייעודית'].some(x=>s.has(x)),
-    why:'מערכות כמו Salesforce, HubSpot ו-NetSuite דורשות מסלול יקר יותר. זו עלות של הלקוח, לא שלך.' },
-  { id:'access',   t:'הרשאות, גישות ומשתמשי מערכת — באחריות הלקוח',            d:'out',
-    why:'זה גם התלות שהכי מעכבת פרויקטים. כתוב את זה, ותוכל להצדיק דחייה בלוח הזמנים.' },
-  { id:'cleanup',  t:'ניקוי או המרה של נתונים קיימים',                          d:'out',
-    why:'כמעט תמיד מתגלה כעבודה בפני עצמה. אל תבלע אותה בפרויקט.' },
-  { id:'edge',     t:'מקרי קצה שלא עלו במיפוי',                                d:'out',
-    why:'זה הסעיף שמציל אותך. בלעדיו כל חריג הופך לוויכוח.' },
-  { id:'redesign', t:'שינוי בתהליך העסקי עצמו',                                d:'out',
-    why:'אתה מאטמט את מה שקיים. לעצב אותו מחדש זו עבודה אחרת.' },
-  { id:'apichange',t:'התאמות בעקבות שינוי ב-API של ספק צד שלישי',              d:'out',
-    why:'לא בשליטתך, וקורה. שייך לתחזוקה, לא לאחריות.' },
-  { id:'newsys',   t:'הוספת מערכת שלא נכללה במיפוי',                            d:'out',
-    why:'"רק עוד מערכת אחת" הוא הביטוי שמפוצץ פרויקטי אוטומציה.' },
-  { id:'scale',    t:'גדילה מעבר לנפח שהוגדר בהצעה',                            d:'out' },
-
-  { id:'maint',    t:'תחזוקה שוטפת אחרי תקופת הליווי',                          d:'extra',
-    why:'זו ההכנסה החוזרת שלך. אל תוותר עליה בשקט — הצע אותה.' },
-  { id:'monitor',  t:'ניטור חודשי ודוח תקלות',                                  d:'extra' },
-  { id:'wa',       t:'אישור WhatsApp Business API מול ספק',                     d:'extra',
-    when:s=>s.has('וואטסאפ'),
-    why:'תהליך מול ספק חיצוני שלוקח זמן ולא תלוי בך. תמחר בנפרד או החרג.' }
-];
-const scopeState = {};
-SCOPE_ITEMS.forEach(i => scopeState[i.id] = i.d);
-const SCOPE_LABEL = { in:'כלול', out:'לא כלול', extra:'בתוספת' };
-
-function renderScope(){
-  const box = el('scopeBox');
-  const visible = SCOPE_ITEMS.filter(i => !i.when || i.when(chosenSystems));
-  box.innerHTML = visible.map(i => `
-    <div class="scope-row">
-      <div class="scope-t">${esc(i.t)}${i.why ? `<span class="scope-why">${esc(i.why)}</span>` : ''}</div>
-      <div class="scope-btns">
-        ${['in','out','extra'].map(s =>
-          `<button type="button" class="sbtn s-${s}${scopeState[i.id]===s?' on':''}"
-             aria-pressed="${scopeState[i.id]===s}"
-             data-i="${i.id}" data-s="${s}">${SCOPE_LABEL[s]}</button>`).join('')}
-      </div>
-    </div>`).join('');
-  box.querySelectorAll('.sbtn').forEach(b => b.onclick = () => {
-    scopeState[b.dataset.i] = b.dataset.s;
-    renderScope();
-    renderProposal();
+/* ---------- templates ----------
+   The shortest path from an empty page to a document worth correcting. One
+   tap sets the systems, typical numbers, opening text, and — the part that
+   matters — the scope decisions for that kind of job, which is where the time
+   actually goes. Everything it writes is editable, and the note says why the
+   rows that moved, moved. */
+const renderTemplates = guard('templates', function (){
+  const box = el('tplChips'); if (!box) return;
+  box.innerHTML = '';
+  TEMPLATES.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tpl' + (activeTemplate === t.id ? ' on' : '');
+    b.setAttribute('aria-pressed', String(activeTemplate === t.id));
+    b.innerHTML = '<span class="tpl-n">' + esc(t.name) + '</span>' +
+                  '<span class="tpl-b">' + esc(t.blurb) + '</span>';
+    b.onclick = () => applyTemplate(t.id);
+    box.appendChild(b);
   });
-}
-function scopeList(state){
-  return SCOPE_ITEMS.filter(i => (!i.when || i.when(chosenSystems)) && scopeState[i.id] === state);
+});
+
+function applyTemplate(id){
+  const t = TEMPLATES.find(x => x.id === id);
+  if (!t) return;
+  activeTemplate = t.id;
+
+  selectSystems(t.systems);
+  Object.entries(t.fields).forEach(([k, v]) => { const f = el(k); if (f) f.value = v; });
+  Object.entries(t.numbers).forEach(([k, v]) => { const f = el(k); if (f) f.value = v; });
+  // applied over the defaults, never over whatever the last template left
+  scopeState = scopeStateFor(t);
+
+  const note = el('tplNote');
+  if (note) {
+    note.innerHTML = '<b>' + esc(t.name) + '.</b> ' + esc(t.note) +
+      '<span class="tpl-caveat">המספרים כאן טיפוסיים, לא נמדדו אצל הלקוח שלך. ' +
+      'תקן אותם מולו — הם קיימים כדי שיהיה מה לתקן, לא כדי להישלח כמו שהם.</span>';
+    show('tplNote', true);
+  }
+  renderTemplates();
+  renderScope();
+  recompute();
+  track('template_used');
+  const doc = el('proposal');
+  if (doc) doc.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-/* ---------- one-tap presets and example fills ----------
-   Two different frictions. Closed/numeric fields cost a keyboard; presets cut
-   that to one tap. Open fields cost composition, not typing — the blank page is
-   the expense — so the example is offered as content that lands IN the field and
-   gets edited, rather than as ghost placeholder text. Placeholder-as-instruction
-   vanishes the moment you type, fails contrast, and is read as a filled value;
-   the persistent hint under each label stays regardless. */
-const PRESETS = {
-  q_freq:     [5, 10, 20, 50, 100],
-  q_minutes:  [3, 5, 10, 20, 45],
-  q_err_freq: [1, 2, 5, 10],
-  q_err_cost: [200, 500, 1000, 2500]
-};
-const EXAMPLES = {
-  q_process: 'כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת',
-  q_trigger: 'בחודש שעבר פספסנו שתי הזמנות, ולקוח קבוע עבר למתחרה',
-  q_prev:    'קנינו תוסף אבל אף אחד לא הטמיע אותו עד הסוף',
-  q_success: 'שאף הזמנה לא תיפול בין הכיסאות'
-};
+function clearTemplateChoice(){
+  activeTemplate = null;
+  show('tplNote', false);
+  renderTemplates();
+}
 
+/* ---------- presets and example fills ---------- */
 Object.entries(PRESETS).forEach(([id, vals]) => {
   const input = el(id); if (!input) return;
   const row = document.createElement('div'); row.className = 'presets';
@@ -179,6 +156,26 @@ Object.entries(EXAMPLES).forEach(([id, text]) => {
   };
   row.appendChild(c);
   field.insertAdjacentElement('afterend', row);
+});
+
+/* ---------- scope on screen ---------- */
+const renderScope = guard('scope', function (){
+  const box = el('scopeBox');
+  box.innerHTML = visibleScope(chosenSystems).map(i => `
+    <div class="scope-row">
+      <div class="scope-t">${esc(i.t)}${i.why ? `<span class="scope-why">${esc(i.why)}</span>` : ''}</div>
+      <div class="scope-btns">
+        ${['in','out','extra'].map(s =>
+          `<button type="button" class="sbtn s-${s}${scopeState[i.id]===s?' on':''}"
+             aria-pressed="${scopeState[i.id]===s}"
+             data-i="${i.id}" data-s="${s}">${SCOPE_LABEL[s]}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.sbtn').forEach(b => b.onclick = () => {
+    scopeState[b.dataset.i] = b.dataset.s;
+    renderScope();
+    renderProposal();
+  });
 });
 
 /* ---------- method selector ---------- */
@@ -254,7 +251,7 @@ function provenanceWarning(m){
   return '';
 }
 
-function recompute(){
+const recompute = guard('recompute', function (){
   const m = model();
   el('s_hours').textContent   = m.hours   ? Math.round(m.hours).toLocaleString('en-US') : '—';
   el('s_value').textContent   = m.annualValue ? ils(m.annualValue) : '—';
@@ -338,248 +335,26 @@ function recompute(){
       (m.payback < 4 ? '-חודש' : '-' + Math.ceil(m.payback / 4.3) + ' חודשים') + '."</div>';
   }
   renderProposal();
-}
+});
 
-document.querySelectorAll('input,select,textarea').forEach(n =>
-  n.addEventListener('input', recompute));
-
-/* ---------- payment gate ----------
-   The key is checked server-side when a server is there to ask, and against
-   an in-page checksum when there isn't. That ordering matters:
-
-   - deployed with POSTCALL_KEYS set, /api/license is authoritative and the
-     checksum is irrelevant — a made-up key with a valid shape is refused
-   - deployed without it, the endpoint answers not_configured and the tool
-     falls back, so the gate is soft until there is something to sell
-   - opened from file://, or offline on a train, fetch fails and it falls
-     back too — a buyer who paid does not get locked out by their network
-
-   The fallback is bypassable by anyone with devtools, and that is still the
-   accepted trade for a first paid test. What changed is that it is no longer
-   the only check: once keys are configured, bypassing the page does not get
-   a key past the server. */
-const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
-let unlocked = false, pendingExport = null;
-
-/* The document stays on screen for everyone — it is the interface, and hiding
-   it would hide the only thing that shows the tool works. The key is required
-   to take it out of the page. */
-function requireKey(fn){
-  if (unlocked) return fn();
-  pendingExport = fn;
-  track('export_attempted');
-  show('wall', true);
-  el('wall').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-el('payBtn').onclick = () => {
-  if (PAYMENT_URL.includes('example.com')) {
-    alert('עוד לא חובר קישור תשלום.\n\nהחלף את PAYMENT_URL בקובץ בקישור מ-Stripe / Lemon Squeezy / Paddle,\nושלח לקונה מפתח בפורמט PC-XXXX-XXXX.');
-    return;
-  }
-  window.open(PAYMENT_URL, '_blank', 'noopener');
-};
-
-function keyValid(k){
-  k = k.trim().toUpperCase();
-  if (!/^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(k)) return false;
-  // light checksum so a random string of the right shape does not open it
-  const body = k.replace(/[^A-Z0-9]/g, '').slice(2);
-  let sum = 0; for (const ch of body.slice(0, 7)) sum += ch.charCodeAt(0);
-  return body[7] === '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[sum % 36];
-}
-/* Asks the server, and says what it could not decide rather than guessing.
-   Returns true / false / null, where null means "no answer available" and the
-   caller falls back to the local checksum. */
-async function keyValidRemote(k){
-  try {
-    const r = await fetch('/api/license', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: k })
-    });
-    if (r.status === 429) return 'throttled';
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j.valid === null ? null : !!j.valid; // null = keys not configured yet
-  } catch (e) {
-    return null; // offline, file://, or no backend — fall back, do not lock out
-  }
-}
-
-let unlockBusy = false;
-async function tryUnlock(){
-  if (unlockBusy) return;
-  const raw = el('keyIn').value.trim().toUpperCase();
-  const shapeOk = /^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(raw);
-
-  // A malformed key never reaches the network — no point spending one of the
-  // ten attempts per ten minutes on something the regex already rejected.
-  if (!shapeOk) return showKeyErr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.');
-
-  unlockBusy = true;
-  show('keyErr', false);
-  const remote = await keyValidRemote(raw);
-  unlockBusy = false;
-
-  if (remote === 'throttled')
-    return showKeyErr('יותר מדי ניסיונות. נסה שוב בעוד כמה דקות.');
-  // remote === null means the server had no opinion; the checksum decides
-  const ok = remote === null ? keyValid(raw) : remote;
-  if (!ok) return showKeyErr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.');
-
-  unlocked = true;
-  show('wall', false);
-  try {
-    localStorage.setItem('postcall_key', raw);
-    // only stamp a confirmation the server actually gave, so a fallback
-    // unlock does not buy itself a day of not being asked again
-    if (remote === true) localStorage.setItem(KEY_OK_AT, new Date().toISOString());
-  } catch(e){}
-  track('unlocked');
-  if (pendingExport) { const f = pendingExport; pendingExport = null; f(); }
-}
-
-function showKeyErr(msg){
-  el('keyErr').textContent = msg;
-  show('keyErr', true);
-}
-/* A key stored in localStorage used to be trusted forever on the strength of
-   the checksum alone, so anyone who wrote a shaped string into storage once
-   was permanently unlocked no matter what the server said. It is now
-   reconfirmed, but not on every load: that would spend the rate limit on
-   reloads and could lock out a whole office behind one address. Once a day is
-   enough to close a bypass that has to survive to be worth anything.
-
-   Unlocking is still optimistic so a paying user never watches a spinner. If
-   the server later says no, the gate comes back. */
-const KEY_OK_AT = 'postcall_key_ok_at';
-const RECHECK_MS = 24 * 60 * 60 * 1000;
-
-try {
-  const saved = localStorage.getItem('postcall_key');
-  if (saved && keyValid(saved)) {
-    unlocked = true;
-    const last = Date.parse(localStorage.getItem(KEY_OK_AT) || '') || 0;
-    if (Date.now() - last > RECHECK_MS) {
-      keyValidRemote(saved).then(v => {
-        if (v === false) {
-          unlocked = false;
-          try { localStorage.removeItem('postcall_key'); localStorage.removeItem(KEY_OK_AT); } catch(e){}
-        } else if (v === true) {
-          try { localStorage.setItem(KEY_OK_AT, new Date().toISOString()); } catch(e){}
-        }
-        // 'throttled' or null: no verdict, leave it as it was
-      });
+/* ---------- the document ---------- */
+const renderProposal = guard('proposal', function (){
+  el('proposal').innerHTML = PC.proposal.build({
+    m: model(),
+    ils,
+    scope: { in: scopeList('in'), out: scopeList('out'), extra: scopeList('extra') },
+    systems: [...chosenSystems],
+    f: {
+      client:   txt('q_client'),
+      process:  txt('q_process'),
+      trigger:  txt('q_trigger'),
+      prev:     txt('q_prev'),
+      decider:  txt('q_decider'),
+      deadline: txt('q_deadline'),
+      success:  txt('q_success')
     }
-  }
-} catch(e){}
-
-/* ---------- proposal ---------- */
-function esc(s){ return (s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
-
-/* The rationale is the part the client actually argues with, so it has to match
-   the method the price came from. A value number pasted under a cost-based price
-   invites "so why is it not just your hours?" */
-function rationaleFor(m){
-  if (m.method === 'value' && m.annualValue) {
-    return `<div class="rationale"><b>מאיפה המחיר.</b> התהליך עולה כ-${ils(m.annualValue)} בשנה.
-      המחיר הוא ${Math.round(m.price / m.annualValue * 100)}% מהערך של השנה הראשונה,
-      וההשקעה מחזירה את עצמה תוך כ-${m.payback.toFixed(1)} שבועות.
-      משנה שנייה ואילך זה חיסכון מלא.</div>`;
-  }
-  if (m.method === 'market' && m.M.market) {
-    return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.M.market.basis} לעבודה בהיקף הזה.
-      המחיר בטווח המקובל${m.annualValue ? `, והתהליך עולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
-  }
-  if (m.method === 'cost') {
-    // The hour breakdown stays out of the client's copy on purpose. Justifying a
-    // price with hours invites a negotiation about hours, and the anchor is
-    // supposed to be what the work is worth, not what it costs to produce.
-    return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.annualValue
-      ? `התהליך עולה לך כ-${ils(m.annualValue)} בשנה. המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל".`
-      : 'המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל" ומהגבולות שמפורטים תחתיו.'}</div>`;
-  }
-  if (m.method === 'comparable' && m.M.comparable) {
-    return `<div class="rationale"><b>מאיפה המחיר.</b> עבודה דומה שביצעתי, מותאמת להיקף כאן${
-      m.annualValue ? `. התהליך עולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
-  }
-  return '';
-}
-
-function renderProposal(){
-  const m = model();
-  // hours ceiling on the tuning commitment. Without it the clause was open-ended
-  // against a criterion the client wrote, which can be absolute ("nothing ever
-  // slips") — an unbounded obligation for someone who won't spot it.
-  const tuneCap = Math.max(4, Math.round(m.effort * 0.15));
-  const client = txt('q_client') || 'הלקוח';
-  const d = new Date();
-  const dstr = d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear();
-  const valid = new Date(d.getTime() + 14*864e5);
-  const vstr = valid.getDate() + '.' + (valid.getMonth()+1) + '.' + valid.getFullYear();
-  const sys = [...chosenSystems];
-
-  const successLine = txt('q_success') ||
-    (m.hours ? 'החזרת כ-' + Math.round(m.hours/52) + ' שעות עבודה בשבוע' : 'התהליך רץ בלי מגע יד');
-
-  // cut on a word boundary — slicing mid-word left titles ending in "...חשבו"
-  const firstLine = txt('q_process').split('\n')[0].trim();
-  let title = firstLine;
-  if (title.length > 55) title = title.slice(0, 55).replace(/\s+\S*$/, '') + '…';
-
-  el('proposal').innerHTML = `
-<h3>הצעה · אוטומציה של ${esc(title || 'התהליך')}</h3>
-<div class="meta">${esc(client)} · ${dstr} · בתוקף עד ${vstr}</div>
-
-${txt('q_trigger') ? `<h4>למה עכשיו</h4><p>${esc(txt('q_trigger'))}</p>` : ''}
-
-<h4>מה קורה היום</h4>
-<p>${esc(txt('q_process') || 'התהליך מתבצע ידנית.')}</p>
-${m.annualValue ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ כ-' + Math.round(m.runs).toLocaleString('en-US') + ' פעמים בשנה, ' : ''}${m.hours ? Math.round(m.hours).toLocaleString('en-US') + ' שעות עבודה' : ''}${m.errValue ? ', ובנוסף ' + ils(m.errValue) + ' בשנה בתקלות' : ''}. סה"כ כ-<b>${ils(m.annualValue)} בשנה</b>.</p>` : ''}
-
-${scopeList('in').length ? `<h4>מה נכלל</h4>
-<ul>${scopeList('in').map((i,ix) =>
-  `<li>${esc(i.t)}${ix===0 && sys.length ? ', כולל החיבורים בין ' + esc(sys.join(', ')) : ''}</li>`).join('')}</ul>` : ''}
-
-${scopeList('out').length ? `<h4>מה לא נכלל</h4>
-<ul>${scopeList('out').map(i => `<li class="no">${esc(i.t)}</li>`).join('')}</ul>
-<p class="fine">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
-
-${scopeList('extra').length ? `<h4>זמין בתוספת תשלום</h4>
-<ul>${scopeList('extra').map(i => `<li>${esc(i.t)}</li>`).join('')}</ul>` : ''}
-
-<h4>המחיר</h4>
-<div class="pricebox">
-  <div class="amt">${ils(m.price)}</div>
-  <div class="fine mt4">
-    תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.
-  </div>
-</div>
-${rationaleFor(m)}
-
-<h4>לוח זמנים</h4>
-<table>
-  <tr><th>שלב</th><th>מה קורה</th><th>משך</th></tr>
-  <tr><td>מיפוי</td><td>ישיבה אחת, ואני חוזר עם תרשים התהליך לאישור</td><td>שבוע</td></tr>
-  <tr><td>בנייה</td><td>פיתוח והטמעה, אומדן ${m.effort} שעות עבודה</td><td>${Math.max(1, Math.ceil(m.effort/12))} עד ${Math.max(2, Math.ceil(m.effort/8))} שבועות</td></tr>
-  <tr><td>בדיקה</td><td>הרצה על נתונים אמיתיים במקביל לתהליך הקיים</td><td>שבוע</td></tr>
-  <tr><td>מסירה</td><td>הדרכה, תיעוד, ואז שבועיים ליווי</td><td>שבועיים</td></tr>
-</table>
-${txt('q_deadline') ? `<p class="mt8">היעד שהגדרת: <b>${esc(txt('q_deadline'))}</b>.</p>` : ''}
-
-<h4>איך נדע שזה הצליח</h4>
-<p>${esc(successLine)}. נמדוד את זה 30 יום אחרי המסירה.
-אם לא הגענו לשם בגלל משהו בבנייה, אני מכוונן ללא תוספת תשלום, עד ${tuneCap} שעות עבודה.
-מעבר לזה, או אם נדרש שינוי בתהליך עצמו או במערכות, נתמחר בנפרד לפי אותו תעריף.</p>
-
-${txt('q_prev') ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${esc(txt('q_prev'))}. ההצעה הזו נבדלת בכך שהמסירה כוללת תיעוד והדרכה, והאחריות על ההטמעה היא שלי ולא שלכם.</p>` : ''}
-
-<h4>ההחלטה</h4>
-<p>ההצעה בתוקף עד ${vstr}.${txt('q_decider') ? ' מי שצריך לאשר: ' + esc(txt('q_decider')) + '.' : ''}
-כדי להתחיל, אישור בכתב על ההצעה הזו והתשלום הראשון.</p>
-`;
-}
+  });
+});
 
 function copyProposal(){
   const t = el('proposal').innerText;
@@ -595,127 +370,6 @@ function fallbackCopy(t, done){
   let ok = false; try { ok = document.execCommand('copy'); } catch(e){}
   document.body.removeChild(ta); done(ok);
 }
-
-renderScope();
-recompute();
-
-/* ============================================================
-   Stage 4 — the deal ledger in the page.
-   The estimate is locked when a deal is saved; hours reported after delivery
-   are compared against that locked number. That comparison is the only thing
-   that can turn the effort table from fitted-backwards into measured, so the
-   "not calibrated" marker is removed by evidence here rather than by editing
-   a label.
-   ============================================================ */
-let currentDealId = null;
-
-function dealSnapshot(){
-  const m = model();
-  return {
-    id: currentDealId || undefined,
-    client: txt('q_client') || 'ללא שם',
-    process: txt('q_process').slice(0, 120),
-    estimatedHours: m.effort,      // locked at save time — see deals.js
-    priceQuoted: m.price,
-    method: m.method,
-    systems: [...chosenSystems]
-  };
-}
-
-function saveCurrentDeal(){
-  const rec = PC.deals.save(dealSnapshot());
-  if (!rec) { flashDoc('השמירה נכשלה — ייתכן שאחסון הדפדפן חסום'); return; }
-  currentDealId = rec.id;
-  renderLedger(); flashDoc('נשמר'); track('deal_saved');
-}
-function markSent(){
-  if (!currentDealId) saveCurrentDeal();
-  if (!currentDealId) return;
-  PC.deals.setStatus(currentDealId, 'sent');
-  renderLedger(); flashDoc('סומנה כנשלחה'); track('deal_sent');
-}
-function flashDoc(msg){
-  const f = el('cpFlag'); f.textContent = msg;
-  f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2000);
-}
-
-function setStatus(id, s){ PC.deals.setStatus(id, s); renderLedger(); }
-function removeDeal(id){
-  if (currentDealId === id) currentDealId = null;
-  PC.deals.remove(id); renderLedger();
-}
-function saveOutcome(id){
-  PC.deals.recordOutcome(id, {
-    closedPrice: el('oc_price_' + id).value,
-    actualHours: el('oc_hours_' + id).value
-  });
-  renderLedger(); recompute(); track('outcome_recorded');
-}
-
-function renderLedger(){
-  const box = el('ledgerBox'); if (!box) return;
-  const list = PC.deals.list();
-  const cal = PC.deals.calibration();
-  const win = PC.deals.winRate();
-
-  const summary = list.length ? `
-    <div class="ledger-sum">
-      <span>${list.length} הצעות</span>
-      <span>${win.won} נסגרו · ${win.lost} נדחו · ${win.undecided} פתוחות</span>
-      ${win.rate !== null ? `<span>שיעור סגירה ${Math.round(win.rate*100)}%</span>` : ''}
-    </div>
-    ${cal.enough
-      ? `<div class="ok"><b>הכיול נמדד על ${cal.n} מסירות.</b> ${cal.suggestion}.
-           אומדן מצטבר ${cal.estimatedTotal} שעות מול ${cal.actualTotal} בפועל.
-           אפשר לעדכן את התעריף או את האומדן בהתאם.</div>`
-      : `<div class="tri-warn">כיול האומדן דורש ${5 - cal.n} מסירות נוספות עם שעות מדווחות.
-           עד אז טבלת האומדן נשארת מסומנת כלא-מכוילת — היא הותאמה אחורה למחיר, ולא נמדדה.</div>`}` : '';
-
-  box.innerHTML = summary + (list.length ? list.map(d => {
-    const o = d.outcome || {};
-    const done = o.actualHours > 0;
-    return `<div class="deal">
-      <div class="deal-h">
-        <b>${esc(d.client)}</b>
-        <span class="deal-st st-${d.status}">${PC.STATUS_LABEL[d.status]}</span>
-        <span class="deal-meta">${d.priceQuoted ? ils(d.priceQuoted) : '—'} · אומדן ${d.estimatedHours || '—'} ש׳ · ${d.created.slice(0,10)}</span>
-      </div>
-      ${d.process ? `<div class="deal-p">${esc(d.process)}</div>` : ''}
-      <div class="deal-acts">
-        ${['sent','won','lost','no_answer'].map(s =>
-          `<button type="button" class="sbtn${d.status===s?' on s-in':''}" aria-pressed="${d.status===s}"
-            data-deal="${d.id}" data-status="${s}">${PC.STATUS_LABEL[s]}</button>`).join('')}
-        <button type="button" class="sbtn" data-deal="${d.id}" data-status="__remove">מחק</button>
-      </div>
-      ${d.status === 'won' || done ? `
-        <div class="deal-out">
-          <div><label for="oc_price_${d.id}">מחיר שנסגר בפועל</label>
-            <input type="number" id="oc_price_${d.id}" value="${o.closedPrice || ''}" placeholder="${d.priceQuoted || ''}"></div>
-          <div><label for="oc_hours_${d.id}">שעות עבודה בפועל</label>
-            <input type="number" id="oc_hours_${d.id}" value="${o.actualHours || ''}" placeholder="${d.estimatedHours || ''}"></div>
-          <button type="button" class="ghost" data-deal="${d.id}" data-status="__outcome">שמור תוצאה</button>
-        </div>` : ''}
-    </div>`;
-  }).join('') : '<p class="lead nomargin">עוד לא נשמרה אף הצעה. בנה אחת למעלה ולחץ "שמור".</p>');
-
-  const bar = el('dealBar');
-  if (bar) bar.innerHTML = list.length
-    ? `<button type="button" class="ghost" data-act="newdeal">הצעה חדשה</button>
-       <span class="dealbar-n">${list.length} שמורות · ${win.undecided} ממתינות לתשובה</span>` : '';
-}
-
-function newDeal(){
-  currentDealId = null;
-  ['q_process','q_client','q_trigger','q_prev','q_decider','q_deadline','q_success',
-   'q_freq','q_minutes','q_err_freq','q_err_cost'].forEach(id => { const e = el(id); if (e) e.value = ''; });
-  [...el('sysChips').children].forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed','false'); });
-  chosenSystems.clear();
-  SCOPE_ITEMS.forEach(i => scopeState[i.id] = i.d);
-  renderScope(); renderLedger(); recompute();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-renderLedger();
 
 /* ---------- optional telemetry ----------
    The page is fully functional with no network at all — this is additive and
@@ -736,7 +390,6 @@ function track(event, extra){
     }).catch(() => {});
   } catch (e) {}
 }
-track('opened');
 
 /* ---------- event wiring ----------
    Inline onclick attributes are blocked by the shipped Content Security Policy
@@ -744,11 +397,11 @@ track('opened');
    dead in production. Delegation from one listener also survives the ledger and
    scope re-rendering their own markup. */
 const ACTIONS = {
-  copy:   () => requireKey(copyProposal),
-  print:  () => requireKey(() => window.print()),
-  save:   saveCurrentDeal,
-  sent:   markSent,
-  unlock: tryUnlock,
+  copy:    () => requireKey(copyProposal),
+  print:   () => requireKey(() => window.print()),
+  save:    saveCurrentDeal,
+  sent:    markSent,
+  unlock:  tryUnlock,
   newdeal: newDeal
 };
 document.addEventListener('click', e => {
@@ -758,7 +411,7 @@ document.addEventListener('click', e => {
     const id = d.dataset.deal, st = d.dataset.status;
     if (st === '__remove') removeDeal(id);
     else if (st === '__outcome') saveOutcome(id);
-    else setStatus(id, st);
+    else setDealStatus(id, st);
     return;
   }
   const t = e.target.closest('[data-act]');
@@ -766,3 +419,16 @@ document.addEventListener('click', e => {
   const fn = ACTIONS[t.dataset.act];
   if (fn) { e.preventDefault(); fn(); }
 });
+
+document.querySelectorAll('input,select,textarea').forEach(n =>
+  n.addEventListener('input', recompute));
+
+/* ---------- start ----------
+   Every module is loaded by now, so first render happens here rather than at
+   the bottom of whichever file happened to define the function. */
+mountGate();
+renderTemplates();
+renderScope();
+recompute();
+renderLedger();
+track('opened');

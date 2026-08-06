@@ -53,7 +53,13 @@ for (const f of PAGES) {
    scanner that reads them finds itself. Code only. */
 const stripComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-for (const f of ['assets/pre-call.js', 'assets/post-call.js']) {
+/* Every script the pages load, not a hand-kept list — a new module that
+   generates markup is exactly the one that would slip past a stale list. */
+const SCRIPTS = fs.readdirSync(path.join(root, 'assets'))
+  .filter(f => f.endsWith('.js') && !f.endsWith('.test.js'))
+  .map(f => 'assets/' + f);
+
+for (const f of SCRIPTS) {
   test(f + ' injects no inline style or handler either', () => {
     const src = stripComments(read(f));
     // template strings that build markup are just as subject to the policy
@@ -61,6 +67,24 @@ for (const f of ['assets/pre-call.js', 'assets/post-call.js']) {
     assert.ok(!/\son(click|input|change)\s*=\s*['"\\]/.test(src), 'inline handler in generated markup');
   });
 }
+
+console.log('\ntelemetry contract');
+/* The client sends an event name; the server checks it against a fixed list
+   and answers 400 for anything else. Nothing surfaces that rejection — the
+   fetch is deliberately silent on failure — so a name added on one side and
+   not the other means the event is simply never counted. That is how the one
+   measurement worth having (did anyone use the template shortcut) went
+   uncounted the day it was added. */
+test('every event the client sends is on the server allowlist', () => {
+  const allowed = (read('api/event.js').match(/const EVENTS = new Set\(\[([\s\S]*?)\]\)/) || [])[1] || '';
+  const known = [...allowed.matchAll(/'([a-z_]+)'/g)].map(m => m[1]);
+  assert.ok(known.length, 'could not read the allowlist');
+  const sent = [...new Set([...read('assets/post-call.js').matchAll(/track\('([a-z_]+)'/g)]
+    .map(m => m[1]))];
+  assert.ok(sent.length, 'no events found in the client');
+  const rejected = sent.filter(e => !known.includes(e));
+  assert.deepStrictEqual(rejected, [], 'the server would answer 400 and nobody would know');
+});
 
 console.log('\nprint contract');
 test('post-call still marks the printable section with .doc', () => {
@@ -99,13 +123,13 @@ console.log('\nshow/hide mechanism');
    The paywall never opened and three of the four pricing methods lost their
    inputs, with no error anywhere. So: one mechanism, enforced. */
 test('nothing toggles display through the style property', () => {
-  for (const f of ['assets/post-call.js', 'assets/pre-call.js']) {
+  for (const f of SCRIPTS) {
     const hits = stripComments(read(f)).match(/\.style\.display\s*=/g) || [];
     assert.deepStrictEqual(hits, [], f + ' must toggle the hidden class instead');
   }
 });
 test('every element hidden by the class is toggled through show()', () => {
-  const js = read('assets/post-call.js');
+  const js = SCRIPTS.map(read).join('\n');
   const ids = [...html['post-call.html'].matchAll(/<[^>]*\sid="([^"]+)"[^>]*\sclass="[^"]*\bhidden\b/g)]
     .map(m => m[1])
     .concat([...html['post-call.html'].matchAll(/<[^>]*\sclass="[^"]*\bhidden\b[^"]*"[^>]*\sid="([^"]+)"/g)]
@@ -137,6 +161,44 @@ for (const f of PAGES) {
       return !id || !html[f].includes('for="' + id + '"');
     }).filter(t => !/aria-label/.test(t));
     assert.deepStrictEqual(unlabelled, [], 'a field with no label is unusable by screen reader');
+  });
+}
+
+console.log('\nmodule loading');
+/* Classic scripts share one global scope and run in document order, so the
+   shell — which calls into every module at load time — has to come last, and
+   a module that is written but never linked is dead code that still passes
+   every other test in this file. */
+test('every module the assets directory defines is actually loaded', () => {
+  const linked = [...html['post-call.html'].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1])
+    .concat([...html['index.html'].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1]));
+  const orphans = SCRIPTS.filter(f => !linked.includes(f));
+  assert.deepStrictEqual(orphans, [], 'written but never loaded by any page');
+});
+test('the shell loads after everything it depends on', () => {
+  const order = [...html['post-call.html'].matchAll(/<script src="assets\/([^"]+)"/g)].map(m => m[1]);
+  assert.strictEqual(order[order.length - 1], 'post-call.js',
+    'the shell renders on load and needs every module already evaluated');
+  ['model.js', 'deals.js', 'pc-dom.js', 'pc-catalog.js', 'pc-proposal.js'].forEach(dep =>
+    assert.ok(order.indexOf(dep) > -1 && order.indexOf(dep) < order.indexOf('post-call.js'),
+      dep + ' must load before the shell'));
+});
+/* A top-level const declared twice across classic scripts is a SyntaxError,
+   and the file that loses simply does not run — the page half-boots with
+   nothing obvious to point at. Only names loaded by the SAME page can
+   collide, so the check is per page. */
+for (const page of PAGES) {
+  test(page + ' loads no name twice at top level', () => {
+    const seen = new Map(), dupes = [];
+    for (const f of [...html[page].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1])) {
+      const decls = new Set([...stripComments(read(f))
+        .matchAll(/^(?:const|let|function)\s+([A-Za-z_$][\w$]*)/gm)].map(m => m[1]));
+      for (const d of decls) {
+        if (seen.has(d)) dupes.push(d + ': ' + seen.get(d) + ' and ' + f);
+        else seen.set(d, f);
+      }
+    }
+    assert.deepStrictEqual(dupes, []);
   });
 }
 

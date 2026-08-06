@@ -25,7 +25,11 @@ jobs:
         run: node assets/model.test.js
       - name: deal ledger
         run: node assets/deals.test.js
-      - name: markup, CSP and print contracts
+      - name: catalog, scope rows and templates
+        run: node assets/catalog.test.js
+      - name: the proposal document
+        run: node assets/proposal.test.js
+      - name: markup, CSP, print and telemetry contracts
         run: node assets/markup.test.js
       - name: api request guards
         run: node api/guard.test.js

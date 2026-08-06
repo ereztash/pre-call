@@ -7,8 +7,12 @@
    prices, and anything else free-form. The proposal never leaves the browser.
    A tool that promises the document stays local has to mean it. */
 
+/* Fixed list, and the client is tested against it — a name the client sends
+   that is missing here is a silent 400 nobody sees, which is how the one
+   measurement that matters most (did the template shortcut get used) would
+   have gone uncounted. */
 const EVENTS = new Set([
-  'opened', 'seeded', 'proposal_rendered', 'scope_changed',
+  'opened', 'seeded', 'template_used', 'proposal_rendered', 'scope_changed',
   'export_attempted', 'unlocked', 'deal_saved', 'deal_sent', 'outcome_recorded'
 ]);
 

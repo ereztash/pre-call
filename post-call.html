@@ -16,6 +16,8 @@
 
 <!-- ============ העסקאות ============ -->
 <div class="dealbar" id="dealBar"></div>
+<!-- A render that throws says so here instead of taking the page down. -->
+<div class="errbound hidden" id="errBoundary" role="status" aria-live="polite"></div>
 
 <!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->
 <main>
@@ -23,6 +25,17 @@
   <div class="sec-h">שלב 1 · שלושים שניות</div>
   <h2>ההצעה נכתבת תוך כדי שאתה ממלא</h2>
   <p class="lead">ארבעה שדות מספיקים למסמך מלא. כל השאר מדייק אותו ויושב למטה.</p>
+
+  <!-- The fastest route to a document worth arguing with. Sets systems,
+       typical numbers, opening text, and the scope decisions for that kind
+       of job — which is where the time actually goes. -->
+  <div class="box tplbox">
+    <h3 class="tpl-h">תהליך מוכר? התחל מכאן</h3>
+    <p class="hint-p">לחיצה אחת ממלאת מערכות, מספרים טיפוסיים, ואת החלטות הסקופ שמתאימות לסוג העבודה הזה. הכול ניתן לעריכה.</p>
+    <div class="tpls" id="tplChips"></div>
+    <div class="tpl-note hidden" id="tplNote"></div>
+  </div>
+
   <div class="box">
     <div class="qa">
       <div class="qt" id="qt1"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
@@ -283,8 +296,16 @@
 
 </div>
 
+<!-- Classic scripts, not modules: ES modules are blocked from file:// by CORS,
+     and this tool has to open by double-clicking the file. Order matters —
+     the shell at the end assumes everything above it has run. -->
 <script src="assets/model.js"></script>
 <script src="assets/deals.js"></script>
+<script src="assets/pc-dom.js"></script>
+<script src="assets/pc-catalog.js"></script>
+<script src="assets/pc-proposal.js"></script>
+<script src="assets/pc-gate.js"></script>
+<script src="assets/pc-ledger.js"></script>
 <script src="assets/post-call.js"></script>
 </body>
 </html>
