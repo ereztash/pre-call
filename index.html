@@ -362,19 +362,32 @@ function go(n){
 }
 
 /* ---------- copy ---------- */
-function cp(id,flag){
-  const t=document.getElementById(id).innerText;
-  navigator.clipboard.writeText(t).then(()=>flash(flag)).catch(()=>fallback(t,flag));
-}
-function cpText(id,flag){
-  const t=document.getElementById(id).innerText;
-  navigator.clipboard.writeText(t).then(()=>flash(flag)).catch(()=>fallback(t,flag));
+function cp(id,flag){ copyText(document.getElementById(id).innerText, flag); }
+function cpText(id,flag){ copyText(document.getElementById(id).innerText, flag); }
+
+async function copyText(t, flag){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    try{ await navigator.clipboard.writeText(t); flash(flag, true); return; }
+    catch(e){ /* clipboard API present but denied/failed — fall through to manual-select */ }
+  }
+  fallback(t, flag);
 }
 function fallback(t,flag){
   const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);
-  ta.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(ta);flash(flag);
+  ta.select();
+  let ok=false;
+  try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
+  document.body.removeChild(ta);
+  flash(flag, ok);
 }
-function flash(f){const e=document.getElementById(f);e.classList.add('on');setTimeout(()=>e.classList.remove('on'),1600)}
+function flash(f, ok=true){
+  const e=document.getElementById(f);
+  if(!e.dataset.orig) e.dataset.orig=e.textContent;
+  e.textContent = ok ? e.dataset.orig : 'ההעתקה נכשלה — סמנו והעתיקו ידנית';
+  e.style.color = ok ? '' : 'var(--red)';
+  e.classList.add('on');
+  setTimeout(()=>e.classList.remove('on'), ok?1600:3200);
+}
 
 /* ---------- parse pasted profile ---------- */
 function parseBiz(){
@@ -389,7 +402,9 @@ function parseBiz(){
   set('f_last', g(/עסקה אחרונה:\s*(.+)/));
   set('f_gain', g(/מה הלקוח הרוויח:\s*(.+)/));
   set('f_no',   g(/מה אני לא מוכר:\s*(.+)/));
-  const edge=g(/מה רק אני רואה:\s*([\s\S]+?)(?:\n[^\n]*:|$)/);
+  // stop only at the next KNOWN field label, not any line that happens to contain a colon
+  // (a multiline answer here easily contains its own "לדוגמה:"-style colon)
+  const edge=g(/מה רק אני רואה:\s*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/);
   if(edge)document.getElementById('f_edge').value=edge.trim();
   const src=g(/מקור הלקוח האחרון:\s*(.+)/);
   if(src){
@@ -416,6 +431,11 @@ function saveProfile(){
     PROFILE_FIELDS.forEach(id=>{ data[id]=document.getElementById(id).value; });
     localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
   }catch(e){ /* private browsing / storage blocked — profile just won't persist */ }
+}
+let saveProfileTimer=null;
+function saveProfileDebounced(){
+  clearTimeout(saveProfileTimer);
+  saveProfileTimer=setTimeout(saveProfile, 400);
 }
 function loadProfile(){
   try{
@@ -499,7 +519,7 @@ function render(){
   if(S.ptrig) openers.push(`יש טריגר ידוע: ${S.ptrig}. אל תזכירו אותו ראשונים. חכו לראות אם הוא מעלה אותו בשאלה 3.`);
   if(S.ppair==='2') openers.push('שניים בשיחה. בשאלת הבעלות, בקשו תשובה מכל אחד בנפרד. אם ענו שונה, ההצעה מותנית בסבב שני עם שניהם.');
   if(S.ptext) openers.push('יש לכם טקסט ציבורי עליו. השוו בשאלה 6 בין מה שהוא כתב על עצמו למה שהוא אומר עכשיו. הפער הוא הסימן.');
-  if(!S.unit) openers.push('אין לכם יחידה תחומה. שימו לב לשאלה 9. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.');
+  if(!S.unit) openers.push('אין לכם יחידה תחומה. שימו לב לשאלה 8. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.');
   if(S.last && S.gain) openers.push(`כיול פרטי, לא לשיחה: העסקה האחרונה שלכם היתה ${S.last}, מול הרווח שהערכתם אצל הלקוח: ${S.gain}. השתמשו ביחס הזה כדי לכייל בראש לפני שאלה 11 — לא להגיד בקול.`);
   if(S.price) openers.push(`מחיר היחידה שלכם הוא ${S.price}. זו הרצפה הפנימית שלכם למה שכדאי בכלל להמשיך אליו, לא מספר שנאמר בשיחה.`);
   if(S.src) openers.push(`הלקוח האחרון שלכם הגיע דרך ${SRC_LABEL[S.src]||S.src}. בשאלה 5 תשמעו מאיפה הגיע הלקוח שלו — אם זה ערוץ אחר משלכם, זה סימן שהערוץ ששכנע אתכם לא בהכרח ישכנע אותו.`);
@@ -617,8 +637,8 @@ buildDR();
 loadProfile();
 PROFILE_FIELDS.forEach(id=>{
   const el=document.getElementById(id);
-  el.addEventListener('input', saveProfile);
-  el.addEventListener('change', saveProfile); // belt-and-suspenders for the <select>
+  el.addEventListener('input', saveProfileDebounced); // debounced: don't hit localStorage on every keystroke
+  el.addEventListener('change', saveProfile); // immediate on blur/select-change — belt-and-suspenders for the <select>
 });
 </script>
 </body>
