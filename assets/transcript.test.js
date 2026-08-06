@@ -1,0 +1,200 @@
+/* node assets/transcript.test.js — no browser, no deps, no network.
+
+   Two things are being protected here, and only one of them is parsing.
+
+   The first is that a value without a citation never becomes a candidate.
+   The whole tool exists to stop a guessed number from setting a price, and
+   an extraction step is the easiest possible way to reintroduce exactly
+   that — at scale, with a confident tone, and with nobody able to check.
+
+   The second is the provenance derivation, which is the actual reason to
+   read a transcript at all: it turns "where did this number come from" from
+   something the operator asserts into something the recording shows. */
+const T = require('./pc-transcript.js');
+const EX = require('./pc-example.js');
+const assert = require('assert');
+
+let pass = 0, fail = 0;
+const test = (name, fn) => {
+  try { fn(); pass++; console.log('  ok   ' + name); }
+  catch (e) { fail++; console.log('  FAIL ' + name + '\n       ' + e.message); }
+};
+
+const cite = (value, quote, speaker) => ({ value, quote, speaker });
+
+console.log('\nthe prompt');
+test('carries the transcript and demands a citation for every value', () => {
+  const p = T.buildPrompt('מוכר: שלום\nלקוח: היי');
+  assert.ok(p.includes('מוכר: שלום'), 'the transcript must be in the prompt');
+  assert.ok(/quote/.test(p) && /speaker/.test(p));
+  assert.ok(/בלי ציטוט, החזר null/.test(p), 'the no-citation rule must be stated');
+  assert.ok(/אל תמציא/.test(p));
+});
+test('asks for extraction only, never for judgement', () => {
+  const p = T.buildPrompt('x');
+  ['מחיר', 'המלץ', 'הערך את השווי'].forEach(w =>
+    assert.ok(!p.includes(w), 'the model is not asked to decide anything: ' + w));
+});
+test('an empty transcript still produces a usable prompt', () => {
+  assert.ok(T.buildPrompt('').length > 200);
+  assert.ok(!/undefined|null\n---/.test(T.buildPrompt(undefined)));
+});
+
+console.log('\nreading what comes back');
+test('reads the shape a model actually returns', () => {
+  const f = T.parseExtraction(EX.EXTRACTION);
+  assert.ok(f, 'the example extraction must parse');
+  assert.strictEqual(f.freq.value, 40);
+  assert.strictEqual(f.minutes.value, 8);
+});
+test('survives prose wrapped around the json', () => {
+  const f = T.parseExtraction('בטח! הנה מה שחילצתי:\n```json\n{"fields":{"freq":' +
+    '{"value":12,"quote":"שתים עשרה","speaker":"לקוח"}}}\n```\nמקווה שעזרתי.');
+  assert.strictEqual(f.freq.value, 12);
+});
+test('survives json with no fence at all', () => {
+  const f = T.parseExtraction('{"fields":{"minutes":{"value":5,"quote":"חמש דקות","speaker":"לקוח"}}}');
+  assert.strictEqual(f.minutes.value, 5);
+});
+test('accepts a bare object without the fields wrapper', () => {
+  const f = T.parseExtraction('{"minutes":{"value":5,"quote":"ח","speaker":"לקוח"}}');
+  assert.strictEqual(f.minutes.value, 5);
+});
+test('garbage returns null instead of throwing', () => {
+  ['', null, undefined, 'סתם טקסט', '```json\n{broken\n```', '[1,2,3]', '"a string"']
+    .forEach(v => assert.doesNotThrow(() => T.parseExtraction(v), String(v)));
+  assert.strictEqual(T.parseExtraction('סתם טקסט'), null);
+});
+
+console.log('\nno citation, no candidate');
+test('a value with no quote is dropped entirely', () => {
+  const c = T.candidates({ freq: { value: 40, quote: '', speaker: 'לקוח' } }, '');
+  assert.deepStrictEqual(c, [], 'an uncited number offered for confirmation gets confirmed');
+});
+test('a quote with no value is dropped too', () => {
+  assert.deepStrictEqual(T.candidates({ freq: cite(null, 'בערך ארבעים', 'לקוח') }, ''), []);
+  assert.deepStrictEqual(T.candidates({ freq: cite(0, 'אפס', 'לקוח') }, ''), []);
+});
+test('a quote the transcript does not contain is kept but marked unverified', () => {
+  // a model that paraphrases has invented the evidence
+  const src = 'לקוח: בערך ארבעים ביום';
+  const real = T.candidates({ freq: cite(40, 'בערך ארבעים ביום', 'לקוח') }, src);
+  const fake = T.candidates({ freq: cite(40, 'הלקוח אמר שיש כארבעים', 'לקוח') }, src);
+  assert.strictEqual(real[0].verified, true);
+  assert.strictEqual(fake[0].verified, false, 'the operator has to be told which to read themselves');
+});
+test('every candidate names the field it fills', () => {
+  T.candidates(T.parseExtraction(EX.EXTRACTION), EX.TRANSCRIPT).forEach(c => {
+    assert.ok(c.label, c.key + ' has no label');
+    assert.ok(c.kind === 'list' || c.target, c.key + ' fills nothing');
+  });
+});
+test('units become the value the select actually uses', () => {
+  const c = T.candidates({ freqUnit: cite('יום', 'ביום', 'לקוח') }, '');
+  assert.strictEqual(c[0].value, '365');
+  assert.deepStrictEqual(T.candidates({ freqUnit: cite('רבעון', 'x', 'לקוח') }, []), [],
+    'a unit the form cannot represent is not a candidate');
+});
+test('numbers arrive clean of currency and separators', () => {
+  const c = T.candidates({ errCost: cite('1,800 ₪', 'אלף שמונה מאות שקל', 'לקוח') }, '');
+  assert.strictEqual(c[0].value, 1800);
+});
+test('an empty list of systems is not a candidate', () => {
+  assert.deepStrictEqual(T.candidates({ systems: cite([], 'x', 'לקוח') }, ''), []);
+  assert.deepStrictEqual(T.candidates({ systems: cite(['', '  '], 'x', 'לקוח') }, ''), []);
+});
+test('a malformed payload does not throw', () => {
+  [null, undefined, {}, { freq: 'not an object' }, { freq: null }].forEach(f =>
+    assert.doesNotThrow(() => T.candidates(f, 'x'), JSON.stringify(f)));
+});
+
+console.log('\nprovenance, derived rather than asked');
+test('a number the client volunteered reads as unprompted', () => {
+  const src = 'לקוח: כל טעות כזאת עולה לנו בערך אלף שמונה מאות שקל';
+  const c = T.candidates({ errCost: cite(1800, 'עולה לנו בערך אלף שמונה מאות שקל', 'לקוח') }, src);
+  const p = T.provenance(c, src);
+  assert.strictEqual(p.value, 'unprompted');
+  assert.ok(p.why);
+});
+test('a number that followed the seller asking for it reads as prompted', () => {
+  const src = 'מוכר: כמה הזמנות כאלה נכנסות בערך ביום?\nלקוח: בערך ארבעים ביום';
+  const c = T.candidates({ freq: cite(40, 'בערך ארבעים ביום', 'לקוח') }, src);
+  assert.strictEqual(T.provenance(c, src).value, 'prompted');
+});
+test('no client figure at all means the number is the operator\'s own', () => {
+  const src = 'מוכר: נניח ארבעים ביום';
+  const c = T.candidates({ freq: cite(40, 'נניח ארבעים ביום', 'מוכר') }, src);
+  const p = T.provenance(c, src);
+  assert.strictEqual(p.value, 'mine');
+  assert.ok(/לא נאמר על ידי הלקוח/.test(p.why));
+});
+test('nothing extracted at all is not treated as unprompted', () => {
+  assert.strictEqual(T.provenance([], '').value, 'mine',
+    'silence must never be read as the client having volunteered a figure');
+});
+test('the worked example lands on prompted, which is the interesting case', () => {
+  // the volume figure in it appears only after the seller asks for it
+  const c = T.candidates(T.parseExtraction(EX.EXTRACTION), EX.TRANSCRIPT);
+  assert.strictEqual(T.provenance(c, EX.TRANSCRIPT).value, 'prompted');
+});
+
+console.log('\nthe local fallback');
+test('finds numbers next to a unit word, with the sentence around them', () => {
+  const h = T.heuristics('לקוח: זה לוקח 8 דקות כל פעם.\nלקוח: כל טעות עולה 1,800 ₪.');
+  const mins = h.find(x => x.key === 'minutes');
+  const cost = h.find(x => x.key === 'errCost');
+  assert.strictEqual(mins.value, 8);
+  assert.strictEqual(cost.value, 1800);
+  assert.ok(mins.quote.includes('8 דקות'), 'the quote must be the line it came from');
+});
+test('marks itself as a guess so it is never mistaken for an extraction', () => {
+  T.heuristics('זה לוקח 8 דקות').forEach(h => assert.strictEqual(h.guessed, true));
+});
+test('an empty or wordless transcript yields nothing', () => {
+  assert.deepStrictEqual(T.heuristics(''), []);
+  assert.deepStrictEqual(T.heuristics('שיחה בלי שום מספר בכלל'), []);
+});
+
+console.log('\nwhat confirmation produces');
+test('confirmed rows become plain field values plus a systems list', () => {
+  const c = T.candidates(T.parseExtraction(EX.EXTRACTION), EX.TRANSCRIPT);
+  const s = T.toState(c);
+  assert.strictEqual(s.fields.q_freq, '40');
+  assert.strictEqual(s.fields.q_freq_unit, '365');
+  assert.strictEqual(s.fields.q_minutes, '8');
+  assert.strictEqual(s.fields.q_err_cost, '1800');
+  assert.ok(s.systems.includes('וואטסאפ'));
+});
+test('rejecting a row keeps it out of the state', () => {
+  const c = T.candidates(T.parseExtraction(EX.EXTRACTION), EX.TRANSCRIPT);
+  const s = T.toState(c.filter(x => x.key !== 'freq'));
+  assert.strictEqual(s.fields.q_freq, undefined, 'a rejected value must not arrive anyway');
+});
+test('nothing confirmed produces nothing', () => {
+  assert.deepStrictEqual(T.toState([]), { fields: {}, systems: [] });
+  assert.deepStrictEqual(T.toState(null), { fields: {}, systems: [] });
+});
+
+console.log('\nthe worked example itself');
+test('the transcript contains the cases the tool is opinionated about', () => {
+  const t = EX.TRANSCRIPT;
+  assert.ok(/כמה הזמנות/.test(t), 'a figure given only on request');
+  assert.ok(/אני מעריך שכל טעות/.test(t), 'a figure volunteered');
+  assert.ok(/קנינו לפני שנה/.test(t), 'a previous failed attempt');
+  assert.ok(/השותף שלי/.test(t), 'more than one decision maker');
+  assert.ok(/וואטסאפ/.test(t), 'a WhatsApp step');
+});
+test('every quote in the example extraction really is in the transcript', () => {
+  const c = T.candidates(T.parseExtraction(EX.EXTRACTION), EX.TRANSCRIPT);
+  const bad = c.filter(x => !x.verified).map(x => x.key);
+  assert.deepStrictEqual(bad, [], 'the shipped example must not cite text that is not there');
+});
+test('the example fills every field the form needs for a full document', () => {
+  const s = T.toState(T.candidates(T.parseExtraction(EX.EXTRACTION), EX.TRANSCRIPT));
+  ['q_process', 'q_freq', 'q_minutes', 'q_err_freq', 'q_err_cost', 'q_client']
+    .forEach(f => assert.ok(s.fields[f], 'example is missing ' + f));
+  assert.ok(s.systems.length >= 2);
+});
+
+console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
+process.exit(fail ? 1 : 0);

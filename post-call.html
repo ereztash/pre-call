@@ -36,6 +36,25 @@
   <h2>ההצעה נכתבת תוך כדי שאתה ממלא</h2>
   <p class="lead">ארבעה שדות מספיקים למסמך שלם. כל השאר רק מדייק, ויושב למטה.</p>
 
+  <!-- ============ מהשיחה עצמה ============
+       The transcript is not a shortcut around the form; it is what turns
+       provenance from something the operator asserts into something the
+       recording shows. Nothing here applies itself — every candidate
+       arrives with the sentence it came from. -->
+  <div class="box trbox">
+    <h3 class="tpl-h">יש לך תמלול של השיחה?</h3>
+    <p class="hint-p">הדבק אותו, והכלי יוציא ממנו את המספרים — כל אחד עם המשפט שממנו הוא נלקח ועם מי אמר אותו. שום דבר לא נכנס לטופס לפני שאתה מאשר.</p>
+    <label for="trIn">תמלול השיחה</label>
+    <textarea id="trIn" placeholder="הדבק כאן את התמלול המלא..."></textarea>
+    <div class="tr-acts">
+      <button class="act" data-act="trprompt">קבל פרומפט לחילוץ</button>
+      <button class="ghost" data-act="trlocal">נסה בלי בינה מלאכותית</button>
+      <button class="ghost" data-act="trdemo">טען שיחת דוגמה</button>
+    </div>
+    <div class="tr-step hidden" id="trPrompt"></div>
+    <div class="tr-review hidden" id="trReview"></div>
+  </div>
+
   <!-- The fastest route to a document worth arguing with. Sets systems,
        typical numbers, opening text, and the scope decisions for that kind
        of job — which is where the time actually goes. -->
@@ -349,6 +368,8 @@
 <script src="assets/deals.js"></script>
 <script src="assets/pc-dom.js"></script>
 <script src="assets/pc-catalog.js"></script>
+<script src="assets/pc-transcript.js"></script>
+<script src="assets/pc-example.js"></script>
 <script src="assets/pc-draft.js"></script>
 <script src="assets/pc-guide.js"></script>
 <script src="assets/pc-viz.js"></script>

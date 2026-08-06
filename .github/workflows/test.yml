@@ -37,6 +37,8 @@ jobs:
         run: node assets/guide.test.js
       - name: the proposal document
         run: node assets/proposal.test.js
+      - name: the call transcript as input
+        run: node assets/transcript.test.js
       - name: sending it out
         run: node assets/send.test.js
       - name: the visuals

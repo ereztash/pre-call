@@ -119,6 +119,148 @@ function clearTemplateChoice(){
   renderTemplates();
 }
 
+/* ---------- the call itself ----------
+   The language model lives wherever the operator already has one. The tool
+   writes the prompt and reads the answer, which keeps this feature free of a
+   backend, of a key, and of any claim about where the transcript went — the
+   operator decides that. See the note at the top of pc-transcript.js for why
+   nothing here applies itself. */
+let trCandidates = [], trRejected = new Set();
+
+function trText(){ const t = el('trIn'); return t ? t.value : ''; }
+
+function showPrompt(){
+  const t = trText().trim();
+  if (!t) { flashDoc('קודם הדבק את התמלול'); goTo('trIn'); return; }
+  const box = el('trPrompt');
+  box.innerHTML =
+    '<div class="tr-h">1 · העתק את זה והרץ ב-Claude או ב-ChatGPT</div>' +
+    '<pre class="tr-p" id="trPromptText"></pre>' +
+    '<div class="tr-acts"><button type="button" class="act" data-act="trcopy">העתק את הפרומפט</button>' +
+    '<span class="copied" id="trFlag">הועתק</span></div>' +
+    '<div class="tr-h mt14">2 · הדבק כאן את מה שחזר</div>' +
+    '<textarea id="trOut" aria-label="הפלט מהחילוץ" placeholder="הדבק כאן את התשובה..."></textarea>' +
+    '<div class="tr-acts"><button type="button" class="act" data-act="trparse">הצג מה נמצא</button></div>';
+  // textContent, never innerHTML: the prompt contains the transcript verbatim
+  el('trPromptText').textContent = PC.transcript.buildPrompt(t);
+  show('trPrompt', true);
+  el('trPrompt').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function copyPrompt(){
+  const txt = el('trPromptText') ? el('trPromptText').textContent : '';
+  const done = ok => { const f = el('trFlag'); if (!f) return;
+    f.textContent = ok ? 'הועתק' : 'ההעתקה נכשלה, סמן והעתק ידנית';
+    f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2200); };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).then(() => done(true)).catch(() => fallbackCopy(txt, done));
+  else fallbackCopy(txt, done);
+}
+
+function parseExtraction(){
+  const out = el('trOut') ? el('trOut').value : '';
+  const fields = PC.transcript.parseExtraction(out);
+  if (!fields) { flashDoc('לא הצלחתי לקרוא את הפלט. ודא שהעתקת את כל התשובה.'); return; }
+  trCandidates = PC.transcript.candidates(fields, trText());
+  trRejected.clear();
+  if (!trCandidates.length) { flashDoc('לא נמצא שום ערך עם ציטוט'); return; }
+  renderReview();
+  track('transcript_parsed');
+}
+
+function localExtraction(){
+  const t = trText().trim();
+  if (!t) { flashDoc('קודם הדבק את התמלול'); goTo('trIn'); return; }
+  trCandidates = PC.transcript.heuristics(t);
+  trRejected.clear();
+  if (!trCandidates.length) {
+    flashDoc('לא נמצאו מספרים ברורים. עדיף דרך הפרומפט.'); showPrompt(); return;
+  }
+  renderReview();
+}
+
+function loadDemo(){
+  el('trIn').value = PC.example.TRANSCRIPT;
+  const fields = PC.transcript.parseExtraction(PC.example.EXTRACTION);
+  trCandidates = PC.transcript.candidates(fields, PC.example.TRANSCRIPT);
+  trRejected.clear();
+  renderReview();
+  track('example_loaded');
+}
+
+const SPEAKER = { client: 'הלקוח אמר', seller: 'אתם אמרתם', unknown: 'לא ידוע מי אמר' };
+
+/* Every row shows the sentence it came from. That is the whole point: a
+   number you cannot trace is the thing this tool exists to keep out of a
+   price, and an extraction step is the easiest way to let one back in. */
+const renderReview = guard('transcript', function (){
+  const box = el('trReview'); if (!box) return;
+  if (!trCandidates.length) { show('trReview', false); box.innerHTML = ''; return; }
+  const prov = PC.transcript.provenance(
+    trCandidates.filter(c => !trRejected.has(c.key)), trText());
+
+  box.innerHTML =
+    '<div class="tr-h">3 · עבור על מה שנמצא ואשר</div>' +
+    '<p class="hint-p">כל שורה עם המשפט שממנו היא נלקחה. מה שלא מתאים — הסר, ומה שחסר תמלא ידנית אחר כך.</p>' +
+    trCandidates.map(c => {
+      const off = trRejected.has(c.key);
+      return '<div class="tr-row' + (off ? ' off' : '') + '">' +
+        '<div class="tr-v"><b>' + esc(c.label) + ':</b> ' +
+          esc(c.kind === 'list' ? c.value.join(', ') : String(c.value)) +
+          (c.guessed ? '<span class="tr-tag t-guess">ניחוש מקומי</span>' : '') +
+          (!c.verified ? '<span class="tr-tag t-unver">הציטוט לא נמצא בתמלול — קרא בעצמך</span>' : '') +
+        '</div>' +
+        '<div class="tr-q">«' + esc(c.quote) + '»<span class="tr-s">' +
+          esc(SPEAKER[c.speaker]) + '</span></div>' +
+        '<button type="button" class="ghost tr-x" data-act="trtoggle" data-key="' +
+          esc(c.key) + '">' + (off ? 'להחזיר' : 'להסיר') + '</button>' +
+      '</div>';
+    }).join('') +
+    '<div class="tr-prov"><b>מאיפה הגיעו המספרים:</b> ' + esc(prov.why) + '. ' +
+      esc(prov.value === 'unprompted'
+        ? 'זה המצב החזק ביותר — המחיר יישען על מה שהוא עצמו אמר.'
+        : prov.value === 'prompted'
+        ? 'הכלי יסמן את זה, כי מספר שנאמר אחרי שאלה עשוי למדוד את השאלה ולא את העסק.'
+        : 'הכלי לא ייתן למספר הזה להיכנס למסמך כהצדקה.') + '</div>' +
+    '<div class="tr-acts"><button type="button" class="act" data-act="trapply">מלא את הטופס</button>' +
+    '<span class="hint-p">אפשר לשנות הכול אחר כך.</span></div>';
+  show('trReview', true);
+});
+
+function toggleRow(key){
+  trRejected.has(key) ? trRejected.delete(key) : trRejected.add(key);
+  renderReview();
+}
+
+function applyExtraction(){
+  const keep = trCandidates.filter(c => !trRejected.has(c.key));
+  if (!keep.length) { flashDoc('לא נשאר מה למלא'); return; }
+  const st = PC.transcript.toState(keep);
+  Object.entries(st.fields).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
+  if (st.systems.length) selectSystems(matchSystems(st.systems));
+
+  // the one field the transcript answers better than the operator can
+  const prov = PC.transcript.provenance(keep, trText());
+  if (el('q_provenance')) el('q_provenance').value = prov.value;
+
+  show('customRateWrap', el('q_role').value === 'custom');
+  renderScope(); recompute(); renderGuide(); saveDraft();
+  track('transcript_applied');
+  flashDoc('הטופס מולא מהשיחה');
+  el('proposal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* A transcript says "מורנינג"; the chip says "חשבונית ירוקה / מורנינג". Match
+   on any word in common rather than on equality, or every system the call
+   actually named would be silently dropped. */
+function matchSystems(names){
+  const norm = s => String(s).toLowerCase().replace(/[^\wא-ת ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+  return SYSTEMS.filter(sys => {
+    const a = norm(sys);
+    return names.some(n => norm(n).some(w => a.includes(w)));
+  });
+}
+
 /* ---------- presets and example fills ---------- */
 Object.entries(PRESETS).forEach(([id, vals]) => {
   const input = el(id); if (!input) return;
@@ -823,7 +965,13 @@ const ACTIONS = {
   newdeal: newDeal,
   discard: discardDraft,
   confirmscope: confirmScope,
-  send:    () => requireKey(openSend)
+  send:    () => requireKey(openSend),
+  trprompt: showPrompt,
+  trcopy:   copyPrompt,
+  trparse:  parseExtraction,
+  trlocal:  localExtraction,
+  trdemo:   loadDemo,
+  trapply:  applyExtraction
 };
 document.addEventListener('click', e => {
   // the guide's own buttons carry where to go, so they are handled first
@@ -834,6 +982,8 @@ document.addEventListener('click', e => {
   if (sk && sk.dataset.act === 'skip') { e.preventDefault(); skipStep(sk.dataset.step); return; }
   const sv = e.target.closest('[data-route]');
   if (sv) { e.preventDefault(); sendVia(sv.dataset.route); return; }
+  const tk = e.target.closest('[data-key]');
+  if (tk && tk.dataset.act === 'trtoggle') { e.preventDefault(); toggleRow(tk.dataset.key); return; }
 
   const d = e.target.closest('[data-deal]');
   if (d) {
