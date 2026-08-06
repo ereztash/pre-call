@@ -58,6 +58,18 @@
      it, which would contaminate the very numbers the price is computed from.
      Every chip costs the same one tap, so none of them pulls harder. */
   .chip-sm{padding:5px 11px;font-size:13px;min-height:32px;border-radius:16px}
+  .scope-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;
+             padding:11px 0;border-bottom:1px solid var(--line)}
+  .scope-row:last-child{border-bottom:0}
+  .scope-t{flex:1 1 210px;font-size:14.5px;color:#e2e5e9;line-height:1.5}
+  .scope-why{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+  .scope-btns{display:flex;gap:5px;flex:0 0 auto}
+  .sbtn{background:#0f1216;border:1px solid var(--line);color:var(--muted);
+        border-radius:5px;padding:6px 11px;font-size:12.5px;font-family:inherit;
+        cursor:pointer;min-height:36px}
+  .sbtn.on.s-in{background:var(--turq);border-color:var(--turq);color:#0d1a18;font-weight:600}
+  .sbtn.on.s-out{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+  .sbtn.on.s-extra{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
   .presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   .presets .lbl{font-size:12.5px;color:var(--muted);align-self:center;margin-left:2px}
 
@@ -377,6 +389,17 @@
   </div>
 </div>
 
+<!-- ============ הסקופ ============ -->
+<div class="sec">
+  <div class="sec-h">הסקופ · חינם</div>
+  <h2>מה נכנס, מה יוצא, ומה בתוספת תשלום</h2>
+  <p class="lead">
+    זה החלק שגוזל את הזמן, ולכן הוא לא טקסט קבוע. כל שורה מגיעה עם ברירת מחדל ועם הסיבה —
+    שלוש הקשות והסקופ סגור. השורות שרלוונטיות רק למערכות שבחרת יופיעו לבד.
+  </p>
+  <div class="box" id="scopeBox"></div>
+</div>
+
 <!-- ============ ההצעה ============ -->
 <div class="sec">
   <div class="sec-h">התוצר · בתשלום</div>
@@ -444,9 +467,81 @@ SYSTEMS.forEach(s => {
   c.className = 'chip'; c.textContent = s;
   c.onclick = () => { c.classList.toggle('on');
     c.classList.contains('on') ? chosenSystems.add(s) : chosenSystems.delete(s);
+    renderScope(); // system-conditional scope rows appear and disappear with this
     recompute(); };
   el('sysChips').appendChild(c);
 });
+
+/* ---------- scope decisions ----------
+   Boilerplate in/out lists look like they solve this and don't: the hard part
+   is deciding, per job, what you are committing to. Each row carries a default
+   and the reason behind it, so the work becomes confirming rather than
+   composing. `extra` is a third state on purpose — most of what a beginner
+   silently absorbs is sellable, not merely excludable.
+   `when` hides rows that don't apply to the systems actually selected. */
+const SCOPE_ITEMS = [
+  { id:'map',      t:'מיפוי התהליך הקיים ותיעוד שלו',                         d:'in' },
+  { id:'build',    t:'בנייה והטמעה של האוטומציה בסביבת הלקוח',                 d:'in' },
+  { id:'errors',   t:'טיפול בשגיאות והתראה כשתהליך נופל',                      d:'in',
+    why:'בלי זה הלקוח מגלה תקלות מהלקוחות שלו, ומאשים אותך.' },
+  { id:'test',     t:'בדיקה על נתונים אמיתיים לפני מעבר לייצור',                d:'in' },
+  { id:'train',    t:'הדרכה אחת לצוות, עד שעה',                                d:'in',
+    why:'תחום את זה למספר. "הדרכה" בלי גבול היא סעיף פתוח.' },
+  { id:'support',  t:'שבועיים ליווי אחרי העלייה לאוויר',                        d:'in' },
+
+  { id:'license',  t:'מנוי לכלי האוטומציה ועלות המשימות (tasks)',              d:'out',
+    why:'אין תמחור משווק ואין תתי-חשבונות ללקוחות. עדיף שהחשבון יהיה על שם הלקוח ובכרטיס שלו.' },
+  { id:'overage',  t:'חריגה ממכסת המשימות בשימוש בפועל',                       d:'out',
+    why:'כל שלב נספר כמשימה. תהליך בן 5 שלבים צורך 5 בכל הרצה, והצריכה בפועל גבוהה מההערכה בכ-50%.' },
+  { id:'premium',  t:'תוספת עלות לאפליקציות פרימיום בכלי האוטומציה',           d:'out',
+    when:s=>['CRM','ERP','מערכת סליקה','מערכת ייעודית'].some(x=>s.has(x)),
+    why:'מערכות כמו Salesforce, HubSpot ו-NetSuite דורשות מסלול יקר יותר. זו עלות של הלקוח, לא שלך.' },
+  { id:'access',   t:'הרשאות, גישות ומשתמשי מערכת — באחריות הלקוח',            d:'out',
+    why:'זה גם התלות שהכי מעכבת פרויקטים. כתוב את זה, ותוכל להצדיק דחייה בלוח הזמנים.' },
+  { id:'cleanup',  t:'ניקוי או המרה של נתונים קיימים',                          d:'out',
+    why:'כמעט תמיד מתגלה כעבודה בפני עצמה. אל תבלע אותה בפרויקט.' },
+  { id:'edge',     t:'מקרי קצה שלא עלו במיפוי',                                d:'out',
+    why:'זה הסעיף שמציל אותך. בלעדיו כל חריג הופך לוויכוח.' },
+  { id:'redesign', t:'שינוי בתהליך העסקי עצמו',                                d:'out',
+    why:'אתה מאטמט את מה שקיים. לעצב אותו מחדש זו עבודה אחרת.' },
+  { id:'apichange',t:'התאמות בעקבות שינוי ב-API של ספק צד שלישי',              d:'out',
+    why:'לא בשליטתך, וקורה. שייך לתחזוקה, לא לאחריות.' },
+  { id:'newsys',   t:'הוספת מערכת שלא נכללה במיפוי',                            d:'out',
+    why:'"רק עוד מערכת אחת" הוא הביטוי שמפוצץ פרויקטי אוטומציה.' },
+  { id:'scale',    t:'גדילה מעבר לנפח שהוגדר בהצעה',                            d:'out' },
+
+  { id:'maint',    t:'תחזוקה שוטפת אחרי תקופת הליווי',                          d:'extra',
+    why:'זו ההכנסה החוזרת שלך. אל תוותר עליה בשקט — הצע אותה.' },
+  { id:'monitor',  t:'ניטור חודשי ודוח תקלות',                                  d:'extra' },
+  { id:'wa',       t:'אישור WhatsApp Business API מול ספק',                     d:'extra',
+    when:s=>s.has('וואטסאפ'),
+    why:'תהליך מול ספק חיצוני שלוקח זמן ולא תלוי בך. תמחר בנפרד או החרג.' }
+];
+const scopeState = {};
+SCOPE_ITEMS.forEach(i => scopeState[i.id] = i.d);
+const SCOPE_LABEL = { in:'כלול', out:'לא כלול', extra:'בתוספת' };
+
+function renderScope(){
+  const box = el('scopeBox');
+  const visible = SCOPE_ITEMS.filter(i => !i.when || i.when(chosenSystems));
+  box.innerHTML = visible.map(i => `
+    <div class="scope-row">
+      <div class="scope-t">${esc(i.t)}${i.why ? `<span class="scope-why">${esc(i.why)}</span>` : ''}</div>
+      <div class="scope-btns">
+        ${['in','out','extra'].map(s =>
+          `<button type="button" class="sbtn s-${s}${scopeState[i.id]===s?' on':''}"
+             data-i="${i.id}" data-s="${s}">${SCOPE_LABEL[s]}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.sbtn').forEach(b => b.onclick = () => {
+    scopeState[b.dataset.i] = b.dataset.s;
+    renderScope();
+    if (unlocked) renderProposal();
+  });
+}
+function scopeList(state){
+  return SCOPE_ITEMS.filter(i => (!i.when || i.when(chosenSystems)) && scopeState[i.id] === state);
+}
 
 /* ---------- one-tap presets and example fills ----------
    Two different frictions. Closed/numeric fields cost a keyboard; presets cut
@@ -830,23 +925,16 @@ ${txt('q_trigger') ? `<h4>למה עכשיו</h4><p>${esc(txt('q_trigger'))}</p>`
 <p>${esc(txt('q_process') || 'התהליך מתבצע ידנית.')}</p>
 ${m.annualValue ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ כ-' + Math.round(m.runs).toLocaleString('en-US') + ' פעמים בשנה, ' : ''}${m.hours ? Math.round(m.hours).toLocaleString('en-US') + ' שעות עבודה' : ''}${m.errValue ? ', ובנוסף ' + ils(m.errValue) + ' בשנה בתקלות' : ''}. סה"כ כ-<b>${ils(m.annualValue)} בשנה</b>.</p>` : ''}
 
-<h4>מה נכלל</h4>
-<ul>
-  <li>מיפוי התהליך הקיים ותיעוד שלו${sys.length ? ', כולל החיבורים בין ' + esc(sys.join(', ')) : ''}</li>
-  <li>בנייה והטמעה של האוטומציה בסביבה שלך</li>
-  <li>טיפול בשגיאות והתראה כשמשהו נופל, כדי שלא תגלו את זה מהלקוח</li>
-  <li>בדיקה על נתונים אמיתיים לפני מעבר לייצור</li>
-  <li>מסירה מתועדת והדרכה קצרה לצוות</li>
-  <li>שבועיים ליווי אחרי העלייה לאוויר, לתיקוני כוונון</li>
-</ul>
+${scopeList('in').length ? `<h4>מה נכלל</h4>
+<ul>${scopeList('in').map((i,ix) =>
+  `<li>${esc(i.t)}${ix===0 && sys.length ? ', כולל החיבורים בין ' + esc(sys.join(', ')) : ''}</li>`).join('')}</ul>` : ''}
 
-<h4>מה לא נכלל</h4>
-<ul>
-  <li class="no">מקרי קצה שלא עלו במיפוי. הם ייבחנו בנפרד ויתומחרו בנפרד</li>
-  <li class="no">עלויות רישוי של כלים חיצוניים${sys.length ? ' ושל המערכות עצמן' : ''}. הן על הלקוח</li>
-  <li class="no">שינוי בתהליך העסקי עצמו. אני מאוטמט את מה שקיים, לא מעצב אותו מחדש</li>
-  <li class="no">תחזוקה שוטפת אחרי שבועיים הליווי. מוצעת בנפרד</li>
-</ul>
+${scopeList('out').length ? `<h4>מה לא נכלל</h4>
+<ul>${scopeList('out').map(i => `<li class="no">${esc(i.t)}</li>`).join('')}</ul>
+<p style="font-size:13px;color:#6b7280">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
+
+${scopeList('extra').length ? `<h4>זמין בתוספת תשלום</h4>
+<ul>${scopeList('extra').map(i => `<li>${esc(i.t)}</li>`).join('')}</ul>` : ''}
 
 <h4>המחיר</h4>
 <div class="pricebox">
@@ -895,6 +983,7 @@ function fallbackCopy(t, done){
   document.body.removeChild(ta); done(ok);
 }
 
+renderScope();
 recompute();
 </script>
 </body>
