@@ -12,6 +12,8 @@ on:
   push:
     branches: ['**']
   pull_request:
+  # so a run can be started by hand without an empty commit
+  workflow_dispatch:
 
 jobs:
   test:
