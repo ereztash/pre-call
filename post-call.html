@@ -26,17 +26,17 @@
 
   <div class="box">
     <div class="qa">
-      <div class="qt"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
+      <div class="qt" id="qt1"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
       <div class="why">תן לו לתאר עד הסוף. התיאור המפורט הוא מה שיהפוך לסקופ בהצעה.</div>
-      <textarea id="q_process" placeholder="למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת"></textarea>
+      <textarea aria-labelledby="qt1" id="q_process" placeholder="למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת"></textarea>
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">2</span>כמה פעמים זה קורה?</div>
+      <div class="qt" id="qt2"><span class="qn">2</span>כמה פעמים זה קורה?</div>
       <div class="why">אם הוא אומר "המון", בקש מספר. "בערך כמה ביום?"</div>
       <div class="row">
-        <div><label>כמות</label><input type="number" id="q_freq" min="0" step="1" placeholder="20"></div>
-        <div><label>לכל</label>
+        <div><label for="q_freq">כמות</label><input type="number" id="q_freq" min="0" step="1" placeholder="20"></div>
+        <div><label for="q_freq_unit">לכל</label>
           <select id="q_freq_unit">
             <option value="365">יום</option>
             <option value="52" selected>שבוע</option>
@@ -47,16 +47,16 @@
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">3</span>כמה זמן לוקח כל פעם, מהתחלה עד הסוף?</div>
+      <div class="qt" id="qt3"><span class="qn">3</span>כמה זמן לוקח כל פעם, מהתחלה עד הסוף?</div>
       <div class="why">כולל ההקשר: לפתוח מסך, לחפש, לוודא. לא רק ההקלדה עצמה.</div>
-      <label>דקות לכל פעם</label>
+      <label for="q_minutes">דקות לכל פעם</label>
       <input type="number" id="q_minutes" min="0" step="1" placeholder="7">
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">4</span>מי עושה את זה היום?</div>
+      <div class="qt" id="qt4"><span class="qn">4</span>מי עושה את זה היום?</div>
       <div class="why">התפקיד קובע את עלות השעה. אם זה בעל העסק בעצמו, המספר קופץ פי שלושה.</div>
-      <label>תפקיד</label>
+      <label for="q_role">תפקיד</label>
       <select id="q_role">
         <option value="60">עובד/ת back-office · כ-60 ₪ לשעה בעלות מלאה</option>
         <option value="85" selected>רכז/ת תפעול · כ-85 ₪ לשעה</option>
@@ -65,36 +65,36 @@
         <option value="custom">אחר, אזין ידנית</option>
       </select>
       <div id="customRateWrap" style="display:none">
-        <label>עלות שעה מלאה בשקלים</label>
+        <label for="q_rate_custom">עלות שעה מלאה בשקלים</label>
         <input type="number" id="q_rate_custom" min="0" step="5" placeholder="100">
       </div>
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">5</span>מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?</div>
+      <div class="qt" id="qt5"><span class="qn">5</span>מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?</div>
       <div class="why">בלי אירוע, אין דחיפות, וההצעה תישאר פתוחה חודשים. זה נכנס לפתיחת ההצעה.</div>
-      <textarea id="q_trigger" placeholder="למשל: בחודש שעבר פספסנו שתי הזמנות והלקוח עבר למתחרה"></textarea>
+      <textarea aria-labelledby="qt5" id="q_trigger" placeholder="למשל: בחודש שעבר פספסנו שתי הזמנות והלקוח עבר למתחרה"></textarea>
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">6</span>כשזה משתבש, מה קורה בפועל? כמה פעמים בחודש?</div>
+      <div class="qt" id="qt6"><span class="qn">6</span>כשזה משתבש, מה קורה בפועל? כמה פעמים בחודש?</div>
       <div class="why">זה הערך השני, וברוב השיחות הוא גדול מחיסכון הזמן. אל תדלג עליו.</div>
       <div class="row">
-        <div><label>תקלות בחודש</label><input type="number" id="q_err_freq" min="0" step="1" placeholder="3"></div>
-        <div><label>עלות ממוצעת לתקלה (₪)</label><input type="number" id="q_err_cost" min="0" step="50" placeholder="400"></div>
+        <div><label for="q_err_freq">תקלות בחודש</label><input type="number" id="q_err_freq" min="0" step="1" placeholder="3"></div>
+        <div><label for="q_err_cost">עלות ממוצעת לתקלה (₪)</label><input type="number" id="q_err_cost" min="0" step="50" placeholder="400"></div>
       </div>
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">7</span>אילו מערכות מעורבות בתהליך?</div>
+      <div class="qt" id="qt7"><span class="qn">7</span>אילו מערכות מעורבות בתהליך?</div>
       <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
       <div class="chips" id="sysChips"></div>
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">8</span>למערכות האלה יש חיבור קיים, או שהכל ידני?</div>
+      <div class="qt" id="qt8"><span class="qn">8</span>למערכות האלה יש חיבור קיים, או שהכל ידני?</div>
       <div class="why">שאל אם יש להן API או אינטגרציה מובנית. "אני לא יודע" = כמו ידני, לצורך האומדן.</div>
-      <select id="q_integration">
+      <select aria-labelledby="qt8" id="q_integration">
         <option value="1.0">יש API או אינטגרציה מובנית לכולן</option>
         <option value="1.4" selected>לחלקן. לפחות אחת דורשת עבודה</option>
         <option value="1.9">ידני לגמרי, או שלא ידוע</option>
@@ -102,9 +102,9 @@
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">9</span>כמה אחוז מהמקרים הם חריגים שדורשים טיפול שונה?</div>
+      <div class="qt" id="qt9"><span class="qn">9</span>כמה אחוז מהמקרים הם חריגים שדורשים טיפול שונה?</div>
       <div class="why">כאן נשברים פרויקטי אוטומציה. אם הוא אומר "רוב המקרים דומים", בקש אחוז.</div>
-      <select id="q_edge">
+      <select aria-labelledby="qt9" id="q_edge">
         <option value="1.0">כמעט אין חריגים, פחות מ-10%</option>
         <option value="1.25" selected>בין 10% ל-25%</option>
         <option value="1.6">יותר מרבע מהמקרים חריגים</option>
@@ -112,32 +112,32 @@
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">10</span>ניסיתם כבר לפתור את זה? מה לא עבד?</div>
+      <div class="qt" id="qt10"><span class="qn">10</span>ניסיתם כבר לפתור את זה? מה לא עבד?</div>
       <div class="why">אם יש ספק קודם שנכשל, זה נכנס להצעה כ"מה שונה הפעם". זה סוגר עסקאות.</div>
-      <textarea id="q_prev" placeholder="למשל: קנינו תוסף אבל אף אחד לא הטמיע אותו"></textarea>
+      <textarea aria-labelledby="qt10" id="q_prev" placeholder="למשל: קנינו תוסף אבל אף אחד לא הטמיע אותו"></textarea>
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">11</span>מי עוד צריך לאשר את זה חוץ ממך?</div>
+      <div class="qt" id="qt11"><span class="qn">11</span>מי עוד צריך לאשר את זה חוץ ממך?</div>
       <div class="why">אם יש עוד מחליט ולא ידעת, ההצעה נתקעת שבועיים. שאל בשיחה, לא אחריה.</div>
-      <input type="text" id="q_decider" placeholder="למשל: השותף שלי. או: אף אחד, אני מחליט">
+      <input aria-labelledby="qt11" type="text" id="q_decider" placeholder="למשל: השותף שלי. או: אף אחד, אני מחליט">
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">12</span>עד מתי אתה צריך שזה יעבוד?</div>
+      <div class="qt" id="qt12"><span class="qn">12</span>עד מתי אתה צריך שזה יעבוד?</div>
       <div class="why">תאריך, לא "בהקדם". זה נכנס להצעה כלוח זמנים ולתאריך החלטה.</div>
-      <input type="text" id="q_deadline" placeholder="למשל: לפני עונת החגים, אמצע ספטמבר">
+      <input aria-labelledby="qt12" type="text" id="q_deadline" placeholder="למשל: לפני עונת החגים, אמצע ספטמבר">
     </div>
 
     <div class="qa">
-      <div class="qt"><span class="qn">13</span>איך נדע בעוד חודש שזה עבד?</div>
+      <div class="qt" id="qt13"><span class="qn">13</span>איך נדע בעוד חודש שזה עבד?</div>
       <div class="why">התשובה שלו הופכת לקריטריון ההצלחה בהצעה. אם אין, הצע: "שעות שחזרו".</div>
-      <input type="text" id="q_success" placeholder="למשל: שאף הזמנה לא תיפול בין הכיסאות">
+      <input type="text" id="q_success" aria-labelledby="qt13" placeholder="למשל: שאף הזמנה לא תיפול בין הכיסאות">
     </div>
   </div>
 
   <div class="box">
-    <label>שם הלקוח או העסק</label>
+    <label for="q_client">שם הלקוח או העסק</label>
     <input type="text" id="q_client" placeholder="לכותרת ההצעה">
   </div>
 </div>
@@ -152,18 +152,18 @@
   </p>
 
   <div class="box">
-    <label>שיטה ראשית</label>
+    <label for="c_last">שיטה ראשית</label>
     <div class="chips" id="methodChips"></div>
     <p style="font-size:12.5px;color:var(--muted);margin-top:8px" id="methodHint"></p>
 
     <div id="m_comparable_in" style="display:none">
       <div class="row">
         <div>
-          <label>כמה גבית על העבודה הדומה האחרונה (₪)</label>
+          <label for="c_last">כמה גבית על העבודה הדומה האחרונה (₪)</label>
           <input type="number" id="c_last" min="0" step="500" placeholder="6,000">
         </div>
         <div>
-          <label>העבודה הזאת, ביחס אליה</label>
+          <label for="c_scale">העבודה הזאת, ביחס אליה</label>
           <select id="c_scale">
             <option value="0.7">קטנה יותר</option>
             <option value="1" selected>דומה בהיקף</option>
@@ -175,13 +175,13 @@
     </div>
 
     <div id="m_cost_in" style="display:none">
-      <label>מרווח מעל העלות שלך (%)</label>
+      <label for="c_margin">מרווח מעל העלות שלך (%)</label>
       <input type="number" id="c_margin" value="30" min="0" max="200" step="5">
     </div>
 
     <div class="row" style="margin-top:12px">
       <div>
-        <label>כמה עסקאות סגרת בתחום הזה?</label>
+        <label for="c_deals">כמה עסקאות סגרת בתחום הזה?</label>
         <select id="c_deals">
           <option value="0">זו הראשונה</option>
           <option value="1">אחת או שתיים</option>
@@ -196,7 +196,7 @@
   <p class="lead">גם אם אתה לא מתמחר לפי ערך, המספר הזה הוא מה שאתה אומר בשיחה.</p>
 
   <div class="box">
-    <label>מאיפה הגיע המספר בשאלה 6
+    <label for="q_provenance">מאיפה הגיע המספר בשאלה 6
       <span class="hint">בשיחות מתועדות בתחומים דומים, הלקוח נותן ספרות רק אחרי שהמוכר מכוון אותו לשם.
         אם זה מה שקרה, המספר מודד את השאלה שלך ולא את העסק שלו.</span></label>
     <select id="q_provenance">
@@ -211,7 +211,7 @@
     <div class="grid">
       <div class="stat"><div class="k">שעות שנשרפות בשנה</div><div class="v" id="s_hours">—</div><div class="u">שעות עבודה</div></div>
       <div class="stat"><div class="k">עלות התהליך בשנה</div><div class="v" id="s_value">—</div><div class="u">זמן + תקלות</div></div>
-      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u" style="color:var(--red)">שעות בנייה · לא מכויל</div></div>
+      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u" style="color:var(--red-text)">שעות בנייה · לא מכויל</div></div>
       <div class="stat big"><div class="k">מחיר מוצע</div><div class="v" id="s_price">—</div><div class="u" id="s_band">טווח הגנה</div></div>
       <div class="stat"><div class="k">החזר השקעה</div><div class="v" id="s_payback">—</div><div class="u">שבועות</div></div>
     </div>
@@ -223,11 +223,11 @@
       <summary>הנחות העבודה, ניתנות לשינוי</summary>
       <div class="row" style="margin-top:10px">
         <div>
-          <label>התעריף שלך לשעת פיתוח (₪)</label>
+          <label for="a_myrate">התעריף שלך לשעת פיתוח (₪)</label>
           <input type="number" id="a_myrate" value="250" min="0" step="25">
         </div>
         <div>
-          <label>אחוז הזמן שבאמת נחסך</label>
+          <label for="a_capture">אחוז הזמן שבאמת נחסך</label>
           <select id="a_capture">
             <option value="0.7">70% · שמרני, נשארת בקרה ידנית</option>
             <option value="0.8" selected>80% · טיפוסי</option>
@@ -235,7 +235,7 @@
           </select>
         </div>
         <div>
-          <label>תחזוקה שנתית, אחוז מהמחיר</label>
+          <label for="a_maint">תחזוקה שנתית, אחוז מהמחיר</label>
           <input type="number" id="a_maint" value="15" min="0" max="100" step="5">
         </div>
       </div>
@@ -273,7 +273,7 @@
     <p style="font-size:13px">תשלום חד-פעמי לכל הצעה. בלי מנוי.</p>
     <button class="act" id="payBtn">קנה וקבל מפתח</button>
     <div class="keyrow">
-      <input type="text" id="keyIn" placeholder="הדבק כאן את המפתח" autocomplete="off">
+      <input type="text" id="keyIn" aria-label="מפתח פתיחה" placeholder="הדבק כאן את המפתח" autocomplete="off">
       <button class="ghost" onclick="tryUnlock()">פתח</button>
     </div>
     <div class="err" id="keyErr">המפתח לא תקין. בדוק שהעתקת אותו במלואו.</div>

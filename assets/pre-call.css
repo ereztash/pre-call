@@ -36,6 +36,8 @@
   .panel{display:none}
   .panel.on{display:block;animation:fade .18s ease}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}}
 
   h2{font-size:19px;font-weight:600;margin:0 0 6px}
   .lead{color:var(--muted);font-size:14.5px;margin-bottom:18px}
@@ -60,9 +62,10 @@
   label .hint{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
   input[type=text],textarea,select{
     width:100%;background:#0f1216;border:1px solid var(--line);border-radius:5px;
-    color:var(--ink);padding:10px 12px;font-size:14.5px;font-family:inherit;
+    color:var(--ink);padding:11px 12px;font-size:14.5px;font-family:inherit;min-height:44px;
     direction:rtl;text-align:right}
   input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
+  :focus-visible{outline:3px solid #e8b57a;outline-offset:2px;border-radius:4px}
   textarea{min-height:80px;resize:vertical;line-height:1.6}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
   @media(max-width:640px){.grid2{grid-template-columns:1fr}}
@@ -107,7 +110,7 @@
   .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
   .copied.on{opacity:1}
   footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
-         color:#697280;font-size:12.5px;line-height:1.8}
+         color:#828b99;font-size:12.5px;line-height:1.8}
   @media print{
     body{background:#fff;color:#000}
     .wrap{max-width:100%;padding:0}

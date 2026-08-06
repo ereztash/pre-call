@@ -24,10 +24,15 @@ const ils = PC.model.ils;
 /* ---------- system chips ---------- */
 const chosenSystems = new Set();
 SYSTEMS.forEach(s => {
-  const c = document.createElement('div');
-  c.className = 'chip'; c.textContent = s;
+  // a real button, not a styled div: a div with onclick is unreachable by keyboard
+  // and announces nothing to a screen reader
+  const c = document.createElement('button');
+  c.type = 'button'; c.className = 'chip'; c.textContent = s;
+  c.setAttribute('aria-pressed', 'false');
   c.onclick = () => { c.classList.toggle('on');
-    c.classList.contains('on') ? chosenSystems.add(s) : chosenSystems.delete(s);
+    const on = c.classList.contains('on');
+    c.setAttribute('aria-pressed', String(on));
+    on ? chosenSystems.add(s) : chosenSystems.delete(s);
     renderScope(); // system-conditional scope rows appear and disappear with this
     recompute(); };
   el('sysChips').appendChild(c);
@@ -91,6 +96,7 @@ function renderScope(){
       <div class="scope-btns">
         ${['in','out','extra'].map(s =>
           `<button type="button" class="sbtn s-${s}${scopeState[i.id]===s?' on':''}"
+             aria-pressed="${scopeState[i.id]===s}"
              data-i="${i.id}" data-s="${s}">${SCOPE_LABEL[s]}</button>`).join('')}
       </div>
     </div>`).join('');
@@ -128,11 +134,13 @@ Object.entries(PRESETS).forEach(([id, vals]) => {
   const input = el(id); if (!input) return;
   const row = document.createElement('div'); row.className = 'presets';
   vals.forEach(v => {
-    const c = document.createElement('div');
-    c.className = 'chip chip-sm'; c.textContent = v;
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'chip chip-sm'; c.textContent = v;
+    c.setAttribute('aria-pressed', 'false');
     c.onclick = () => {
       input.value = v;
-      [...row.children].forEach(x => x.classList.toggle('on', x === c));
+      [...row.children].forEach(x => { const sel = x === c;
+        x.classList.toggle('on', sel); x.setAttribute('aria-pressed', String(sel)); });
       input.dispatchEvent(new Event('input', { bubbles: true }));
     };
     row.appendChild(c);
@@ -142,15 +150,15 @@ Object.entries(PRESETS).forEach(([id, vals]) => {
   // never a constraint on what you can enter
   input.addEventListener('input', () => {
     if (![...row.children].some(x => x.textContent === input.value))
-      [...row.children].forEach(x => x.classList.remove('on'));
+      [...row.children].forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed','false'); });
   });
 });
 
 Object.entries(EXAMPLES).forEach(([id, text]) => {
   const field = el(id); if (!field) return;
   const row = document.createElement('div'); row.className = 'presets';
-  const c = document.createElement('div');
-  c.className = 'chip chip-sm';
+  const c = document.createElement('button');
+  c.type = 'button'; c.className = 'chip chip-sm';
   c.textContent = 'מלא דוגמה ואז ערוך';
   c.onclick = () => {
     field.value = text;
@@ -166,12 +174,15 @@ Object.entries(EXAMPLES).forEach(([id, text]) => {
 const mc = el('methodChips');
 mc.dataset.sel = 'value';
 Object.entries(METHODS).forEach(([key, m]) => {
-  const c = document.createElement('div');
+  const c = document.createElement('button');
+  c.type = 'button';
   c.className = 'chip' + (key === 'value' ? ' on' : '');
   c.textContent = m.name; c.dataset.k = key;
+  c.setAttribute('aria-pressed', String(key === 'value'));
   c.onclick = () => {
     mc.dataset.sel = key;
-    [...mc.children].forEach(x => x.classList.toggle('on', x.dataset.k === key));
+    [...mc.children].forEach(x => { const sel = x.dataset.k === key;
+      x.classList.toggle('on', sel); x.setAttribute('aria-pressed', String(sel)); });
     el('methodHint').textContent = m.hint;
     el('m_comparable_in').style.display = key === 'comparable' ? '' : 'none';
     el('m_cost_in').style.display = key === 'cost' ? '' : 'none';

@@ -55,7 +55,7 @@
 
   <div class="box">
     <h3>הדבקה מהירה</h3>
-    <label>הדביקו כאן את הפלט מהפרומפט
+    <label for="pasteBiz">הדביקו כאן את הפלט מהפרומפט
       <span class="hint">הכלי ינסה לחלץ את השדות לבד. אפשר גם לדלג ולמלא ידנית למטה.</span>
     </label>
     <textarea id="pasteBiz" style="min-height:120px" placeholder="הדביקו כאן..."></textarea>
@@ -66,32 +66,32 @@
     <h3>הפרופיל <span class="copied" id="profileSaved" style="font-size:12px">✓ נשמר בדפדפן</span></h3>
     <div class="grid2">
       <div>
-        <label>מה אתם מוכרים, במילים שלכם
+        <label for="f_what">מה אתם מוכרים, במילים שלכם
           <span class="hint">משפט אחד. לא סלוגן.</span></label>
         <input type="text" id="f_what" placeholder="למשל: מסדר תהליכי גבייה לעסקים קטנים">
       </div>
       <div>
-        <label>למי
+        <label for="f_who">למי
           <span class="hint">הקהל שבפועל שילם, לא הקהל שאתם רוצים.</span></label>
         <input type="text" id="f_who" placeholder="למשל: משרדי רו״ח עד 10 עובדים">
       </div>
       <div>
-        <label>היחידה התחומה שלכם, אם יש
+        <label for="f_unit">היחידה התחומה שלכם, אם יש
           <span class="hint">פורמט + תוצר. אם אין, השאירו ריק. זה משנה את התסריט.</span></label>
         <input type="text" id="f_unit" placeholder="למשל: 3 מפגשים, יוצא מהם נוהל גבייה כתוב">
       </div>
       <div>
-        <label>מחיר היחידה, אם יש
+        <label for="f_price">מחיר היחידה, אם יש
           <span class="hint">הרצפה הפנימית שלכם. לא נאמרת בשיחה, רק תזכורת לכם לפני שאלה 11.</span></label>
         <input type="text" id="f_price" placeholder="למשל: 6,500 ₪">
       </div>
       <div>
-        <label>העסקה האחרונה, סכום
+        <label for="f_last">העסקה האחרונה, סכום
           <span class="hint">מה שהוא שילם לכם. לא נכנס לשיחה בקול, רק לכיול הפנימי שלכם מול מה שהרוויח.</span></label>
         <input type="text" id="f_last" placeholder="למשל: 8,000 ₪">
       </div>
       <div>
-        <label>איך הלקוח האחרון הגיע אליכם</label>
+        <label for="f_src">איך הלקוח האחרון הגיע אליכם</label>
         <select id="f_src">
           <option value="">בחרו</option>
           <option value="ref">הפניה או היכרות אישית</option>
@@ -101,13 +101,13 @@
         </select>
       </div>
     </div>
-    <label>מה הלקוח האחרון הרוויח מזה, במספר
+    <label for="f_gain">מה הלקוח האחרון הרוויח מזה, במספר
       <span class="hint">התחילו במספר או בטווח, ואז הקשר קצר אם צריך. זה נכנס ישירות למשפט העוגן בשיחה.</span></label>
     <input type="text" id="f_gain" placeholder="למשל: כ-40,000 ₪ תזרים, אחרי שקיצר את זמן הגבייה מ-60 ל-25 יום">
-    <label>מה רק אתם רואים אצל הלקוחות שלכם, שאחרים לא רואים
+    <label for="f_edge">מה רק אתם רואים אצל הלקוחות שלכם, שאחרים לא רואים
       <span class="hint">זה מה שהופך את שאלת הבעלות בשיחה למדויקת. שתיים או שלוש שורות, שיאוחדו למשפט אחד מצוטט בתסריט.</span></label>
     <textarea id="f_edge" placeholder="למשל: שהבעיה אף פעם לא בתוכנה, היא בזה שאף אחד לא הוגדר כאחראי על המעקב"></textarea>
-    <label>מה אתם לא מוכרים
+    <label for="f_no">מה אתם לא מוכרים
       <span class="hint">הגבול. מונע מכם להגיד כן בשיחה למשהו שתתחרטו עליו.</span></label>
     <input type="text" id="f_no" placeholder="למשל: לא מפעיל את התהליך במקומם, לא ליווי חודשי">
     <button class="ghost" onclick="clearProfile()">מחק פרופיל שמור מהדפדפן הזה</button>
@@ -127,7 +127,7 @@
 
   <div class="box">
     <h3>מסלול מהיר · הדבקת פרופיל</h3>
-    <label>הדביקו את הכותרת, ה-About והתפקידים מהפרופיל שלו בלינקדאין, או כל טקסט ציבורי עליו
+    <label for="p_paste">הדביקו את הכותרת, ה-About והתפקידים מהפרופיל שלו בלינקדאין, או כל טקסט ציבורי עליו
       <span class="hint">אתר, פוסט, דף שירותים. כל דבר שהוא כתב על עצמו.</span></label>
     <textarea id="p_paste" style="min-height:130px" placeholder="הדביקו כאן..."></textarea>
   </div>
@@ -136,8 +136,8 @@
     <h3>מסלול מעמיק · פרומפט ל-Deep Research</h3>
     <p style="font-size:14px;color:#a9b0b8;margin-bottom:8px">מלאו את שני השדות למטה, ואז העתיקו את הפרומפט והריצו אותו במחקר מעמיק. את הפלט הדביקו בתיבה למעלה.</p>
     <div class="grid2">
-      <div><label>שם</label><input type="text" id="p_name" placeholder="שם מלא" oninput="buildDR()"></div>
-      <div><label>העסק או התפקיד</label><input type="text" id="p_co" placeholder="שם החברה או התחום" oninput="buildDR()"></div>
+      <div><label for="p_name">שם</label><input type="text" id="p_name" placeholder="שם מלא" oninput="buildDR()"></div>
+      <div><label for="p_co">העסק או התפקיד</label><input type="text" id="p_co" placeholder="שם החברה או התחום" oninput="buildDR()"></div>
     </div>
     <pre class="prompt" id="promptDR" style="margin-top:14px"></pre>
     <button class="act" onclick="cp('promptDR','c2')">העתק פרומפט מחקר</button>
@@ -148,12 +148,12 @@
     <h3>מה שכבר ידוע לכם</h3>
     <div class="grid2">
       <div>
-        <label>יש טריגר ידוע
+        <label for="p_trig">יש טריגר ידוע
           <span class="hint">אירוע שקרה לאחרונה ובגללו הוא מחפש עכשיו.</span></label>
         <input type="text" id="p_trig" placeholder="למשל: איבד לקוח גדול בחודש שעבר">
       </div>
       <div>
-        <label>איך הגעתם זה לזה</label>
+        <label for="p_how">איך הגעתם זה לזה</label>
         <select id="p_how">
           <option value="">בחרו</option>
           <option value="in">הוא פנה אליי</option>
@@ -162,7 +162,7 @@
         </select>
       </div>
     </div>
-    <label>שניים או שלושה, יחיד או צמד</label>
+    <label for="p_pair">שניים או שלושה, יחיד או צמד</label>
     <select id="p_pair">
       <option value="1">אדם אחד</option>
       <option value="2">שניים או יותר בשיחה</option>
