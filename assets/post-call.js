@@ -174,7 +174,7 @@ const renderScope = guard('scope', function (){
   box.querySelectorAll('.sbtn').forEach(b => b.onclick = () => {
     scopeState[b.dataset.i] = b.dataset.s;
     renderScope();
-    renderProposal();
+    renderProposal();   // the client read does not depend on scope
   });
 });
 
@@ -334,7 +334,77 @@ const recompute = guard('recompute', function (){
       ' בשנה. ההשקעה מחזירה את עצמה תוך פחות מ' +
       (m.payback < 4 ? '-חודש' : '-' + Math.ceil(m.payback / 4.3) + ' חודשים') + '."</div>';
   }
+  renderClientRead();
   renderProposal();
+});
+
+/* ---------- reading the specific client ----------
+   Everything here comes off answers already given. The panel exists because
+   a document that quietly rewrote its own payment terms is worse than one
+   that never adapted: the operator sends it either way, and only a visible
+   inference is one they can catch. */
+let clientOverride = 'auto';
+
+function clientProfile(){
+  return PC.client.applyOverride(PC.client.read({
+    systems: [...chosenSystems],
+    freq: num('q_freq'),
+    freqUnit: parseFloat(el('q_freq_unit').value),
+    decider: txt('q_decider'),
+    prev: txt('q_prev'),
+    trigger: txt('q_trigger'),
+    deadline: txt('q_deadline'),
+    provenance: el('q_provenance') ? el('q_provenance').value : ''
+  }), clientOverride);
+}
+
+const SIZE_LABEL = { solo: 'עסק קטן שמנוהל ישירות', small: 'עסק קטן־בינוני',
+                     mid: 'ארגון עם תהליך פנימי' };
+const DECIDE_LABEL = { single: 'מחליט אחד', shared: 'שניים מחליטים',
+                       committee: 'יותר מאדם אחד מחליט', unknown: 'לא ידוע מי מחליט' };
+
+const renderClientRead = guard('client', function (){
+  const box = el('clientRead'); if (!box) return;
+  const p = clientProfile();
+  const a = PC.client.adapt(p);
+
+  // nothing inferred and nothing changed — an empty panel is just noise
+  if (!p.evidence.length && !a.changes.length) { show('clientRead', false); return; }
+
+  box.innerHTML =
+    '<div class="cread-h">' +
+      '<span class="cread-t">הקריאה על הלקוח הזה</span>' +
+      '<span class="cread-c">' + esc(SIZE_LABEL[p.size]) + ' · ' + esc(DECIDE_LABEL[p.decision]) +
+        ' · ביטחון ' + Math.round(p.confidence * 100) + '%</span>' +
+      '<label class="cread-o" for="clientShape">אם טעיתי</label>' +
+      '<select id="clientShape">' +
+        [['auto','זהה לבד'],['solo','עסק קטן'],['small','עסק קטן־בינוני'],
+         ['mid','ארגון עם רכש']].map(([v, t]) =>
+          '<option value="' + v + '"' + (clientOverride === v ? ' selected' : '') + '>' +
+          t + '</option>').join('') +
+      '</select>' +
+    '</div>' +
+    (p.evidence.length ? '<ul class="cread-e">' +
+      p.evidence.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' : '') +
+    (a.changes.length
+      ? '<div class="cread-ch"><b>מה זה שינה במסמך</b><ul>' +
+        a.changes.map(c => '<li>' + esc(c) + '</li>').join('') + '</ul></div>'
+      : '<div class="cread-ch cread-none">המסמך לא שונה. הקריאה הזאת לא מצדיקה סטייה מברירת המחדל.</div>');
+
+  el('clientShape').onchange = e => { clientOverride = e.target.value; recompute(); };
+  show('clientRead', true);
+
+  // the questions that move this particular client's document, marked where
+  // they already sit — moving them between drawers would cost more in lost
+  // orientation than it buys in emphasis
+  document.querySelectorAll('.focus').forEach(n => n.classList.remove('focus'));
+  a.focus.forEach(id => {
+    const f = el(id); if (!f) return;
+    // not every question is wrapped in .qa — the provenance select sits in a
+    // plain .box, and marking only .qa dropped it without a word
+    const host = f.closest('.qa') || f.closest('.box');
+    if (host) host.classList.add('focus');
+  });
 });
 
 /* ---------- the document ---------- */
@@ -342,6 +412,7 @@ const renderProposal = guard('proposal', function (){
   el('proposal').innerHTML = PC.proposal.build({
     m: model(),
     ils,
+    adapt: PC.client.adapt(clientProfile()),
     scope: { in: scopeList('in'), out: scopeList('out'), extra: scopeList('extra') },
     systems: [...chosenSystems],
     f: {
@@ -429,6 +500,6 @@ document.querySelectorAll('input,select,textarea').forEach(n =>
 mountGate();
 renderTemplates();
 renderScope();
-recompute();
+recompute();   // recompute drives the client read and the document
 renderLedger();
 track('opened');

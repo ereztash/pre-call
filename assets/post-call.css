@@ -262,6 +262,38 @@
      numbers that arrive prefilled are read as measured unless told otherwise */
   .tpl-caveat{display:block;margin-top:8px;font-size:12.5px;color:var(--muted)}
 
+  /* ---- the read on this client ----
+     Sits directly above the document, because it is a statement about the
+     document and not about the form. Deliberately quiet: it is a note the
+     operator should be able to skim past when it is right, and notice
+     immediately when it is wrong. */
+  .cread{background:var(--charcoal-2);border:1px solid var(--line);border-top:0;
+         padding:14px 16px;font-size:13.5px;color:#c9cdd3;line-height:1.65}
+  .cread-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:8px}
+  .cread-t{font-weight:600;color:var(--turq)}
+  .cread-c{font-size:12.5px;color:var(--muted)}
+  .cread-o{font-size:12.5px;color:var(--muted);margin:0 auto 0 0}
+  .cread select{width:auto;min-width:150px;min-height:36px;padding:6px 10px;font-size:13px}
+  .cread-e{margin:0;padding:0 18px 0 0;color:var(--muted);font-size:12.5px}
+  .cread-e li{margin-bottom:3px}
+  .cread-ch{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .cread-ch b{color:var(--copper-label);font-size:12.5px;letter-spacing:.4px}
+  .cread-ch ul{margin:5px 0 0;padding:0 18px 0 0}
+  .cread-ch li{margin-bottom:6px}
+  .cread-none{color:var(--muted);font-size:12.5px}
+  .out{border-radius:0}
+  .cread + .out{border-radius:0 0 8px 8px}
+
+  /* a question that moves this particular client's document, marked where it
+     already sits — moving it would cost more orientation than it buys */
+  .qa.focus{border-right:2px solid var(--turq);padding-right:12px;margin-right:-14px}
+  .box.focus{border-color:var(--turq)}
+  .qa.focus .qt::after,.box.focus>label:first-child::after{
+    content:'משנה את המסמך אצל הלקוח הזה';display:inline-block;
+    margin-right:8px;font-size:11px;font-weight:600;letter-spacing:.3px;
+    color:#0f1216;background:var(--turq);border-radius:3px;padding:1px 7px;
+    vertical-align:middle}
+
   /* ---- error boundary ---- */
   .errbound{background:#2a1d20;border:1px solid #7a3b45;border-right:3px solid var(--red-text);
             border-radius:6px;padding:12px 16px;margin:12px 0;font-size:13.5px;

@@ -57,11 +57,20 @@
     return t;
   }
 
+  const DEFAULT_TERMS = 'תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.';
+
   function build(ctx) {
     const { m, scope, systems, f } = ctx;
     const ils = ctx.ils || (root.PC && root.PC.model && root.PC.model.ils) || String;
     const now = ctx.now || new Date();
-    const valid = new Date(now.getTime() + 14 * 864e5);
+    /* What the read of this particular client changed. Absent means the
+       document behaves exactly as it did before any of this existed, which
+       is what keeps the adaptation optional rather than load-bearing. */
+    const a = ctx.adapt || {};
+    const validityDays = a.validityDays || 14;
+    const terms = a.terms || DEFAULT_TERMS;
+    const clauses = a.clauses || [];
+    const valid = new Date(now.getTime() + validityDays * 864e5);
     const dstr = he(now), vstr = he(valid);
 
     // hours ceiling on the tuning commitment. Without it the clause was open-ended
@@ -81,7 +90,7 @@ ${f.trigger ? `<h4>למה עכשיו</h4><p>${escape(f.trigger)}</p>` : ''}
 
 <h4>מה קורה היום</h4>
 <p>${escape(f.process || 'התהליך מתבצע ידנית.')}</p>
-${m.annualValue ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ כ-' + n0(m.runs) + ' פעמים בשנה, ' : ''}${m.hours ? n0(m.hours) + ' שעות עבודה' : ''}${m.errValue ? ', ובנוסף ' + ils(m.errValue) + ' בשנה בתקלות' : ''}. סה"כ כ-<b>${ils(m.annualValue)} בשנה</b>.</p>` : ''}
+${m.annualValue && !a.suppressRoi ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ כ-' + n0(m.runs) + ' פעמים בשנה, ' : ''}${m.hours ? n0(m.hours) + ' שעות עבודה' : ''}${m.errValue ? ', ובנוסף ' + ils(m.errValue) + ' בשנה בתקלות' : ''}. סה"כ כ-<b>${ils(m.annualValue)} בשנה</b>.</p>` : ''}
 
 ${scope.in.length ? `<h4>מה נכלל</h4>
 <ul>${scope.in.map((i, ix) =>
@@ -97,11 +106,9 @@ ${scope.extra.length ? `<h4>זמין בתוספת תשלום</h4>
 <h4>המחיר</h4>
 <div class="pricebox">
   <div class="amt">${ils(m.price)}</div>
-  <div class="fine mt4">
-    תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.
-  </div>
+  <div class="fine mt4">${escape(terms)}</div>
 </div>
-${rationaleFor(m, ils)}
+${a.suppressRoi ? '' : rationaleFor(m, ils)}
 
 <h4>לוח זמנים</h4>
 <table>
@@ -118,6 +125,8 @@ ${f.deadline ? `<p class="mt8">היעד שהגדרת: <b>${escape(f.deadline)}</
 אם לא הגענו לשם בגלל משהו בבנייה, אני מכוונן ללא תוספת תשלום, עד ${tuneCap} שעות עבודה.
 מעבר לזה, או אם נדרש שינוי בתהליך עצמו או במערכות, נתמחר בנפרד לפי אותו תעריף.</p>
 
+${clauses.map(c => `<h4>${escape(c.h)}</h4><p>${escape(c.p)}</p>`).join('\n')}
+
 ${f.prev ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${escape(f.prev)}. ההצעה הזו נבדלת בכך שהמסירה כוללת תיעוד והדרכה, והאחריות על ההטמעה היא שלי ולא שלכם.</p>` : ''}
 
 <h4>ההחלטה</h4>
@@ -127,7 +136,7 @@ ${f.prev ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${escape(f.pr
   }
 
   root.PC = root.PC || {};
-  root.PC.proposal = { build, rationaleFor, titleFrom, escape };
+  root.PC.proposal = { build, rationaleFor, titleFrom, escape, DEFAULT_TERMS };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.proposal;
 })(typeof window !== 'undefined' ? window : globalThis);

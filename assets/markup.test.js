@@ -86,6 +86,26 @@ test('every event the client sends is on the server allowlist', () => {
   assert.deepStrictEqual(rejected, [], 'the server would answer 400 and nobody would know');
 });
 
+console.log('\nclient read contract');
+/* The per-client read marks the questions that move THIS client's document.
+   The marker attaches to the field's .qa or .box wrapper, so a field that
+   has neither — or an id that no longer exists — makes the emphasis vanish
+   with no error. That is how the provenance select, the single most
+   important thing to mark, was silently unmarkable. */
+test('every field the client read wants to emphasise can be emphasised', () => {
+  const ids = [...new Set([...read('assets/pc-client.js').matchAll(/focus\.push\(([^)]*)\)/g)]
+    .flatMap(m => [...m[1].matchAll(/'([a-z_]+)'/g)].map(x => x[1])))];
+  assert.ok(ids.length, 'no focus targets found — has the mechanism moved?');
+  const page = html['post-call.html'];
+  ids.forEach(id => {
+    const at = page.indexOf('id="' + id + '"');
+    assert.ok(at > -1, id + ' does not exist in the page');
+    const before = page.slice(0, at);
+    const wrapper = Math.max(before.lastIndexOf('class="qa"'), before.lastIndexOf('class="box'));
+    assert.ok(wrapper > -1, id + ' has no .qa or .box wrapper, so its marker goes nowhere');
+  });
+});
+
 console.log('\nprint contract');
 test('post-call still marks the printable section with .doc', () => {
   assert.ok(/class="sec doc"/.test(html['post-call.html']),

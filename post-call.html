@@ -88,6 +88,11 @@
       <span class="copied" id="cpFlag">הועתק</span>
     </div>
   </div>
+  <!-- What the tool concluded about this particular client, from what, and
+       what it changed in the document. Shown rather than applied silently:
+       the operator signs the proposal either way, and only a visible
+       inference is one they can check. -->
+  <div class="cread hidden" id="clientRead"></div>
   <div class="out" id="proposal"></div>
   <div id="wall" class="wall hidden">
     <h3>לייצוא ההצעה נדרש מפתח</h3>
@@ -303,6 +308,7 @@
 <script src="assets/deals.js"></script>
 <script src="assets/pc-dom.js"></script>
 <script src="assets/pc-catalog.js"></script>
+<script src="assets/pc-client.js"></script>
 <script src="assets/pc-proposal.js"></script>
 <script src="assets/pc-gate.js"></script>
 <script src="assets/pc-ledger.js"></script>
