@@ -42,10 +42,48 @@ export function rateLimit(req, { limit, windowMs, bucket }) {
   return 0;
 }
 
+/* Who the limiter is counting.
+
+   This used to read the first hop of x-forwarded-for, which is the value the
+   caller controls: the platform appends, it does not replace what came in, so
+   an attacker who varies that one header gets a fresh bucket on every request
+   and /api/license goes back to being an unlimited guessing oracle. An
+   identity anyone can choose is not an identity.
+
+   The trust boundary is the platform edge, so the order below runs from
+   headers only the edge can write down to the socket:
+
+     x-vercel-forwarded-for — Vercel reserves the x-vercel-* prefix and strips
+       any inbound copy, so this one cannot be forged from outside
+     x-real-ip — written by the proxy in front of us (Vercel, nginx), single
+       valued, with no caller-supplied list to pick the wrong end of
+     x-forwarded-for — the fallback, and here the LAST hop is taken rather
+       than the first. Every entry to the left of it can be caller-supplied;
+       the rightmost is the one the nearest proxy wrote itself.
+     the socket — no proxy at all, and then the connection is the truth
+
+   Behind two or more proxies the last hop is the nearest proxy rather than the
+   client, and everyone lands in one bucket. That fails toward refusing real
+   traffic instead of admitting forged traffic, which is the right direction to
+   fail in for a key check — and it does not arise on the platform this
+   actually deploys to, where the edge headers above answer first.
+
+   If this is ever deployed behind something that forwards x-real-ip verbatim
+   from the client, this ordering has to be retuned; that is a property of the
+   deployment, not of this file, so it is written down rather than guessed at. */
 export function clientIp(req) {
-  const fwd = req.headers['x-forwarded-for'];
-  if (typeof fwd === 'string' && fwd) return fwd.split(',')[0].trim();
-  return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
+  const h = req.headers || {};
+  const one = v => (typeof v === 'string' ? v.split(',')[0].trim() : '');
+
+  const edge = one(h['x-vercel-forwarded-for']) || one(h['x-real-ip']);
+  if (edge) return edge;
+
+  const fwd = h['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.trim()) {
+    const hops = fwd.split(',').map(s => s.trim()).filter(Boolean);
+    if (hops.length) return hops[hops.length - 1];
+  }
+  return req.socket?.remoteAddress || 'unknown';
 }
 
 /* Neither endpoint has any use for a large body — the biggest legitimate

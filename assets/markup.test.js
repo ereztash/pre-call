@@ -244,6 +244,27 @@ for (const page of PAGES) {
   });
 }
 
+/* The same fact — one shared global scope, filled in document order — is what
+   makes stale caching a correctness bug here rather than a performance note.
+   There is no build step and therefore no fingerprint in a filename, so a
+   deploy that ships a new post-call.html against an hour-old post-call.js gets
+   a page that boots, renders, and calls a function that is not there yet. That
+   is the exact failure class the rest of this file exists to catch, arriving
+   by a route no test of the source can see. Until something hashes the names,
+   the assets must revalidate on every load. */
+test('assets are not cached under names that never change', () => {
+  const rule = (csp.headers || []).find(h => /assets/.test(h.source));
+  assert.ok(rule, 'the /assets rule went missing');
+  const cc = (rule.headers.find(h => h.key.toLowerCase() === 'cache-control') || {}).value || '';
+  const maxAge = Number((cc.match(/max-age=(\d+)/) || [])[1]);
+  const fingerprinted = SCRIPTS.some(f => /\.[0-9a-f]{8,}\.js$/.test(f));
+  assert.ok(fingerprinted || maxAge === 0 || /no-cache|no-store/.test(cc),
+    'unhashed filenames plus max-age=' + maxAge + ' lets a browser run old JS ' +
+    'against new HTML for ' + maxAge + ' seconds after a deploy');
+  assert.ok(/must-revalidate|no-cache|no-store/.test(cc),
+    'without must-revalidate a stale response may still be served');
+});
+
 test('every data-act in the markup has a handler in the script', () => {
   const pairs = [['index.html', 'assets/pre-call.js'], ['post-call.html', 'assets/post-call.js']];
   for (const [page, script] of pairs) {

@@ -64,9 +64,47 @@ test('the window slides — old hits stop counting', () => {
   while (Date.now() - start < 3) { /* let the 1ms window pass */ }
   assert.strictEqual(rateLimit(r, opts), 0, 'the window expired, the client is allowed again');
 });
-test('takes the first hop of x-forwarded-for, not the last', () => {
+
+console.log('\nwho the limiter is counting');
+/* The identity has to be one the caller cannot choose. Every test here is
+   really the same question asked four ways: can a request talk its way into a
+   fresh bucket by writing a header? */
+test('prefers the header only the platform edge can write', () => {
+  assert.strictEqual(clientIp(req({ headers: {
+    'x-vercel-forwarded-for': '9.9.9.9',
+    'x-real-ip': '8.8.8.8',
+    'x-forwarded-for': '1.1.1.1, 2.2.2.2'
+  } })), '9.9.9.9');
+});
+test('falls to x-real-ip when the platform header is absent', () => {
+  assert.strictEqual(clientIp(req({ headers: {
+    'x-real-ip': '8.8.8.8', 'x-forwarded-for': '1.1.1.1, 2.2.2.2'
+  } })), '8.8.8.8');
+});
+test('takes the LAST hop of x-forwarded-for, not the first', () => {
+  // the first hop is whatever the caller sent; only the rightmost entry was
+  // written by the proxy nearest to us
   assert.strictEqual(
-    clientIp(req({ headers: { 'x-forwarded-for': '9.9.9.9, 10.0.0.1, 10.0.0.2' } })), '9.9.9.9');
+    clientIp(req({ headers: { 'x-forwarded-for': '9.9.9.9, 10.0.0.1, 10.0.0.2' } })), '10.0.0.2');
+});
+test('a caller cannot buy a new bucket by prepending to x-forwarded-for', () => {
+  const opts = { limit: 1, windowMs: 60_000, bucket: 'spoof' };
+  const real = '203.0.113.7';
+  assert.strictEqual(rateLimit(req({ headers: { 'x-forwarded-for': real } }), opts), 0);
+  // same client, a different invented first hop on every attempt
+  ['1.1.1.1', '2.2.2.2', '3.3.3.3'].forEach(fake => {
+    assert.ok(rateLimit(req({ headers: { 'x-forwarded-for': fake + ', ' + real } }), opts) > 0,
+      'forging ' + fake + ' reset the limit — the oracle is open again');
+  });
+});
+test('no proxy headers at all falls back to the socket', () => {
+  assert.strictEqual(clientIp({ headers: {}, socket: { remoteAddress: '127.0.0.1' } }), '127.0.0.1');
+  assert.strictEqual(clientIp({ headers: {} }), 'unknown');
+});
+test('an empty or whitespace header is not treated as an identity', () => {
+  assert.strictEqual(clientIp({ headers: { 'x-real-ip': '', 'x-forwarded-for': '  ' },
+    socket: { remoteAddress: '127.0.0.1' } }), '127.0.0.1',
+    'otherwise every blank-header caller shares one bucket');
 });
 
 console.log('\nbody size');

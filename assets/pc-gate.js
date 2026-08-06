@@ -107,20 +107,45 @@ function showKeyErr(msg){
    reloads and could lock out a whole office behind one address. Once a day is
    enough to close a bypass that has to survive to be worth anything.
 
-   Unlocking is still optimistic so a paying user never watches a spinner. If
-   the server later says no, the gate comes back. */
+   The second thing this used to get wrong was the opposite failure, and it is
+   the one that costs money. POSTCALL_KEYS is an allowlist, so the server has
+   no reason to care about the checksum and does not check it — a key issued
+   by hand is valid on the server and fails keyValid(). That key unlocked once,
+   on the server's word, and was then thrown away on the next reload, which is
+   a paying customer hitting the paywall again. Requiring the weaker of two
+   authorities to ratify the stronger one is backwards.
+
+   So the rule here is the same one tryUnlock() uses, in both directions: the
+   server decides when it has an opinion, and the checksum decides only when it
+   does not. In practice that means three ways in, and the ordering is what
+   keeps a reload instant:
+
+     - a stamp from a previous server 'yes' (only tryUnlock writes it, and only
+       on remote === true) — the server has already ruled, so unlock now and
+       do not spend a request on it. This is also what makes the offline
+       reload work for a key the checksum would reject.
+     - the checksum passes — unlock now, optimistically, as before.
+     - neither — a server-issued key with no surviving stamp. Do not open the
+       page on nothing, but do ask, and unlock if the answer is yes.
+
+   Revocation still runs in all cases: an explicit `false` locks and clears. */
 function rehydrateKey(){
   try {
     const saved = localStorage.getItem(KEY_STORE);
-    if (!saved || !keyValid(saved)) return;
-    unlocked = true;
+    // shape is the floor — below it there is nothing worth asking about
+    if (!saved || !KEY_SHAPE.test(saved)) return;
+
     const last = Date.parse(localStorage.getItem(KEY_OK_AT) || '') || 0;
-    if (Date.now() - last <= RECHECK_MS) return;
+    const confirmed = last > 0;
+    unlocked = confirmed || keyValid(saved);
+
+    if (unlocked && Date.now() - last <= RECHECK_MS) return;
     keyValidRemote(saved).then(v => {
       if (v === false) {
         unlocked = false;
         try { localStorage.removeItem(KEY_STORE); localStorage.removeItem(KEY_OK_AT); } catch(e){}
       } else if (v === true) {
+        unlocked = true;
         try { localStorage.setItem(KEY_OK_AT, new Date().toISOString()); } catch(e){}
       }
       // 'throttled' or null: no verdict, leave it as it was
