@@ -152,12 +152,38 @@
 
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
     html{scroll-behavior:auto}}
+  /* ---- print ----
+     An allowlist, not a denylist. The old sheet named the things to hide, so
+     when the restructure wrapped the proposal in its own .sec that wrapper's
+     display:none took the proposal down with it — display:block on a child
+     cannot resurrect a removed ancestor — and the paid PDF came out blank.
+     Now everything is hidden and only the chain down to the document is put
+     back, so a future wrapper cannot silently empty the page again. */
   @media print{
     body{background:#fff;color:#000}
     .wrap{max-width:100%;padding:0}
-    header,.sec,.box,.nums,.wall,button,footer,.hideprint{display:none!important}
-    #proposal{display:block!important}
-    .out{padding:0}
+    .wrap > *{display:none!important}
+    .wrap > main{display:block!important}
+    main > *{display:none!important}
+    main > .sec.doc{display:block!important}
+    .sec.doc > *{display:none!important}
+    .sec.doc > #proposal{display:block!important}
+    .out{padding:0;margin:0;border:0;border-radius:0;background:#fff}
+
+    /* Browsers print backgrounds off by default, so anything that carries its
+       meaning in a fill loses it on paper: the dark table header printed as
+       white on white, and the two callouts lost the edge that separates them
+       from body text. Each one is restated with a border, which always prints. */
+    .out th{background:transparent;color:#000;border-bottom:1.5px solid #000}
+    .out .pricebox,.out .rationale{background:transparent;border:1px solid #999;
+                                   border-right:3px solid #333}
+    /* the exclusions list keeps its colour and nothing else — #9c3340 is a text
+       colour, so it prints; striking it through would read as "cancelled"
+       rather than "out of scope" on a document going to a client */
+
+    /* keep a section and its heading on the same sheet */
+    .out h4{break-after:avoid;page-break-after:avoid}
+    .out table,.out .pricebox{break-inside:avoid;page-break-inside:avoid}
   }
 
   /* ---- document-first shell ----

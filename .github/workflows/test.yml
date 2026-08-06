@@ -1,0 +1,29 @@
+# The two bugs that would have shipped broken — a CSP that killed every button
+# and a print sheet that produced a blank PDF — were both invisible locally and
+# both statically checkable. Running the suite on every push is what turns that
+# from a thing I happened to catch into a thing that cannot recur.
+#
+# No package.json on purpose: this is a static site with serverless functions,
+# and the tests use only the Node standard library, so there is nothing to
+# install and nothing for the deploy step to misread as a build.
+name: tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: pricing model
+        run: node assets/model.test.js
+      - name: deal ledger
+        run: node assets/deals.test.js
+      - name: markup, CSP and print contracts
+        run: node assets/markup.test.js
