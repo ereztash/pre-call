@@ -195,11 +195,23 @@
   <h2 style="margin-top:26px">מה התהליך עולה לו בשנה</h2>
   <p class="lead">גם אם אתה לא מתמחר לפי ערך, המספר הזה הוא מה שאתה אומר בשיחה.</p>
 
+  <div class="box">
+    <label>מאיפה הגיע המספר בשאלה 6
+      <span class="hint">בשיחות מתועדות בתחומים דומים, הלקוח נותן ספרות רק אחרי שהמוכר מכוון אותו לשם.
+        אם זה מה שקרה, המספר מודד את השאלה שלך ולא את העסק שלו.</span></label>
+    <select id="q_provenance">
+      <option value="unprompted">הוא נקב במספר מעצמו, בלי שכיוונתי</option>
+      <option value="prompted" selected>הוא נקב אחרי ששאלתי ישירות</option>
+      <option value="mine">אני הערכתי בשבילו</option>
+      <option value="none">לא היה מספר</option>
+    </select>
+  </div>
+
   <div class="nums">
     <div class="grid">
       <div class="stat"><div class="k">שעות שנשרפות בשנה</div><div class="v" id="s_hours">—</div><div class="u">שעות עבודה</div></div>
       <div class="stat"><div class="k">עלות התהליך בשנה</div><div class="v" id="s_value">—</div><div class="u">זמן + תקלות</div></div>
-      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u">שעות בנייה</div></div>
+      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u" style="color:var(--red)">שעות בנייה · לא מכויל</div></div>
       <div class="stat big"><div class="k">מחיר מוצע</div><div class="v" id="s_price">—</div><div class="u" id="s_band">טווח הגנה</div></div>
       <div class="stat"><div class="k">החזר השקעה</div><div class="v" id="s_payback">—</div><div class="u">שבועות</div></div>
     </div>

@@ -214,6 +214,24 @@ function readInputs(){
 }
 const model = () => PC.model.compute(readInputs());
 
+/* Where the client's number came from decides what the value figure is worth.
+   In documented comparable engagements, clients produced digits only after the
+   seller injected the quantification move — meaning a number that appears on
+   request may be measuring the question rather than the business. The tool
+   cannot resolve that, so it records it and says so instead of averaging it in. */
+function provenanceWarning(m){
+  if (!m.annualValue) return '';
+  const p = el('q_provenance').value;
+  if (p === 'unprompted') return '';
+  if (p === 'prompted') return '<div class="tri-warn">המספר הגיע אחרי ששאלת. ' +
+    'ייתכן שהוא אמיתי, וייתכן שהוא נבנה בשבילך בזמן השיחה. לפני שאתה שולח מחיר שנשען עליו, ' +
+    'שאל אותו שאלה אחת: "איך אתה יודע את זה?" — אם אין תשובה, זה אומדן ולא מדידה.</div>';
+  if (p === 'mine') return '<div class="tri-warn"><b>המספר הוא שלך, לא שלו.</b> ' +
+    'תמחור לפי ערך שנשען על מספר שאתה המצאת הוא תמחור לפי עלות עם שכבת הצדקה. ' +
+    'או שתוציא ממנו מספר, או שתתמחר לפי שיטה אחרת ותציג את הערך כהערכה מפורשת.</div>';
+  return '';
+}
+
 function recompute(){
   const m = model();
   el('s_hours').textContent   = m.hours   ? Math.round(m.hours).toLocaleString('en-US') : '—';
@@ -245,6 +263,7 @@ function recompute(){
       (m.errShare > 0.55 ? '<div class="tri-warn">' + Math.round(m.errShare * 100) +
         '% מהערך השנתי מגיע מהערכת התקלות בשאלה 6 — מספר שהלקוח שלף בעל פה. ' +
         'המחיר שלך תלוי בו יותר מאשר בכל השאר. בקש ממנו דוגמה אחת קונקרטית לפני שאתה שולח.</div>' : '') +
+      provenanceWarning(m) +
       (m.M.cost && m.M.market && Math.max(m.M.cost.value, m.M.market.value) /
         Math.min(m.M.cost.value, m.M.market.value) >= 2
         ? '<div class="tri-warn">אומדן העלות שלך רחוק מטווח השוק. או שהאומדן שגוי, ' +
@@ -361,8 +380,12 @@ function rationaleFor(m){
       המחיר בטווח המקובל${m.annualValue ? `, והתהליך עולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
   }
   if (m.method === 'cost') {
-    return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.M.cost.basis}.
-      התמחור שקוף: אתה משלם על העבודה שנדרשת${m.annualValue ? `, מול תהליך שעולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
+    // The hour breakdown stays out of the client's copy on purpose. Justifying a
+    // price with hours invites a negotiation about hours, and the anchor is
+    // supposed to be what the work is worth, not what it costs to produce.
+    return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.annualValue
+      ? `התהליך עולה לך כ-${ils(m.annualValue)} בשנה. המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל".`
+      : 'המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל" ומהגבולות שמפורטים תחתיו.'}</div>`;
   }
   if (m.method === 'comparable' && m.M.comparable) {
     return `<div class="rationale"><b>מאיפה המחיר.</b> עבודה דומה שביצעתי, מותאמת להיקף כאן${

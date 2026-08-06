@@ -67,8 +67,12 @@
   .presets .lbl{font-size:12.5px;color:var(--muted);align-self:center;margin-left:2px}
 
   /* ---- live numbers ---- */
+  /* Was position:sticky;bottom:0 — sensible when this was a five-stat strip.
+     It has since grown a triangulation table, a recommendation and warnings,
+     and a pinned block that tall covered the method selector above it and
+     swallowed its clicks. Nothing here needs to follow the scroll. */
   .nums{background:#0f1216;border:1px solid var(--line);border-radius:8px;padding:18px;
-        position:sticky;bottom:0;margin-top:8px}
+        margin-top:8px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
   .stat{background:var(--charcoal-2);border-radius:6px;padding:12px 14px;
         border-right:3px solid var(--turq)}
