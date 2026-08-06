@@ -22,8 +22,36 @@ function dealSnapshot(){
     estimatedHours: m.effort,      // locked at save time — see deals.js
     priceQuoted: m.price,
     method: m.method,
-    systems: [...chosenSystems]
+    systems: [...chosenSystems],
+    /* The full form, so a saved deal can be opened again.
+       Without this the ledger stored a summary and nothing else, which meant
+       saving a proposal was a one-way door: the client comes back asking for
+       one change and the whole thing has to be re-entered from the call
+       notes. The summary fields above stay as they are — the ledger's
+       reporting reads them, and estimatedHours in particular must keep
+       meaning "the estimate at the moment it was quoted". */
+    form: collectDraft()
   };
+}
+
+/* Puts a saved deal back on the form. Announced, because a page that silently
+   repopulates itself is indistinguishable from one showing the wrong client
+   — and the operator is about to send whatever is on it. */
+function loadDeal(id){
+  const d = PC.deals.get(id);
+  if (!d || !d.form) { flashDoc('העסקה הזאת נשמרה לפני שהיה אפשר לפתוח מחדש'); return; }
+  applyDraft(d.form);
+  currentDealId = d.id;
+  renderScope(); renderLedger(); recompute(); renderGuide();
+  saveDraft();
+  const note = el('draftNote');
+  if (note) {
+    note.innerHTML = 'נפתחה לעריכה: ' + esc(d.client) +
+      ' · נשמרה ' + (d.created || '').slice(0, 10) +
+      ' <button type="button" class="ghost" data-act="newdeal">הצעה חדשה במקום</button>';
+    show('draftNote', true);
+  }
+  el('proposal').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function saveCurrentDeal(){
@@ -94,6 +122,8 @@ const renderLedger = guard('ledger', function (){
         ${['sent','won','lost','no_answer'].map(s =>
           `<button type="button" class="sbtn${d.status===s?' on s-in':''}" aria-pressed="${d.status===s}"
             data-deal="${d.id}" data-status="${s}">${PC.STATUS_LABEL[s]}</button>`).join('')}
+        <button type="button" class="sbtn s-open" data-deal="${d.id}" data-status="__open"${
+          d.form ? '' : ' disabled title="נשמרה לפני שהיה אפשר לפתוח מחדש"'}>פתח לעריכה</button>
         <button type="button" class="sbtn" data-deal="${d.id}" data-status="__remove">מחק</button>
       </div>
       ${d.status === 'won' || done ? `

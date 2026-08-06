@@ -360,7 +360,9 @@ const recompute = guard('recompute', function (){
   }
   renderClientRead();
   renderProposal();
+  renderViz();
   renderGuide();
+  if (!el('sendBox').classList.contains('hidden')) renderSend();
 });
 
 /* ---------- the guide ----------
@@ -415,6 +417,7 @@ const renderGuide = guard('guide', function (){
   let g = PC.guide.next(guideState());
 
   // a step the user explicitly skipped is not offered again on every keystroke
+  if (g.suggestion && skipped.has(g.suggestion.stepId)) g = Object.assign({}, g, { suggestion: null });
   if (skipped.has(g.stepId) && g.optional) {
     g = PC.guide.next(Object.assign(guideState(), { errFreq: 1, errCost: 1 }));
   }
@@ -433,11 +436,22 @@ const renderGuide = guard('guide', function (){
     '<div class="guide-ask">' + esc(g.ask) + '</div>' +
     (g.why ? '<div class="guide-why">' + esc(g.why) + '</div>' : '') +
     '<div class="guide-acts">' +
-      '<button type="button" class="act" data-act="goto" data-anchor="' + g.anchor +
-        '" data-fields="' + esc(g.fields.join(',')) + '">' + esc(g.cta) + '</button>' +
+      // a step that names an action is dispatched, not navigated to
+      (g.act
+        ? '<button type="button" class="act" data-act="' + esc(g.act) + '">' + esc(g.cta) + '</button>'
+        : '<button type="button" class="act" data-act="goto" data-anchor="' + g.anchor +
+          '" data-fields="' + esc(g.fields.join(',')) + '">' + esc(g.cta) + '</button>') +
       (g.optional ? '<button type="button" class="guide-skip" data-act="skip" data-step="' +
         g.stepId + '">לדלג על זה</button>' : '') +
     '</div>' +
+    // a suggestion sits under the instruction, never instead of it
+    (g.suggestion ? '<div class="guide-sug"><b>אפשר לחדד:</b> ' + esc(g.suggestion.title) + '. ' +
+      esc(g.suggestion.why) +
+      '<span class="guide-sug-a"><button type="button" class="ghost" data-act="goto" ' +
+      'data-anchor="' + g.suggestion.anchor + '" data-fields="' +
+      esc(g.suggestion.fields.join(',')) + '">' + esc(g.suggestion.cta) + '</button>' +
+      '<button type="button" class="guide-skip" data-act="skip" data-step="' +
+      g.suggestion.stepId + '">לא צריך</button></span></div>' : '') +
     g.problems.map(pr =>
       '<div class="guide-prob"><span>' + esc(pr.text) + '</span>' +
       '<button type="button" class="ghost" data-act="goto" data-anchor="' + pr.field + '">' +
@@ -466,10 +480,16 @@ function confirmScope(){
 
 function skipStep(id){ skipped.add(id); renderGuide(); }
 
-function resetGuide(){
-  scopeConfirmed = false; skipped.clear(); methodPinned = false;
+function resetScopeConfirm(){
+  scopeConfirmed = false;
   const w = el('scopeConfirmBtn');
   if (w) { w.textContent = 'עברתי על הרשימה, ממשיכים'; w.parentElement.classList.remove('done'); }
+}
+
+function resetGuide(){
+  resetScopeConfirm();
+  skipped.clear(); methodPinned = false;
+  show('sendBox', false);
   renderGuide();
 }
 
@@ -557,6 +577,80 @@ const renderClientRead = guard('client', function (){
   });
 });
 
+/* ---------- the visuals ----------
+   Only what the evidence supports. See the note at the top of pc-viz.js for
+   what is deliberately absent and why. */
+const renderViz = guard('viz', function (){
+  const box = el('vizBox'); if (!box) return;
+  const v = PC.viz.forModel(model(), { numbersAreMine: el('q_provenance').value === 'mine' });
+  if (!v.payback && !v.share && !v.waiting) { show('vizBox', false); box.innerHTML = ''; return; }
+
+  let html = '';
+  if (v.payback) {
+    // one cell per week; the verdict is a word first and a hue second, so the
+    // meaning survives a colour vision deficiency, glare, or a bad screen
+    html += '<div class="viz-b"><div class="viz-h">מתי ההשקעה חוזרת ללקוח' +
+      '<span class="viz-tag v-' + v.payback.verdict + '">' + esc(v.payback.verdictText) + '</span></div>' +
+      '<div class="wks" role="img" aria-label="' + esc(v.payback.label) + '">' +
+      Array.from({ length: v.payback.cells }, (_, i) =>
+        '<i class="wk' + (i < v.payback.filled ? ' on' : '') + '"></i>').join('') +
+      '</div><div class="viz-c">' + esc(v.payback.label) + '</div>' +
+      '<div class="viz-s">' + esc(v.payback.sentence) + '</div></div>';
+  }
+  if (v.share) {
+    html += '<div class="viz-b"><div class="viz-h">המחיר מול מה שזה עולה לו בשנה</div>' +
+      '<div class="shr' + (v.share.over ? ' over' : '') + '" role="img" aria-label="' +
+      esc(v.share.label) + '"><span class="shr-f"></span>' +
+      '<span class="shr-l">' + v.share.percent + '%</span></div>' +
+      '<div class="viz-s">' + esc(v.share.sentence) + '</div></div>';
+  }
+  if (v.waiting) {
+    html += '<div class="viz-b"><div class="viz-h">' + esc(v.waiting.label) + '</div>' +
+      '<div class="viz-s">' + esc(v.waiting.note) + '</div></div>';
+  }
+  box.innerHTML = html;
+  const f = box.querySelector('.shr-f');
+  if (f && v.share) f.style.width = v.share.percent + '%';   // CSSOM, not an inline attribute
+  show('vizBox', true);
+});
+
+/* ---------- sending it ----------
+   A = the call ended. B = the proposal is in the client's inbox. Everything
+   before this closed the first half and left the second entirely to the
+   operator, which is the most abandonable step in the whole journey. */
+const renderSend = guard('send', function (){
+  const box = el('sendBox'); if (!box) return;
+  const rs = PC.send.routes({
+    html: el('proposal').innerHTML,
+    client: txt('q_client'), phone: txt('q_phone'), email: txt('q_email')
+  });
+  box.innerHTML = '<div class="send-h">לשלוח ללקוח</div>' +
+    '<div class="send-rows">' + rs.map(r =>
+      '<div class="send-row' + (r.ok ? '' : ' off') + '">' +
+        '<button type="button" class="' + (r.ok ? 'act' : 'ghost') + '" data-act="sendvia" ' +
+          'data-route="' + r.id + '"' + (r.ok ? '' : ' disabled') + '>' + esc(r.label) + '</button>' +
+        '<span class="send-n">' + esc(r.note) + '</span>' +
+      '</div>').join('') + '</div>' +
+    '<div class="send-f">אחרי השליחה ההצעה תסומן אוטומטית כ"נשלחה" בפנקס, כדי שתדע על מה עוד לא ענו.</div>';
+});
+
+function openSend(){ show('sendBox', true); renderSend();
+  el('sendBox').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+
+function sendVia(id){
+  const rs = PC.send.routes({
+    html: el('proposal').innerHTML,
+    client: txt('q_client'), phone: txt('q_phone'), email: txt('q_email')
+  });
+  const r = rs.find(x => x.id === id);
+  if (!r || !r.ok) return;
+  if (id === 'copy') copyProposal();
+  else window.open(r.url, '_blank', 'noopener');
+  // marking it sent is the point of the ledger, and asking the operator to
+  // remember a second click is how a follow-up list goes stale
+  markSent();
+}
+
 /* ---------- the document ---------- */
 const renderProposal = guard('proposal', function (){
   el('proposal').innerHTML = PC.proposal.build({
@@ -626,19 +720,29 @@ const PRISTINE = (() => {
   return o;
 })();
 
+/* One place that puts a saved shape back on the form. Both the draft restore
+   and reopening a saved deal go through it, so the two cannot drift into
+   restoring different subsets of the same state. */
+function applyDraft(d){
+  if (!d) return;
+  Object.entries(d.fields || {}).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
+  selectSystems(d.systems || []);
+  scopeState = Object.assign(defaultScopeState(), d.scope || {});
+  activeTemplate = d.template || null;
+  clientOverride = d.override || 'auto';
+  methodPinned = false;
+  skipped.clear();
+  show('customRateWrap', el('q_role').value === 'custom');
+  if (d.scopeConfirmed) confirmScopeSilently(); else resetScopeConfirm();
+}
+
 function restoreDraft(){
   if (!PC.draft) return;
   const d = PC.draft.load();
   if (PC.draft.isEmpty(d, PRISTINE)) return;
 
-  Object.entries(d.fields || {}).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
-  if (d.systems) selectSystems(d.systems);
-  if (d.scope) scopeState = Object.assign(defaultScopeState(), d.scope);
-  activeTemplate = d.template || null;
+  applyDraft(d);
   currentDealId = d.dealId || null;
-  clientOverride = d.override || 'auto';
-  if (d.scopeConfirmed) confirmScopeSilently();
-  show('customRateWrap', el('q_role').value === 'custom');
 
   /* Announced, never silent. A form that fills itself on load with no
      explanation is indistinguishable from a form showing the wrong client —
@@ -691,7 +795,8 @@ const ACTIONS = {
   unlock:  tryUnlock,
   newdeal: newDeal,
   discard: discardDraft,
-  confirmscope: confirmScope
+  confirmscope: confirmScope,
+  send:    () => requireKey(openSend)
 };
 document.addEventListener('click', e => {
   // the guide's own buttons carry where to go, so they are handled first
@@ -700,6 +805,8 @@ document.addEventListener('click', e => {
     goTo(g.dataset.anchor, (g.dataset.fields || '').split(',').filter(Boolean)); return; }
   const sk = e.target.closest('[data-step]');
   if (sk && sk.dataset.act === 'skip') { e.preventDefault(); skipStep(sk.dataset.step); return; }
+  const sv = e.target.closest('[data-route]');
+  if (sv) { e.preventDefault(); sendVia(sv.dataset.route); return; }
 
   const d = e.target.closest('[data-deal]');
   if (d) {
@@ -707,6 +814,7 @@ document.addEventListener('click', e => {
     const id = d.dataset.deal, st = d.dataset.status;
     if (st === '__remove') removeDeal(id);
     else if (st === '__outcome') saveOutcome(id);
+    else if (st === '__open') loadDeal(id);
     else setDealStatus(id, st);
     return;
   }

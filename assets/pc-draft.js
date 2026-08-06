@@ -30,7 +30,8 @@
     'q_trigger','q_err_freq','q_err_cost','q_integration','q_edge','q_prev','q_decider',
     'q_deadline','q_success','q_provenance',
     'a_capture','a_myrate','a_maint',
-    'c_last','c_scale','c_deals','c_margin'
+    'c_last','c_scale','c_deals','c_margin',
+    'q_phone','q_email'
   ];
 
   function make(storage) {

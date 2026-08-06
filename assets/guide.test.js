@@ -75,12 +75,30 @@ test('an optional step never blocks the finish', () => {
   assert.strictEqual(n.ready, true, 'the price is worse without it, but it is not a gate');
   assert.strictEqual(n.percent, 100);
 });
-test('an optional step is still offered before the end', () => {
+test('once nothing required is missing, the instruction is to send', () => {
+  // an optional question must never stand between the operator and the only
+  // outcome that matters — measured once as the final button pointing at
+  // question six instead of at the send panel
   const s = { process: 'x', freq: 20, freqUnit: 52, minutes: 7, systems: ['א'],
               scopeConfirmed: true, client: 'מאפייה' };
   const n = G.next(s);
-  assert.strictEqual(n.stepId, 'breaks');
-  assert.strictEqual(n.optional, true, 'offered, marked skippable');
+  assert.strictEqual(n.stepId, 'send');
+  assert.strictEqual(n.anchor, 'sendBox');
+});
+test('the optional step is surfaced as a suggestion, not as the instruction', () => {
+  const s = { process: 'x', freq: 20, freqUnit: 52, minutes: 7, systems: ['א'],
+              scopeConfirmed: true, client: 'מאפייה' };
+  const n = G.next(s);
+  assert.ok(n.suggestion, 'skipping it silently loses the operator money');
+  assert.strictEqual(n.suggestion.stepId, 'breaks');
+  assert.ok(n.suggestion.cta && n.suggestion.anchor && n.suggestion.why);
+});
+test('nothing is suggested while something required is still missing', () => {
+  assert.strictEqual(G.next({}).suggestion, null, 'one thing at a time');
+  assert.strictEqual(G.next({ process: 'x' }).suggestion, null);
+});
+test('a finished form with the optional step done suggests nothing', () => {
+  assert.strictEqual(at({}).suggestion, null);
 });
 test('every step carries its own short label rather than a truncated title', () => {
   G.next({}).steps.forEach(st => {
@@ -118,6 +136,18 @@ test('every step says what answering it buys the user', () => {
 });
 test('every step points somewhere concrete on the page', () => {
   G.STEPS.forEach(st => assert.ok(st.anchor, st.id + ' has nowhere to send you'));
+});
+test('the final step is an action, not a place to scroll to', () => {
+  // pointing it at an element landed on a panel that is hidden until the
+  // export gate is passed — the last instruction in the flow was a dead end
+  const last = G.STEPS[G.STEPS.length - 1];
+  assert.strictEqual(last.terminal, true);
+  assert.ok(last.act, 'the terminal step must dispatch an action');
+  assert.strictEqual(G.next({ process: 'x', freq: 1, freqUnit: 52, minutes: 1,
+    systems: ['א'], scopeConfirmed: true, client: 'x' }).act, 'send');
+});
+test('an ordinary step names no action, so it navigates', () => {
+  assert.strictEqual(G.next({}).act, null);
 });
 test('a step needing two answers names both of them', () => {
   // otherwise the cursor lands on the first box, the user fills it, and the

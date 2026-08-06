@@ -324,6 +324,13 @@
   .guide.ready{border-right-color:var(--copper);border-color:var(--copper-dim)}
   .guide.ready .guide-step,.guide.ready .guide-fill{color:var(--copper);background:var(--copper)}
 
+  /* a suggestion, under the instruction and never in place of it */
+  .guide-sug{background:#12191f;border:1px solid var(--line);border-radius:5px;
+             padding:10px 13px;margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.6}
+  .guide-sug b{color:#cfd6dd}
+  .guide-sug-a{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+  .guide-sug-a button{margin:0;font-size:12.5px;padding:6px 12px;min-height:38px}
+
   /* a number that cannot be true, said as an observation with the arithmetic
      shown — a red border teaches nothing to someone who does not know why */
   .guide-prob{background:#2a1b1f;border-right:3px solid var(--red-text);border-radius:5px;
@@ -346,6 +353,53 @@
              padding:12px 15px;font-size:13.5px;color:#bfe3dd;line-height:1.65;margin-bottom:10px}
   details.methodpick{margin-bottom:10px}
   details.methodpick>summary{font-size:13.5px;font-weight:500;color:var(--muted)}
+
+  /* ---- visuals ----
+     Icon array and part-to-whole only. Every state carries a word as well as
+     a hue (WCAG 1.4.1), and there is nothing here that exists to look nice —
+     see the note at the top of pc-viz.js. */
+  .viz{background:var(--charcoal-2);border:1px solid var(--line);border-top:0;
+       padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .viz-b{background:#0f1216;border:1px solid var(--line);border-radius:6px;padding:13px 15px}
+  .viz-h{font-size:13px;font-weight:600;color:#e2e5e9;margin-bottom:9px;
+         display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+  .viz-tag{font-size:11px;font-weight:700;border-radius:3px;padding:2px 8px;border:1px solid}
+  .v-fast{color:#0d1a18;background:var(--turq);border-color:var(--turq)}
+  .v-ok{color:#e8b57a;background:transparent;border-color:#e8b57a}
+  .v-slow{color:#f0c6cc;background:transparent;border-color:var(--red-text);
+          border-style:dashed}
+  .viz-c{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .viz-s{font-size:12.5px;color:#c9cdd3;margin-top:7px;line-height:1.6}
+
+  /* one square per week of the first year */
+  .wks{display:grid;grid-template-columns:repeat(13,1fr);gap:3px;direction:ltr}
+  .wk{display:block;width:100%;padding-top:100%;background:#242a31;border-radius:2px;
+      border:1px solid #2f363e}
+  /* filled cells differ by fill AND by border, so the array still reads when
+     hue is unavailable */
+  .wk.on{background:var(--turq);border-color:#7fd3c6}
+
+  .shr{position:relative;height:26px;background:#242a31;border:1px solid var(--line);
+       border-radius:4px;overflow:hidden;direction:ltr}
+  .shr-f{position:absolute;inset:0 auto 0 0;background:var(--copper);
+         border-left:2px solid #e8b57a}
+  .shr.over .shr-f{background:var(--red);border-left-color:var(--red-text)}
+  .shr-l{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+         font-size:13px;font-weight:700;color:#f2f0ec;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+
+  /* ---- sending ---- */
+  .sendbox{background:var(--charcoal-2);border:1px solid var(--copper-dim);border-top:0;
+           padding:16px}
+  .send-h{font-size:15px;font-weight:600;color:var(--copper);margin-bottom:10px}
+  .send-rows{display:flex;flex-direction:column;gap:9px}
+  .send-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .send-row button{margin:0;min-width:150px}
+  .send-row.off button{opacity:.5;cursor:not-allowed}
+  .send-n{font-size:12.5px;color:var(--muted);flex:1 1 200px;line-height:1.5}
+  .send-f{font-size:12.5px;color:var(--muted);margin-top:12px;padding-top:10px;
+          border-top:1px solid var(--line)}
+  .sbtn.s-open{border-color:var(--copper-dim);color:#e8c9a8}
+  .sbtn.s-open:disabled{opacity:.45;cursor:not-allowed}
 
   /* ---- restored draft ---- */
   .draftnote{background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);

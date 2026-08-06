@@ -106,7 +106,13 @@
       ask: 'עבור עליה פעם אחת מלמעלה למטה, ואז שלח.',
       why: '',
       cta: 'שלח ללקוח',
-      anchor: 'proposal',
+      anchor: 'sendBox',
+      /* The last step is an action, not a destination. Pointing it at an
+         element was measured landing on a hidden panel — the final
+         instruction in the whole flow was a dead end. A step that names an
+         `act` is dispatched through the app's own action table, which is
+         also what puts it behind the same gate as every other export. */
+      act: 'send',
       done: s => !!s.sent,
       terminal: true
     }
@@ -153,13 +159,23 @@
     const required = steps.filter(st => !st.optional && !st.terminal);
     const doneCount = required.filter(st => st.complete).length;
 
-    // the first thing not done, optional steps included so they get offered
-    // once rather than never — but they never block the finish
+    const ready = required.every(st => st.complete);
+
+    /* Once nothing required is missing the instruction is to send, full stop.
+       An earlier version offered the optional step here instead, which put a
+       skippable question between the operator and the only outcome that
+       matters — and measured as the guide's final button pointing at question
+       six rather than at the send panel. The optional step still gets
+       surfaced, as a suggestion alongside the instruction rather than as the
+       instruction. */
     const pending = steps.find(st => !st.terminal && !st.complete && !st.optional)
+                 || (ready ? steps[steps.length - 1] : null)
                  || steps.find(st => !st.terminal && !st.complete && st.optional)
                  || steps[steps.length - 1];
 
-    const ready = required.every(st => st.complete);
+    const suggest = ready
+      ? steps.find(st => !st.terminal && !st.complete && st.optional) || null
+      : null;
     const problems = sanity(s);
 
     return {
@@ -178,8 +194,13 @@
          step carries all of its fields and the caller focuses the first one
          still empty. */
       fields: pending.fields || [],
+      act: pending.act || null,
       optional: !!pending.optional,
       ready,
+      /* Worth doing, not required, and never in the way. */
+      suggestion: suggest ? { stepId: suggest.id, title: suggest.title,
+                              why: suggest.why, cta: suggest.cta,
+                              anchor: suggest.anchor, fields: suggest.fields || [] } : null,
       // a warning never replaces the instruction; it rides alongside it, so
       // there is still exactly one thing to do
       problems,

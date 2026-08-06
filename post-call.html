@@ -79,6 +79,12 @@
     </div>
     <label for="q_client">שם הלקוח או העסק</label>
     <input type="text" id="q_client" placeholder="לכותרת ההצעה">
+    <div class="row mt12">
+      <div><label for="q_phone">טלפון <span class="hint">לא חובה. אם תמלא, כפתור השליחה יפתח את הצ׳אט שלו</span></label>
+        <input type="tel" id="q_phone" placeholder="052-1234567" autocomplete="off"></div>
+      <div><label for="q_email">אימייל <span class="hint">לא חובה. לשליחה במייל בלחיצה אחת</span></label>
+        <input type="email" id="q_email" placeholder="name@company.co.il" autocomplete="off"></div>
+    </div>
   </div>
 </div>
 
@@ -93,8 +99,8 @@
     <div class="docacts">
       <button class="act" data-act="copy">העתק</button>
       <button class="ghost" data-act="print">PDF</button>
+      <button class="ghost" data-act="send">שלח</button>
       <button class="ghost" data-act="save">שמור</button>
-      <button class="ghost" data-act="sent">סמן כנשלחה</button>
       <span class="copied" id="cpFlag">הועתק</span>
     </div>
   </div>
@@ -104,6 +110,17 @@
        inference is one they can check. -->
   <div class="cread hidden" id="clientRead"></div>
   <div class="out" id="proposal"></div>
+
+  <!-- Evidence-led, and smaller than it could be. Icon arrays and part-to-whole
+       bars are here because visual aids measurably help people with low
+       numeracy read a quantity. Decorative illustration is absent because the
+       seductive-details literature says task-irrelevant pictures lower recall
+       — worst for exactly the readers this is for. -->
+  <div class="viz hidden" id="vizBox"></div>
+
+  <!-- The last step, which the tool used to leave entirely to the operator. -->
+  <div class="sendbox hidden" id="sendBox"></div>
+
   <div id="wall" class="wall hidden">
     <h3>לייצוא ההצעה נדרש מפתח</h3>
     <p>המסמך והמספרים חינם ותמיד יישארו. התשלום הוא על לקיחתו החוצה.</p>
@@ -334,6 +351,8 @@
 <script src="assets/pc-catalog.js"></script>
 <script src="assets/pc-draft.js"></script>
 <script src="assets/pc-guide.js"></script>
+<script src="assets/pc-viz.js"></script>
+<script src="assets/pc-send.js"></script>
 <script src="assets/pc-client.js"></script>
 <script src="assets/pc-proposal.js"></script>
 <script src="assets/pc-gate.js"></script>

@@ -35,6 +35,10 @@ jobs:
         run: node assets/guide.test.js
       - name: the proposal document
         run: node assets/proposal.test.js
+      - name: sending it out
+        run: node assets/send.test.js
+      - name: the visuals
+        run: node assets/viz.test.js
       - name: markup, CSP, print and telemetry contracts
         run: node assets/markup.test.js
       - name: api request guards
