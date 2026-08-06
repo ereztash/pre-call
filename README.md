@@ -211,6 +211,29 @@ POST-CALL נבנה כתשובה לכשל מבני ב-PRE-CALL: עוגן המחי
 
 ## פריסה ל-Vercel
 
+**חבר את הריפו, אל תעלה קבצים.** Vercel מזהה את המבנה לבד — אתר סטטי עם פונקציות ב-`api/`, בלי שלב build.
+
+1. [vercel.com/new](https://vercel.com/new) → **Import Git Repository** → `ereztash/pre-call`
+2. Framework Preset: **Other**. Build Command ו-Output Directory נשארים ריקים.
+3. **Deploy**.
+
+מכאן כל push לענף מייצר פריסה אוטומטית, וכל PR מקבל כתובת תצוגה מקדימה משלו.
+
+### שני משתני סביבה שצריך להגדיר
+
+| משתנה | מה קורה בלעדיו |
+|---|---|
+| `POSTCALL_KEYS` | מפתחות מופרדים בפסיקים, למשל `PC-A1B2-C3DK,PC-9X8Y-7Z6W`. **בלעדיו האכיפה בצד השרת כבויה** — `/api/license` מחזיר `not_configured` והשער נסוג לספרת הביקורת בדף, שניתנת לעקיפה. `/api/health` מדווח `licenseEnforced: false` בדיוק כדי שהמצב הזה לא יהיה שקוף |
+
+ועוד דבר אחד שהוא לא משתנה סביבה: **`PAYMENT_URL` בקובץ `assets/pc-gate.js`** עדיין מצביע על `example.com`. כל עוד הוא כזה, כפתור הרכישה מציג הודעה במקום לפתוח קישור תשלום. יש להחליף אותו בקישור מ-Stripe / Lemon Squeezy / Paddle.
+
+### בדיקה אחרי הפריסה
+
+```
+curl https://<your-domain>/api/health
+```
+צריך להחזיר `licenseEnforced: true` אחרי שהגדרתם מפתחות. אם הוא מחזיר `false`, השער פתוח.
+
 ```
 vercel.json        כותרות אבטחה, CSP, קאשינג
 api/_guard.js      הגבלת קצב, מגבלת גודל, השוואה בזמן קבוע
