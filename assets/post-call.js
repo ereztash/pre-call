@@ -452,7 +452,7 @@ ${scopeList('in').length ? `<h4>מה נכלל</h4>
 
 ${scopeList('out').length ? `<h4>מה לא נכלל</h4>
 <ul>${scopeList('out').map(i => `<li class="no">${esc(i.t)}</li>`).join('')}</ul>
-<p style="font-size:13px;color:#5f6673">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
+<p class="fine">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
 
 ${scopeList('extra').length ? `<h4>זמין בתוספת תשלום</h4>
 <ul>${scopeList('extra').map(i => `<li>${esc(i.t)}</li>`).join('')}</ul>` : ''}
@@ -460,7 +460,7 @@ ${scopeList('extra').length ? `<h4>זמין בתוספת תשלום</h4>
 <h4>המחיר</h4>
 <div class="pricebox">
   <div class="amt">${ils(m.price)}</div>
-  <div style="font-size:13px;color:#5f6673;margin-top:4px">
+  <div class="fine mt4">
     תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.
   </div>
 </div>
@@ -474,7 +474,7 @@ ${rationaleFor(m)}
   <tr><td>בדיקה</td><td>הרצה על נתונים אמיתיים במקביל לתהליך הקיים</td><td>שבוע</td></tr>
   <tr><td>מסירה</td><td>הדרכה, תיעוד, ואז שבועיים ליווי</td><td>שבועיים</td></tr>
 </table>
-${txt('q_deadline') ? `<p style="margin-top:8px">היעד שהגדרת: <b>${esc(txt('q_deadline'))}</b>.</p>` : ''}
+${txt('q_deadline') ? `<p class="mt8">היעד שהגדרת: <b>${esc(txt('q_deadline'))}</b>.</p>` : ''}
 
 <h4>איך נדע שזה הצליח</h4>
 <p>${esc(successLine)}. נמדוד את זה 30 יום אחרי המסירה.
@@ -592,8 +592,8 @@ function renderLedger(){
       <div class="deal-acts">
         ${['sent','won','lost','no_answer'].map(s =>
           `<button type="button" class="sbtn${d.status===s?' on s-in':''}" aria-pressed="${d.status===s}"
-            onclick="setStatus('${d.id}','${s}')">${PC.STATUS_LABEL[s]}</button>`).join('')}
-        <button type="button" class="sbtn" onclick="removeDeal('${d.id}')">מחק</button>
+            data-deal="${d.id}" data-status="${s}">${PC.STATUS_LABEL[s]}</button>`).join('')}
+        <button type="button" class="sbtn" data-deal="${d.id}" data-status="__remove">מחק</button>
       </div>
       ${d.status === 'won' || done ? `
         <div class="deal-out">
@@ -601,14 +601,14 @@ function renderLedger(){
             <input type="number" id="oc_price_${d.id}" value="${o.closedPrice || ''}" placeholder="${d.priceQuoted || ''}"></div>
           <div><label for="oc_hours_${d.id}">שעות עבודה בפועל</label>
             <input type="number" id="oc_hours_${d.id}" value="${o.actualHours || ''}" placeholder="${d.estimatedHours || ''}"></div>
-          <button type="button" class="ghost" onclick="saveOutcome('${d.id}')">שמור תוצאה</button>
+          <button type="button" class="ghost" data-deal="${d.id}" data-status="__outcome">שמור תוצאה</button>
         </div>` : ''}
     </div>`;
-  }).join('') : '<p class="lead" style="margin:0">עוד לא נשמרה אף הצעה. בנה אחת למעלה ולחץ "שמור".</p>');
+  }).join('') : '<p class="lead nomargin">עוד לא נשמרה אף הצעה. בנה אחת למעלה ולחץ "שמור".</p>');
 
   const bar = el('dealBar');
   if (bar) bar.innerHTML = list.length
-    ? `<button type="button" class="ghost" onclick="newDeal()">הצעה חדשה</button>
+    ? `<button type="button" class="ghost" data-act="newdeal">הצעה חדשה</button>
        <span class="dealbar-n">${list.length} שמורות · ${win.undecided} ממתינות לתשובה</span>` : '';
 }
 
@@ -645,3 +645,32 @@ function track(event, extra){
   } catch (e) {}
 }
 track('opened');
+
+/* ---------- event wiring ----------
+   Inline onclick attributes are blocked by the shipped Content Security Policy
+   (script-src 'self'), which would have left every button in the document bar
+   dead in production. Delegation from one listener also survives the ledger and
+   scope re-rendering their own markup. */
+const ACTIONS = {
+  copy:   () => requireKey(copyProposal),
+  print:  () => requireKey(() => window.print()),
+  save:   saveCurrentDeal,
+  sent:   markSent,
+  unlock: tryUnlock,
+  newdeal: newDeal
+};
+document.addEventListener('click', e => {
+  const d = e.target.closest('[data-deal]');
+  if (d) {
+    e.preventDefault();
+    const id = d.dataset.deal, st = d.dataset.status;
+    if (st === '__remove') removeDeal(id);
+    else if (st === '__outcome') saveOutcome(id);
+    else setStatus(id, st);
+    return;
+  }
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const fn = ACTIONS[t.dataset.act];
+  if (fn) { e.preventDefault(); fn(); }
+});

@@ -121,3 +121,14 @@
     .out{padding:0}
     .q{box-shadow:none;border-right:3px solid #999}
   }
+
+  /* utility classes replacing inline style attributes — see the CSP note */
+  .hidden{display:none}
+  .mt14{margin-top:14px}
+  .mb6{margin-bottom:6px}
+  .tiny{font-size:12px}
+  .ta-md{min-height:120px}
+  .ta-lg{min-height:130px}
+  .body-p{font-size:14.5px;color:#b8bec6}
+  .hint-p{font-size:14px;color:#a9b0b8;margin-bottom:8px}
+  .hint-p.tight{font-size:12.5px;color:var(--muted);margin:-4px 0 14px}

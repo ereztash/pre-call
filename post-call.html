@@ -66,22 +66,22 @@
   <div class="docbar">
     <div class="docprice"><span class="k">מחיר מוצע</span><span class="v" id="s_price_top">—</span></div>
     <div class="docacts">
-      <button class="act" onclick="requireKey(copyProposal)">העתק</button>
-      <button class="ghost" onclick="requireKey(()=>window.print())">PDF</button>
-      <button class="ghost" onclick="saveCurrentDeal()">שמור</button>
-      <button class="ghost" onclick="markSent()">סמן כנשלחה</button>
+      <button class="act" data-act="copy">העתק</button>
+      <button class="ghost" data-act="print">PDF</button>
+      <button class="ghost" data-act="save">שמור</button>
+      <button class="ghost" data-act="sent">סמן כנשלחה</button>
       <span class="copied" id="cpFlag">הועתק</span>
     </div>
   </div>
   <div class="out" id="proposal"></div>
-  <div id="wall" class="wall" style="display:none">
+  <div id="wall" class="wall hidden">
     <h3>לייצוא ההצעה נדרש מפתח</h3>
     <p>המסמך והמספרים חינם ותמיד יישארו. התשלום הוא על לקיחתו החוצה.</p>
     <div class="price">₪49</div>
     <button class="act" id="payBtn">קנה וקבל מפתח</button>
     <div class="keyrow">
       <input type="text" id="keyIn" aria-label="מפתח פתיחה" placeholder="הדבק כאן את המפתח" autocomplete="off">
-      <button class="ghost" onclick="tryUnlock()">פתח</button>
+      <button class="ghost" data-act="unlock">פתח</button>
     </div>
     <div class="err" id="keyErr">המפתח לא תקין. בדוק שהעתקת אותו במלואו.</div>
   </div>
@@ -111,7 +111,7 @@
         <option value="215">בעל/ת העסק · כ-215 ₪ לשעה</option>
         <option value="custom">אחר, אזין ידנית</option>
       </select>
-      <div id="customRateWrap" style="display:none">
+      <div id="customRateWrap" class="hidden">
         <label for="q_rate_custom">עלות שעה מלאה בשקלים</label>
         <input type="number" id="q_rate_custom" min="0" step="5" placeholder="100">
       </div>
@@ -167,9 +167,9 @@
     <div class="box">
     <label for="methodChips">שיטה ראשית</label>
     <div class="chips" id="methodChips"></div>
-    <p style="font-size:12.5px;color:var(--muted);margin-top:8px" id="methodHint"></p>
+    <p class="hint-p" id="methodHint"></p>
 
-    <div id="m_comparable_in" style="display:none">
+    <div id="m_comparable_in" class="hidden">
       <div class="row">
         <div>
           <label for="c_last">כמה גבית על העבודה הדומה האחרונה (₪)</label>
@@ -187,12 +187,12 @@
       </div>
     </div>
 
-    <div id="m_cost_in" style="display:none">
+    <div id="m_cost_in" class="hidden">
       <label for="c_margin">מרווח מעל העלות שלך (%)</label>
       <input type="number" id="c_margin" value="30" min="0" max="200" step="5">
     </div>
 
-    <div class="row" style="margin-top:12px">
+    <div class="row mt12">
       <div>
         <label for="c_deals">כמה עסקאות סגרת בתחום הזה?</label>
         <select id="c_deals">
@@ -221,7 +221,7 @@
     <div class="grid">
       <div class="stat"><div class="k">שעות שנשרפות בשנה</div><div class="v" id="s_hours">—</div><div class="u">שעות עבודה</div></div>
       <div class="stat"><div class="k">עלות התהליך בשנה</div><div class="v" id="s_value">—</div><div class="u">זמן + תקלות</div></div>
-      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u" style="color:var(--red-text)">שעות בנייה · לא מכויל</div></div>
+      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u u-warn">שעות בנייה · לא מכויל</div></div>
       <div class="stat big"><div class="k">מחיר מוצע</div><div class="v" id="s_price">—</div><div class="u" id="s_band">טווח הגנה</div></div>
       <div class="stat"><div class="k">החזר השקעה</div><div class="v" id="s_payback">—</div><div class="u">שבועות</div></div>
     </div>
@@ -231,7 +231,7 @@
 
     <details class="assump">
       <summary>הנחות העבודה, ניתנות לשינוי</summary>
-      <div class="row" style="margin-top:10px">
+      <div class="row mt10">
         <div>
           <label for="a_myrate">התעריף שלך לשעת פיתוח (₪)</label>
           <input type="number" id="a_myrate" value="250" min="0" step="25">
@@ -249,7 +249,7 @@
           <input type="number" id="a_maint" value="15" min="0" max="100" step="5">
         </div>
       </div>
-      <p style="font-size:12.5px;color:var(--muted);margin-top:10px">
+      <p class="hint-p mt10">
         הנוסחה: (שעות בשנה × עלות שעה מלאה × אחוז שנחסך) + (תקלות × עלות) = ערך שנתי.
         עלות שעה מלאה היא ברוטו × 1.3 בקירוב, כולל מעסיק. טווח המחיר הוא 12% עד 35% מהערך של שנה ראשונה,
         מה שמתאים ל-ROI מקובל של 200% עד 500% בשנה הראשונה, עם רצפה של אומדן המאמץ × התעריף שלך.
@@ -259,7 +259,7 @@
   </div>
   </details>
 
-  <div class="priv" id="privArea" style="display:none"></div>
+  <div id="privArea" class="priv hidden"></div>
 </div>
 
 <!-- ============ שלב 4 ============ -->

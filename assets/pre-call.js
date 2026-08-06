@@ -337,3 +337,27 @@ PROFILE_FIELDS.forEach(id=>{
   el.addEventListener('input', saveProfileDebounced); // debounced: don't hit localStorage on every keystroke
   el.addEventListener('change', saveProfile); // immediate on blur/select-change — belt-and-suspenders for the <select>
 });
+
+/* ---------- event wiring ----------
+   Inline onclick/oninput attributes are blocked by the shipped Content Security
+   Policy (script-src 'self'), which would have left every button dead in
+   production. One delegated listener replaces them all. */
+const ACTIONS = {
+  'cp-biz':       () => cp('promptBiz', 'c1'),
+  'cp-dr':        () => cp('promptDR', 'c2'),
+  'cp-out':       () => cpText('outArea', 'c3'),
+  parse:          parseBiz,
+  clearprofile:   clearProfile,
+  go3:            () => go(3),
+  newprospect:    newProspect,
+  build:          build,
+  print:          () => window.print()
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const fn = ACTIONS[t.dataset.act];
+  if (fn) { e.preventDefault(); fn(); }
+});
+document.querySelectorAll('[data-oninput="builddr"]').forEach(
+  el => el.addEventListener('input', buildDR));

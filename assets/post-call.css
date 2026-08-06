@@ -205,3 +205,17 @@
             background:#0f1216;border-radius:6px;padding:12px}
   .deal-out>div{flex:1 1 140px}
   .deal-out label{margin-top:0}
+
+  /* ---- utility classes replacing inline style attributes ----
+     A CSP that allows inline styles allows an injected style attribute too.
+     Since the policy shipped as script-src/style-src 'self', the markup had to
+     stop relying on either — this is the style half. */
+  .hidden{display:none}
+  .mt10{margin-top:10px}
+  .mt12{margin-top:12px}
+  .hint-p{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .u-warn{color:var(--red-text)}
+  .out .fine{font-size:13px;color:#5f6673}
+  .mt4{margin-top:4px}
+  .mt8{margin-top:8px}
+  .nomargin{margin:0}
