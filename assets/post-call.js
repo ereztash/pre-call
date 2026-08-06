@@ -177,11 +177,18 @@ const renderScope = guard('scope', function (){
     scopeState[b.dataset.i] = b.dataset.s;
     renderScope();
     renderProposal();   // the client read does not depend on scope
+    renderGuide();
     saveDraftSoon();
   });
 });
 
-/* ---------- method selector ---------- */
+/* ---------- method selector ----------
+   Four chips asking someone to choose between value, market rate, cost-plus
+   and a comparable deal is a question only a person who already prices work
+   can answer, and answering it wrong costs them money. The tool now decides
+   and says why in one sentence; the chips remain for whoever wants to
+   override, behind their own explanation. */
+let methodPinned = false;
 const mc = el('methodChips');
 mc.dataset.sel = 'value';
 Object.entries(METHODS).forEach(([key, m]) => {
@@ -191,17 +198,30 @@ Object.entries(METHODS).forEach(([key, m]) => {
   c.textContent = m.name; c.dataset.k = key;
   c.setAttribute('aria-pressed', String(key === 'value'));
   c.onclick = () => {
-    mc.dataset.sel = key;
-    [...mc.children].forEach(x => { const sel = x.dataset.k === key;
-      x.classList.toggle('on', sel); x.setAttribute('aria-pressed', String(sel)); });
-    el('methodHint').textContent = m.hint;
-    show('m_comparable_in', key === 'comparable');
-    show('m_cost_in', key === 'cost');
+    methodPinned = true;   // an explicit choice is never overwritten by the tool
+    setMethod(key);
     recompute();
   };
   mc.appendChild(c);
 });
-el('methodHint').textContent = METHODS.value.hint;
+function setMethod(key){
+  mc.dataset.sel = key;
+  [...mc.children].forEach(x => { const sel = x.dataset.k === key;
+    x.classList.toggle('on', sel); x.setAttribute('aria-pressed', String(sel)); });
+  el('methodHint').textContent = METHODS[key].hint;
+  show('m_comparable_in', key === 'comparable');
+  show('m_cost_in', key === 'cost');
+}
+
+/* Decided from what is on the form, unless the operator has taken over. */
+function autoMethod(){
+  if (methodPinned) return;
+  const p = PC.guide.pickMethod(guideState());
+  if (mc.dataset.sel !== p.method) setMethod(p.method);
+  const w = el('methodWhy');
+  if (w) w.textContent = p.because;
+}
+setMethod('value');
 
 el('q_role').addEventListener('change', () => {
   show('customRateWrap', el('q_role').value === 'custom');
@@ -255,6 +275,7 @@ function provenanceWarning(m){
 }
 
 const recompute = guard('recompute', function (){
+  autoMethod();          // before the model reads it
   const m = model();
   el('s_hours').textContent   = m.hours   ? Math.round(m.hours).toLocaleString('en-US') : '—';
   el('s_value').textContent   = m.annualValue ? ils(m.annualValue) : '—';
@@ -339,7 +360,127 @@ const recompute = guard('recompute', function (){
   }
   renderClientRead();
   renderProposal();
+  renderGuide();
 });
+
+/* ---------- the guide ----------
+   The page no longer expects anyone to know what to do with it. One
+   instruction is on screen at all times, it takes you to the exact field it
+   is about, and it opens whatever drawer that field is hiding in — because
+   "go fill question 6" is only an instruction to someone who already knows
+   where question 6 is. */
+let scopeConfirmed = false, skipped = new Set();
+
+function guideState(){
+  return {
+    process: txt('q_process'),
+    freq: num('q_freq'),
+    freqUnit: parseFloat(el('q_freq_unit').value),
+    minutes: num('q_minutes'),
+    systems: [...chosenSystems],
+    errFreq: num('q_err_freq'),
+    errCost: num('q_err_cost'),
+    numbersAreMine: el('q_provenance').value === 'mine',
+    comparableLast: num('c_last'),
+    scopeConfirmed,
+    client: txt('q_client'),
+    sent: false
+  };
+}
+
+/* Takes you there, opens what is closed, and puts the cursor in the field.
+   Every one of those three is a thing a first-time user would otherwise have
+   to work out on their own. */
+function goTo(anchor, fields){
+  const n = el(anchor); if (!n) return;
+  let d = n.closest('details');
+  while (d) { d.open = true; d = d.parentElement && d.parentElement.closest('details'); }
+
+  // the first field of this step that is still blank, not simply the first
+  const empty = (fields || []).map(el).find(f => f && !String(f.value).trim());
+  const target = empty ||
+    (/INPUT|TEXTAREA|SELECT/.test(n.tagName) ? n : n.querySelector('input,textarea,button'));
+
+  setTimeout(() => {
+    (target || n).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (target && target.focus) target.focus({ preventScroll: true });
+    const glow = target && target.classList ? target : n;
+    glow.classList.add('pointed');
+    setTimeout(() => glow.classList.remove('pointed'), 2400);
+  }, 60);
+}
+
+const renderGuide = guard('guide', function (){
+  const box = el('guideBar'); if (!box) return;
+  let g = PC.guide.next(guideState());
+
+  // a step the user explicitly skipped is not offered again on every keystroke
+  if (skipped.has(g.stepId) && g.optional) {
+    g = PC.guide.next(Object.assign(guideState(), { errFreq: 1, errCost: 1 }));
+  }
+
+  box.className = 'guide' + (g.ready ? ' ready' : '');
+  box.innerHTML =
+    '<div class="guide-top">' +
+      // an optional step must not claim a number in the sequence — saying
+      // "step 5 of 5" over something skippable is a small lie that costs
+      // trust exactly where the user has none to spare
+      '<span class="guide-step">' + (g.ready && g.stepId === 'send' ? 'הכול מוכן'
+        : g.optional ? 'לא חובה, אבל שווה'
+        : 'שלב ' + g.index + ' מתוך ' + g.total) + '</span>' +
+      '<span class="guide-t">' + esc(g.title) + '</span>' +
+    '</div>' +
+    '<div class="guide-ask">' + esc(g.ask) + '</div>' +
+    (g.why ? '<div class="guide-why">' + esc(g.why) + '</div>' : '') +
+    '<div class="guide-acts">' +
+      '<button type="button" class="act" data-act="goto" data-anchor="' + g.anchor +
+        '" data-fields="' + esc(g.fields.join(',')) + '">' + esc(g.cta) + '</button>' +
+      (g.optional ? '<button type="button" class="guide-skip" data-act="skip" data-step="' +
+        g.stepId + '">לדלג על זה</button>' : '') +
+    '</div>' +
+    g.problems.map(pr =>
+      '<div class="guide-prob"><span>' + esc(pr.text) + '</span>' +
+      '<button type="button" class="ghost" data-act="goto" data-anchor="' + pr.field + '">' +
+      'לתקן</button></div>').join('') +
+    '<div class="guide-bar"><div class="guide-fill"></div></div>' +
+    '<div class="guide-dots">' + g.steps.map(st =>
+      '<span class="guide-dot' + (st.complete ? ' done' : '') +
+      (st.id === g.stepId ? ' now' : '') + '">' +
+      (st.complete ? '✓ ' : '') + esc(st.short) + '</span>').join('') + '</div>';
+
+  /* The bar's width is set through the CSSOM rather than an inline style
+     attribute: style-src 'self' blocks the attribute in parsed markup but not
+     a property assignment, and the class-based alternative would be a
+     hundred and one width classes. */
+  const fill = box.querySelector('.guide-fill');
+  if (fill) fill.style.width = g.percent + '%';
+});
+
+function confirmScope(){
+  confirmScopeSilently();
+  saveDraftSoon();
+  renderGuide();
+  const g = PC.guide.next(guideState());
+  if (g.anchor && g.stepId !== 'scope') goTo(g.anchor, g.fields);
+}
+
+function skipStep(id){ skipped.add(id); renderGuide(); }
+
+function resetGuide(){
+  scopeConfirmed = false; skipped.clear(); methodPinned = false;
+  const w = el('scopeConfirmBtn');
+  if (w) { w.textContent = 'עברתי על הרשימה, ממשיכים'; w.parentElement.classList.remove('done'); }
+  renderGuide();
+}
+
+/* Restoring a draft must bring the confirmation back without jumping the
+   page to wherever the next step happens to be — the operator is reading, not
+   acting, in the first second after a reload. */
+function confirmScopeSilently(){
+  scopeConfirmed = true;
+  const w = el('scopeConfirmBtn');
+  if (w) { w.textContent = '✓ אושר'; w.parentElement.classList.add('done'); }
+}
 
 /* ---------- reading the specific client ----------
    Everything here comes off answers already given. The panel exists because
@@ -461,7 +602,8 @@ function collectDraft(){
   const fields = {};
   PC.DRAFT_FIELDS.forEach(id => { const f = el(id); if (f) fields[id] = f.value; });
   return { fields, systems: [...chosenSystems], scope: scopeState,
-           template: activeTemplate, dealId: currentDealId, override: clientOverride };
+           template: activeTemplate, dealId: currentDealId, override: clientOverride,
+           scopeConfirmed };
 }
 
 function saveDraft(){
@@ -495,6 +637,7 @@ function restoreDraft(){
   activeTemplate = d.template || null;
   currentDealId = d.dealId || null;
   clientOverride = d.override || 'auto';
+  if (d.scopeConfirmed) confirmScopeSilently();
   show('customRateWrap', el('q_role').value === 'custom');
 
   /* Announced, never silent. A form that fills itself on load with no
@@ -547,9 +690,17 @@ const ACTIONS = {
   sent:    markSent,
   unlock:  tryUnlock,
   newdeal: newDeal,
-  discard: discardDraft
+  discard: discardDraft,
+  confirmscope: confirmScope
 };
 document.addEventListener('click', e => {
+  // the guide's own buttons carry where to go, so they are handled first
+  const g = e.target.closest('[data-anchor]');
+  if (g) { e.preventDefault();
+    goTo(g.dataset.anchor, (g.dataset.fields || '').split(',').filter(Boolean)); return; }
+  const sk = e.target.closest('[data-step]');
+  if (sk && sk.dataset.act === 'skip') { e.preventDefault(); skipStep(sk.dataset.step); return; }
+
   const d = e.target.closest('[data-deal]');
   if (d) {
     e.preventDefault();
@@ -577,6 +728,7 @@ mountGate();
 renderTemplates();
 restoreDraft();   // before the first render, so the page comes up as it was left
 renderScope();
-recompute();   // recompute drives the client read and the document
+recompute();   // recompute drives the method, the client read and the document
+renderGuide();
 renderLedger();
 track('opened');

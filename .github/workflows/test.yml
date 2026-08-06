@@ -31,6 +31,8 @@ jobs:
         run: node assets/client.test.js
       - name: the unfinished draft
         run: node assets/draft.test.js
+      - name: the guide — one instruction, plain words
+        run: node assets/guide.test.js
       - name: the proposal document
         run: node assets/proposal.test.js
       - name: markup, CSP, print and telemetry contracts

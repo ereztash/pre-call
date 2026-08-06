@@ -294,6 +294,59 @@
     color:#0f1216;background:var(--turq);border-radius:3px;padding:1px 7px;
     vertical-align:middle}
 
+  /* ---- the guide ----
+     Pinned to the top of the viewport because its whole job is that there is
+     never a moment where the next action is off screen. Deliberately the
+     loudest thing on the page: everything else competes for attention, this
+     one wins. */
+  .guide{position:sticky;top:0;z-index:20;background:#1b2733;
+         border:1px solid #2f6b62;border-right:4px solid var(--turq);
+         border-radius:8px;padding:14px 16px;margin:14px 0 4px;
+         box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  .guide-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:6px}
+  .guide-step{font-size:12px;letter-spacing:.6px;color:var(--turq);font-weight:700}
+  .guide-t{font-size:17px;font-weight:700;color:#f2f0ec;flex:1 1 100%}
+  .guide-ask{font-size:14px;color:#cfd6dd;line-height:1.6}
+  .guide-why{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:5px}
+  .guide-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:11px}
+  .guide-acts button{margin:0}
+  .guide-skip{background:transparent;border:0;color:var(--muted);font-size:13px;
+              cursor:pointer;font-family:inherit;text-decoration:underline;min-height:44px}
+  .guide-skip:hover{color:var(--ink)}
+  .guide-bar{height:4px;background:#0f1216;border-radius:2px;overflow:hidden;margin-top:11px}
+  .guide-fill{height:100%;background:var(--turq);transition:width .25s}
+  @media(prefers-reduced-motion:reduce){.guide-fill{transition:none}}
+  .guide-dots{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .guide-dot{font-size:11.5px;color:var(--muted);background:#0f1216;border-radius:11px;
+             padding:3px 9px;border:1px solid var(--line)}
+  .guide-dot.done{color:#0d1a18;background:var(--turq);border-color:var(--turq);font-weight:600}
+  .guide-dot.now{border-color:var(--turq);color:#e8f4f2}
+  .guide.ready{border-right-color:var(--copper);border-color:var(--copper-dim)}
+  .guide.ready .guide-step,.guide.ready .guide-fill{color:var(--copper);background:var(--copper)}
+
+  /* a number that cannot be true, said as an observation with the arithmetic
+     shown — a red border teaches nothing to someone who does not know why */
+  .guide-prob{background:#2a1b1f;border-right:3px solid var(--red-text);border-radius:5px;
+              padding:10px 13px;margin-top:10px;font-size:13px;color:#f0c6cc;line-height:1.6;
+              display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .guide-prob button{margin:0;font-size:12.5px;padding:6px 12px;min-height:38px}
+
+  /* the field the guide just sent you to */
+  @keyframes pointto{0%{box-shadow:0 0 0 0 rgba(47,158,143,.55)}
+                     100%{box-shadow:0 0 0 14px rgba(47,158,143,0)}}
+  .pointed{animation:pointto 1.1s ease-out 2;border-color:var(--turq)!important}
+  @media(prefers-reduced-motion:reduce){.pointed{animation:none;
+    outline:3px solid var(--turq);outline-offset:2px}}
+
+  .scope-confirm{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:4px}
+  .scope-confirm .hint-p{margin:0;flex:1 1 220px}
+  .scope-confirm.done button{background:#2f9e8f;color:#0d1a18}
+
+  .methodwhy{background:#16262a;border-right:3px solid var(--turq);border-radius:5px;
+             padding:12px 15px;font-size:13.5px;color:#bfe3dd;line-height:1.65;margin-bottom:10px}
+  details.methodpick{margin-bottom:10px}
+  details.methodpick>summary{font-size:13.5px;font-weight:500;color:var(--muted)}
+
   /* ---- restored draft ---- */
   .draftnote{background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);
              border-radius:6px;padding:10px 14px;margin:12px 0;font-size:13.5px;color:#bfe3dd;

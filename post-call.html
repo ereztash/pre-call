@@ -23,6 +23,12 @@
      client, and the operator is about to send whatever is on it. -->
 <div class="draftnote hidden" id="draftNote" role="status" aria-live="polite"></div>
 
+<!-- ============ המדריך — הוא שמוביל, לא המשתמש ============
+     Exactly one instruction, always on screen, always taking you to the
+     one place that instruction is about. Everything else on the page is
+     optional detail; this is the spine. -->
+<div class="guide" id="guideBar" role="status" aria-live="polite"></div>
+
 <!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->
 <main>
 <div class="sec">
@@ -117,6 +123,10 @@
   <h2>מה נכנס, מה יוצא, ומה בתוספת תשלום</h2>
   <p class="lead">כל שורה עם ברירת מחדל ועם הסיבה. שלוש הקשות והסקופ סגור, והמסמך למעלה מתעדכן.</p>
   <div class="box" id="scopeBox"></div>
+  <div class="scope-confirm">
+    <button class="act" data-act="confirmscope" id="scopeConfirmBtn">עברתי על הרשימה, ממשיכים</button>
+    <span class="hint-p" id="scopeConfirmNote">ברירות המחדל כבר מסומנות. אם כולן מתאימות, פשוט אשר.</span>
+  </div>
 </div>
 
 <!-- ============ מגירות ============ -->
@@ -189,9 +199,17 @@
   <details class="drawer">
     <summary>תמחור · שיטה, מספרים והצלבה</summary>
     <div class="box">
-    <label for="methodChips">שיטה ראשית</label>
-    <div class="chips" id="methodChips"></div>
-    <p class="hint-p" id="methodHint"></p>
+    <!-- The tool decides this. Choosing between four pricing methods is a
+         question only someone who already prices work can answer, and getting
+         it wrong costs them money. The reason is stated in plain words; the
+         chips stay for whoever wants to take over. -->
+    <div class="methodwhy" id="methodWhy"></div>
+    <details class="drawer methodpick">
+      <summary>לשנות את דרך התמחור בעצמי</summary>
+      <div class="box">
+        <label for="methodChips">שיטה ראשית</label>
+        <div class="chips" id="methodChips"></div>
+        <p class="hint-p" id="methodHint"></p>
 
     <div id="m_comparable_in" class="hidden">
       <div class="row">
@@ -212,9 +230,11 @@
     </div>
 
     <div id="m_cost_in" class="hidden">
-      <label for="c_margin">מרווח מעל העלות שלך (%)</label>
+      <label for="c_margin">התוספת שלך מעל העלות (%)</label>
       <input type="number" id="c_margin" value="30" min="0" max="200" step="5">
     </div>
+      </div>
+    </details>
 
     <div class="row mt12">
       <div>
@@ -313,6 +333,7 @@
 <script src="assets/pc-dom.js"></script>
 <script src="assets/pc-catalog.js"></script>
 <script src="assets/pc-draft.js"></script>
+<script src="assets/pc-guide.js"></script>
 <script src="assets/pc-client.js"></script>
 <script src="assets/pc-proposal.js"></script>
 <script src="assets/pc-gate.js"></script>

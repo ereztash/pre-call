@@ -120,6 +120,7 @@ function newDeal(){
   clearSystems();
   resetScope();
   clearTemplateChoice();
+  resetGuide();
   renderScope(); renderLedger(); recompute();
   // a new proposal means there is nothing half-finished to come back to;
   // re-saving the blank form here made the recovery notice reappear forever
