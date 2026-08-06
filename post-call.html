@@ -64,6 +64,18 @@
   .stat .v{font-size:22px;font-weight:700;color:#f2f0ec;margin-top:2px;
            font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
   .stat .u{font-size:12.5px;color:var(--muted);margin-top:1px}
+  .tri-h{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+         font-weight:700;margin:16px 0 7px}
+  .tri-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;
+           padding:8px 11px;border-radius:5px;background:var(--charcoal-2);margin-bottom:5px;
+           border-right:3px solid var(--line)}
+  .tri-row.on{border-right-color:var(--copper);background:#2a2118}
+  .tri-n{font-size:14px;color:#e2e5e9;font-weight:600;flex:0 0 auto}
+  .tri-v{font-size:16px;font-weight:700;color:#f2f0ec;font-variant-numeric:tabular-nums;
+         direction:ltr;margin-right:auto}
+  .tri-b{font-size:12px;color:var(--muted);flex:1 0 100%}
+  .tri-warn{border-right:3px solid var(--red);background:#2a1b1f;color:#f0c6cc;
+            padding:10px 13px;border-radius:5px;font-size:13px;margin-top:8px}
   .flag{border-right:3px solid var(--red);background:#2a1b1f;color:#f0c6cc;
         padding:11px 14px;border-radius:5px;font-size:13.5px;margin-top:12px}
   .ok{border-right:3px solid var(--turq);background:#16262a;color:#bfe3dd;
@@ -265,8 +277,55 @@
 <!-- ============ המספרים ============ -->
 <div class="sec">
   <div class="sec-h">הכיול · חינם</div>
-  <h2>מה התהליך הזה עולה לו בשנה</h2>
-  <p class="lead">זה המספר שאתה מציג בשיחה. המחיר נגזר ממנו.</p>
+  <h2>איך אתה מתמחר את זה</h2>
+  <p class="lead">
+    אין שיטה אחת נכונה. השוק עובד בשלוש משפחות — עלות, שוק, ערך — ורוב המנוסים מצליבים ביניהן.
+    בחר את השיטה שאתה יכול <b>להגן עליה בשיחה</b>. השאר יחושבו ברקע כבדיקת שפיות.
+  </p>
+
+  <div class="box">
+    <label>שיטה ראשית</label>
+    <div class="chips" id="methodChips"></div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:8px" id="methodHint"></p>
+
+    <div id="m_comparable_in" style="display:none">
+      <div class="row">
+        <div>
+          <label>כמה גבית על העבודה הדומה האחרונה (₪)</label>
+          <input type="number" id="c_last" min="0" step="500" placeholder="6,000">
+        </div>
+        <div>
+          <label>העבודה הזאת, ביחס אליה</label>
+          <select id="c_scale">
+            <option value="0.7">קטנה יותר</option>
+            <option value="1" selected>דומה בהיקף</option>
+            <option value="1.5">גדולה יותר</option>
+            <option value="2.2">גדולה משמעותית</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="m_cost_in" style="display:none">
+      <label>מרווח מעל העלות שלך (%)</label>
+      <input type="number" id="c_margin" value="30" min="0" max="200" step="5">
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div>
+        <label>כמה עסקאות סגרת בתחום הזה?</label>
+        <select id="c_deals">
+          <option value="0">זו הראשונה</option>
+          <option value="1">אחת או שתיים</option>
+          <option value="2" selected>שלוש עד עשר</option>
+          <option value="3">יותר מעשר</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:26px">מה התהליך עולה לו בשנה</h2>
+  <p class="lead">גם אם אתה לא מתמחר לפי ערך, המספר הזה הוא מה שאתה אומר בשיחה.</p>
 
   <div class="nums">
     <div class="grid">
@@ -276,6 +335,8 @@
       <div class="stat big"><div class="k">מחיר מוצע</div><div class="v" id="s_price">—</div><div class="u" id="s_band">טווח הגנה</div></div>
       <div class="stat"><div class="k">החזר השקעה</div><div class="v" id="s_payback">—</div><div class="u">שבועות</div></div>
     </div>
+    <div id="triangulate"></div>
+    <div id="recommend"></div>
     <div id="verdict"></div>
 
     <details class="assump">
@@ -356,6 +417,13 @@
 const SYSTEMS = ['וואטסאפ','אימייל','גיליונות Google','Excel','CRM','חשבונית ירוקה / מורנינג',
                  'מערכת סליקה','אתר / טפסים','ERP','Monday / Asana','מערכת ייעודית','אחר'];
 
+const METHODS = {
+  value:      { name: 'ערך / ROI',    hint: 'המחיר נגזר ממה שהתהליך עולה ללקוח בשנה. הכי חזק בשיחה, אבל דורש שהוא ייתן לך מספרים. אם הוא מנחש אותם, המחיר מנחש איתו.' },
+  market:     { name: 'מחירון שוק',   hint: 'המחיר לפי טווח מקובל לעבודה מהסוג הזה. תמיד זמין, לא דורש היסטוריה ולא מספרים מהלקוח. חלש כשהעבודה חריגה.' },
+  cost:       { name: 'עלות + מרווח', hint: 'אומדן השעות שלך × התעריף שלך, ועוד מרווח. הכי בטוח מבחינתך, אבל תקוע על הוותק שלך ולא על מה שהעבודה שווה.' },
+  comparable: { name: 'עסקה דומה',    hint: 'מה שגבית על עבודה דומה, מותאם להיקף. מדויק כשבאמת עשית משהו דומה. דורש היסטוריה.' }
+};
+
 const el = id => document.getElementById(id);
 const num = id => { const v = parseFloat(el(id).value); return isFinite(v) && v > 0 ? v : 0; };
 const txt = id => el(id).value.trim();
@@ -371,6 +439,25 @@ SYSTEMS.forEach(s => {
     recompute(); };
   el('sysChips').appendChild(c);
 });
+
+/* ---------- method selector ---------- */
+const mc = el('methodChips');
+mc.dataset.sel = 'value';
+Object.entries(METHODS).forEach(([key, m]) => {
+  const c = document.createElement('div');
+  c.className = 'chip' + (key === 'value' ? ' on' : '');
+  c.textContent = m.name; c.dataset.k = key;
+  c.onclick = () => {
+    mc.dataset.sel = key;
+    [...mc.children].forEach(x => x.classList.toggle('on', x.dataset.k === key));
+    el('methodHint').textContent = m.hint;
+    el('m_comparable_in').style.display = key === 'comparable' ? '' : 'none';
+    el('m_cost_in').style.display = key === 'cost' ? '' : 'none';
+    recompute();
+  };
+  mc.appendChild(c);
+});
+el('methodHint').textContent = METHODS.value.hint;
 
 el('q_role').addEventListener('change', () => {
   el('customRateWrap').style.display = el('q_role').value === 'custom' ? '' : 'none';
@@ -407,15 +494,86 @@ function model(){
   // roughly 17%–33% of year-one value. 35% is the ceiling: past it the client
   // earns back less than ~1.9x in year one and the deal stops defending itself.
   const low = annualValue * 0.12, high = annualValue * 0.35;
-  let price = Math.max(floor * 1.2, annualValue * 0.15);
+
+  /* ---- the four pricing methods ----
+     No single method is correct, and each needs data the others don't. Cost and
+     market always work; value needs the client's numbers; comparable needs your
+     own history. Computing all of them turns the one that is unavailable into a
+     non-event, and makes an inflated input visible as an outlier instead of
+     silently setting the price.
+
+     Rounding to 10 rather than 100 on purpose: negotiation research finds
+     precise first offers draw less ambitious counteroffers than round ones,
+     and read as better-informed. ₪7,240 outperforms ₪7,200 as an anchor. */
+  const round = v => Math.round(v / 10) * 10;
+  const M = {};
+
+  M.cost = { label: 'עלות + מרווח',
+    raw: round(floor * (1 + (num('c_margin') || 30) / 100)),
+    basis: effort + ' שעות × ₪' + myRate + ' + ' + (num('c_margin') || 30) + '% מרווח' };
+
+  // Market bands converted from published US ranges for this vertical; they are
+  // starting points for an Israeli market, not measurements of it.
+  const tier = !n ? null
+    : (n <= 2 && parseFloat(el('q_integration').value) <= 1.0) ? ['פשוט', 1500, 4000]
+    : (n <= 3) ? ['מורכב', 4000, 11000]
+    : (n <= 5) ? ['רב-מערכתי', 11000, 25000]
+    : ['ארגוני', 25000, 45000];
+  M.market = tier ? { label: 'מחירון שוק',
+    raw: round((tier[1] + tier[2]) / 2),
+    basis: 'טווח ' + tier[0] + ': ' + ils(tier[1]) + '–' + ils(tier[2]) } : null;
+
+  // Value pricing yields a band, not a point — published first-year ROI of
+  // 200–500% puts a defensible price at 17–33% of year-one value. Claiming the
+  // top of that band is the whole skill; 25% is a mid-band default.
+  M.value = annualValue > 0 ? { label: 'ערך / ROI',
+    raw: round(annualValue * 0.25),
+    basis: '25% מ' + ils(annualValue) + ' ערך שנתי · הטווח שניתן להגנה ' +
+           ils(annualValue * 0.17) + '–' + ils(annualValue * 0.33) } : null;
+
+  const cLast = num('c_last');
+  M.comparable = cLast > 0 ? { label: 'עסקה דומה',
+    raw: round(cLast * parseFloat(el('c_scale').value)),
+    basis: ils(cLast) + ' × ' + el('c_scale').selectedOptions[0].text } : null;
+
+  // No method may price below what delivery costs. A "method" that loses money
+  // is not a pricing strategy, and the value method drops under cost whenever
+  // the process is small relative to the build.
+  const costFloor = round(floor * 1.1);
+  Object.values(M).forEach(x => { if (x) {
+    x.value = Math.max(x.raw, costFloor);
+    x.raised = x.value > x.raw;
+  }});
+
+  const method = el('methodChips').dataset.sel || 'value';
+  const chosen = M[method];
+  const available = Object.keys(M).filter(k => M[k]);
+
+  // primary method drives the price; if its inputs are missing, fall back to the
+  // one that always works rather than showing nothing
+  const price = chosen ? chosen.value : (M.cost ? M.cost.value : 0);
+  const usedFallback = !chosen;
+
+  const vals = available.map(k => M[k].value).filter(v => v > 0);
+  const spread = vals.length > 1 ? Math.max(...vals) / Math.min(...vals) : 1;
+
+  // which method actually pays the most here, subject to staying defensible
+  const ceiling = annualValue > 0 ? annualValue * 0.35 : Infinity;
+  const best = available
+    .filter(k => M[k].value <= ceiling)
+    .sort((a, b) => M[b].value - M[a].value)[0] || null;
+
+  const belowCost = price > 0 && price < floor;
   const tooThin = annualValue > 0 && price > high;
-  price = Math.round(price / 100) * 100;
+  const deals = parseInt(el('c_deals').value, 10);
 
   const netWeekly = annualValue > 0 ? (annualValue * (1 - maint)) / 52 : 0;
   const payback = netWeekly > 0 ? price / netWeekly : 0;
 
   return { runs, mins, rate, hours, timeValue, errValue, annualValue,
-           effort, floor, price, low, high, payback, tooThin, capture, maint, myRate };
+           effort, floor, price, low, high, payback, tooThin, capture, maint, myRate,
+           M, method, chosen, available, spread, belowCost, usedFallback, deals, best, costFloor,
+           errShare: annualValue > 0 ? errValue / annualValue : 0 };
 }
 
 function recompute(){
@@ -428,6 +586,56 @@ function recompute(){
   el('s_band').textContent = m.annualValue
     ? ils(m.low) + ' – ' + ils(m.high)
     : 'טווח הגנה';
+
+  // side-by-side of every method that has data, so an inflated input shows up
+  // as an outlier instead of quietly setting the price
+  const tri = el('triangulate');
+  if (m.available.length) {
+    tri.innerHTML = '<div class="tri-h">מה כל שיטה אומרת</div>' +
+      m.available.map(k => {
+        const x = m.M[k], on = k === m.method;
+        return '<div class="tri-row' + (on ? ' on' : '') + '">' +
+          '<span class="tri-n">' + x.label + (on ? ' · נבחרה' : '') + '</span>' +
+          '<span class="tri-v">' + ils(x.value) + '</span>' +
+          '<span class="tri-b">' + x.basis +
+          (x.raised ? ' · הועלה לרצפת העלות ' + ils(m.costFloor) +
+                      ', השיטה עצמה נתנה ' + ils(x.raw) : '') + '</span></div>';
+      }).join('') +
+      // A big gap between cost and value is the point of value pricing, not an
+      // error — warning on it would teach distrust of exactly the case that pays.
+      // What deserves a warning is the one input the client invents on the spot.
+      (m.errShare > 0.55 ? '<div class="tri-warn">' + Math.round(m.errShare * 100) +
+        '% מהערך השנתי מגיע מהערכת התקלות בשאלה 6 — מספר שהלקוח שלף בעל פה. ' +
+        'המחיר שלך תלוי בו יותר מאשר בכל השאר. בקש ממנו דוגמה אחת קונקרטית לפני שאתה שולח.</div>' : '') +
+      (m.M.cost && m.M.market && Math.max(m.M.cost.value, m.M.market.value) /
+        Math.min(m.M.cost.value, m.M.market.value) >= 2
+        ? '<div class="tri-warn">אומדן העלות שלך רחוק מטווח השוק. או שהאומדן שגוי, ' +
+          'או שהתעריף שלך לא מתאים לסוג העבודה הזה.</div>' : '');
+  } else tri.innerHTML = '';
+
+  /* Which method pays most is a property of THIS deal, not a general truth.
+     Value pricing wins when the process is worth a lot relative to the build,
+     and loses to plain cost pricing when it isn't. Saying "value always yields
+     more" while the screen shows it yielding least is how a tool loses trust. */
+  const rec = el('recommend');
+  if (!m.best || m.available.length < 2) {
+    rec.innerHTML = '';
+  } else if (m.best === m.method) {
+    rec.innerHTML = '<div class="ok"><b>זו גם השיטה שמניבה הכי הרבה כאן</b> מבין אלה שיש לך נתונים עבורן, ' +
+      'בלי לחרוג ממה שניתן להגנה מול הלקוח.</div>';
+  } else {
+    const gap = m.M[m.best].value - m.price;
+    rec.innerHTML = '<div class="ok"><b>' + m.M[m.best].label + ' מניבה כאן ' + ils(gap) + ' יותר</b> ' +
+      '(' + ils(m.M[m.best].value) + ' מול ' + ils(m.price) + '), ועדיין בטווח שניתן להגנה. ' +
+      (m.best === 'value'
+        ? 'תמחור לפי ערך מציב את העוגן על מה שהתהליך עולה ללקוח במקום על התעריף שלך, וזה מה שמזיז את המספר.'
+        : 'בעסקה הזאת הערך של התהליך קטן מדי מכדי שתמחור לפי ערך ינצח. זה לא תמיד המצב.') +
+      '</div>';
+  }
+  if (!m.annualValue && m.method !== 'value') {
+    rec.innerHTML += '<div class="ok">אין לך עדיין את המספרים לתמחור לפי ערך. ' +
+      'שאלות 2, 3, 4 ו-6 הן מה שפותח אותו — ובעסקאות שבהן התהליך יקר, זו השיטה שמזיזה הכי הרבה כסף.</div>';
+  }
 
   const v = el('verdict');
   if (!m.annualValue) {
@@ -500,8 +708,37 @@ try {
 /* ---------- proposal ---------- */
 function esc(s){ return (s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 
+/* The rationale is the part the client actually argues with, so it has to match
+   the method the price came from. A value number pasted under a cost-based price
+   invites "so why is it not just your hours?" */
+function rationaleFor(m){
+  if (m.method === 'value' && m.annualValue) {
+    return `<div class="rationale"><b>מאיפה המחיר.</b> התהליך עולה כ-${ils(m.annualValue)} בשנה.
+      המחיר הוא ${Math.round(m.price / m.annualValue * 100)}% מהערך של השנה הראשונה,
+      וההשקעה מחזירה את עצמה תוך כ-${m.payback.toFixed(1)} שבועות.
+      משנה שנייה ואילך זה חיסכון מלא.</div>`;
+  }
+  if (m.method === 'market' && m.M.market) {
+    return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.M.market.basis} לעבודה בהיקף הזה.
+      המחיר בטווח המקובל${m.annualValue ? `, והתהליך עולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
+  }
+  if (m.method === 'cost') {
+    return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.M.cost.basis}.
+      התמחור שקוף: אתה משלם על העבודה שנדרשת${m.annualValue ? `, מול תהליך שעולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
+  }
+  if (m.method === 'comparable' && m.M.comparable) {
+    return `<div class="rationale"><b>מאיפה המחיר.</b> עבודה דומה שביצעתי, מותאמת להיקף כאן${
+      m.annualValue ? `. התהליך עולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
+  }
+  return '';
+}
+
 function renderProposal(){
   const m = model();
+  // hours ceiling on the tuning commitment. Without it the clause was open-ended
+  // against a criterion the client wrote, which can be absolute ("nothing ever
+  // slips") — an unbounded obligation for someone who won't spot it.
+  const tuneCap = Math.max(4, Math.round(m.effort * 0.15));
   const client = txt('q_client') || 'הלקוח';
   const d = new Date();
   const dstr = d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear();
@@ -552,12 +789,7 @@ ${m.annualValue ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ
     תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.
   </div>
 </div>
-${m.annualValue ? `<div class="rationale">
-  <b>מאיפה המחיר.</b> התהליך עולה כ-${ils(m.annualValue)} בשנה.
-  המחיר הוא ${Math.round(m.price / m.annualValue * 100)}% מהערך של השנה הראשונה,
-  וההשקעה מחזירה את עצמה תוך כ-${m.payback.toFixed(1)} שבועות.
-  משנה שנייה ואילך זה חיסכון מלא.
-</div>` : ''}
+${rationaleFor(m)}
 
 <h4>לוח זמנים</h4>
 <table>
@@ -570,7 +802,9 @@ ${m.annualValue ? `<div class="rationale">
 ${txt('q_deadline') ? `<p style="margin-top:8px">היעד שהגדרת: <b>${esc(txt('q_deadline'))}</b>.</p>` : ''}
 
 <h4>איך נדע שזה הצליח</h4>
-<p>${esc(successLine)}. נמדוד את זה 30 יום אחרי המסירה. אם לא הגענו לשם, אני ממשיך לכוונן בלי תוספת תשלום.</p>
+<p>${esc(successLine)}. נמדוד את זה 30 יום אחרי המסירה.
+אם לא הגענו לשם בגלל משהו בבנייה, אני מכוונן ללא תוספת תשלום, עד ${tuneCap} שעות עבודה.
+מעבר לזה, או אם נדרש שינוי בתהליך עצמו או במערכות, נתמחר בנפרד לפי אותו תעריף.</p>
 
 ${txt('q_prev') ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${esc(txt('q_prev'))}. ההצעה הזו נבדלת בכך שהמסירה כוללת תיעוד והדרכה, והאחריות על ההטמעה היא שלי ולא שלכם.</p>` : ''}
 
