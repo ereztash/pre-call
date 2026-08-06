@@ -52,6 +52,14 @@
         padding:6px 13px;font-size:13.5px;cursor:pointer;color:#c3c9d0;user-select:none;
         min-height:34px;display:flex;align-items:center}
   .chip.on{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
+  /* one-tap presets. Deliberately not sliders: slider scales measurably raise
+     item non-response and drop-off, cost more time, and are imprecise under
+     touch — and worse here, a handle resting at a value drags the answer toward
+     it, which would contaminate the very numbers the price is computed from.
+     Every chip costs the same one tap, so none of them pulls harder. */
+  .chip-sm{padding:5px 11px;font-size:13px;min-height:32px;border-radius:16px}
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .presets .lbl{font-size:12.5px;color:var(--muted);align-self:center;margin-left:2px}
 
   /* ---- live numbers ---- */
   .nums{background:#0f1216;border:1px solid var(--line);border-radius:8px;padding:18px;
@@ -438,6 +446,64 @@ SYSTEMS.forEach(s => {
     c.classList.contains('on') ? chosenSystems.add(s) : chosenSystems.delete(s);
     recompute(); };
   el('sysChips').appendChild(c);
+});
+
+/* ---------- one-tap presets and example fills ----------
+   Two different frictions. Closed/numeric fields cost a keyboard; presets cut
+   that to one tap. Open fields cost composition, not typing — the blank page is
+   the expense — so the example is offered as content that lands IN the field and
+   gets edited, rather than as ghost placeholder text. Placeholder-as-instruction
+   vanishes the moment you type, fails contrast, and is read as a filled value;
+   the persistent hint under each label stays regardless. */
+const PRESETS = {
+  q_freq:     [5, 10, 20, 50, 100],
+  q_minutes:  [3, 5, 10, 20, 45],
+  q_err_freq: [1, 2, 5, 10],
+  q_err_cost: [200, 500, 1000, 2500]
+};
+const EXAMPLES = {
+  q_process: 'כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת',
+  q_trigger: 'בחודש שעבר פספסנו שתי הזמנות, ולקוח קבוע עבר למתחרה',
+  q_prev:    'קנינו תוסף אבל אף אחד לא הטמיע אותו עד הסוף',
+  q_success: 'שאף הזמנה לא תיפול בין הכיסאות'
+};
+
+Object.entries(PRESETS).forEach(([id, vals]) => {
+  const input = el(id); if (!input) return;
+  const row = document.createElement('div'); row.className = 'presets';
+  vals.forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'chip chip-sm'; c.textContent = v;
+    c.onclick = () => {
+      input.value = v;
+      [...row.children].forEach(x => x.classList.toggle('on', x === c));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    row.appendChild(c);
+  });
+  input.insertAdjacentElement('afterend', row);
+  // typing your own number clears the chip highlight — the chips are a shortcut,
+  // never a constraint on what you can enter
+  input.addEventListener('input', () => {
+    if (![...row.children].some(x => x.textContent === input.value))
+      [...row.children].forEach(x => x.classList.remove('on'));
+  });
+});
+
+Object.entries(EXAMPLES).forEach(([id, text]) => {
+  const field = el(id); if (!field) return;
+  const row = document.createElement('div'); row.className = 'presets';
+  const c = document.createElement('div');
+  c.className = 'chip chip-sm';
+  c.textContent = 'מלא דוגמה ואז ערוך';
+  c.onclick = () => {
+    field.value = text;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.focus();
+    field.setSelectionRange(field.value.length, field.value.length);
+  };
+  row.appendChild(c);
+  field.insertAdjacentElement('afterend', row);
 });
 
 /* ---------- method selector ---------- */
