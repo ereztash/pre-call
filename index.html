@@ -185,11 +185,13 @@
         <input type="text" id="f_unit" placeholder="למשל: 3 מפגשים, יוצא מהם נוהל גבייה כתוב">
       </div>
       <div>
-        <label>מחיר היחידה, אם יש</label>
+        <label>מחיר היחידה, אם יש
+          <span class="hint">הרצפה הפנימית שלכם. לא נאמרת בשיחה, רק תזכורת לכם לפני שאלה 11.</span></label>
         <input type="text" id="f_price" placeholder="למשל: 6,500 ₪">
       </div>
       <div>
-        <label>העסקה האחרונה, סכום</label>
+        <label>העסקה האחרונה, סכום
+          <span class="hint">מה שהוא שילם לכם. לא נכנס לשיחה בקול, רק לכיול הפנימי שלכם מול מה שהרוויח.</span></label>
         <input type="text" id="f_last" placeholder="למשל: 8,000 ₪">
       </div>
       <div>
@@ -204,8 +206,8 @@
       </div>
     </div>
     <label>מה הלקוח האחרון הרוויח מזה, במספר
-      <span class="hint">גם הערכה גסה. זה העוגן שמאפשר לכם לשאול בשיחה בלי לנקוב במחיר.</span></label>
-    <input type="text" id="f_gain" placeholder="למשל: קיצר את זמן הגבייה מ-60 ל-25 יום, בערך 40 אלף ₪ תזרים">
+      <span class="hint">התחילו במספר או בטווח, ואז הקשר קצר אם צריך. זה נכנס ישירות למשפט העוגן בשיחה.</span></label>
+    <input type="text" id="f_gain" placeholder="למשל: כ-40,000 ₪ תזרים, אחרי שקיצר את זמן הגבייה מ-60 ל-25 יום">
     <label>מה רק אתם רואים אצל הלקוחות שלכם, שאחרים לא רואים
       <span class="hint">זה מה שהופך את שאלת הבעלות בשיחה למדויקת. שתיים או שלוש שורות.</span></label>
     <textarea id="f_edge" placeholder="למשל: שהבעיה אף פעם לא בתוכנה, היא בזה שאף אחד לא הוגדר כאחראי על המעקב"></textarea>
@@ -424,25 +426,33 @@ function build(){
 
 function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
 
+const SRC_LABEL = {ref:'הפניה או היכרות אישית', content:'התוכן שאתם מפרסמים', out:'פנייה יזומה שלכם', other:'ערוץ אחר'};
+
 function render(){
-  const name = S.pname || 'הצד השני';
+  const name = S.pname ? (S.pname + (S.pco?' · '+S.pco:'')) : 'הצד השני';
   const d = new Date();
   const dstr = d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear();
 
-  /* --- price anchor sentence, built from THEIR last deal --- */
+  /* --- price anchor sentence, built from what THEIR last client gained ---
+     S.gain drives the sentence. If it reads as a number/amount up front, it slots
+     into "היה שווה בערך X". If it's a narrative, that phrasing breaks grammatically
+     ("שווה בערך מצא 3 לקוחות..."), so it gets its own sentence structure instead. */
+  const numFirst = /^\s*(כ-|~|בערך)?\s*[\d₪$€]/.test(S.gain||'');
   let anchor;
-  if(S.gain && S.last){
+  if(S.gain && numFirst){
     anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך ${S.gain}. אצלך זה יותר או פחות?`;
   }else if(S.gain){
-    anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך ${S.gain}. אצלך זה יותר או פחות?`;
+    anchor = `אצל לקוח שעבדתי איתו במצב דומה, ${S.gain}. אצלך זה דומה, פחות, או יותר?`;
   }else{
     anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך [כאן נכנס המספר מהעסקה האחרונה שלכם]. אצלך זה יותר או פחות?`;
   }
 
-  /* --- ownership move, built from THEIR edge --- */
+  /* --- ownership move, built from THEIR edge. Wrapped as an actual line to
+     say, not just an instruction — but a static template can't conjugate
+     Hebrew person/gender, so it ships with a visible caveat to adjust it. */
   let own;
   if(S.edge){
-    own = `נסחו לו את הצוואר שלו בניסוח קצר, שנשען על מה שרק אתם רואים: "${S.edge.split('\n')[0]}". השאירו אותו מעט לא מדויק בכוונה, ואז שאלו:`;
+    own = `אמרו לו, במילים קרובות לאלה: "אני מנחש/ת ש${S.edge.split('\n')[0]}. תקן/י אותי אם אני טועה." התאימו גוף וזמן למה שכתבתם, השאירו את זה מעט לא מדויק בכוונה, ואז שאלו:`;
   }else{
     own = `נסחו לו את הצוואר שלו במשפט אחד, מעט לא מדויק בכוונה, ואז שאלו:`;
   }
@@ -456,6 +466,9 @@ function render(){
   if(S.ppair==='2') openers.push('שניים בשיחה. בשאלת הבעלות, בקשו תשובה מכל אחד בנפרד. אם ענו שונה, ההצעה מותנית בסבב שני עם שניהם.');
   if(S.ptext) openers.push('יש לכם טקסט ציבורי עליו. השוו בשאלה 6 בין מה שהוא כתב על עצמו למה שהוא אומר עכשיו. הפער הוא הסימן.');
   if(!S.unit) openers.push('אין לכם יחידה תחומה. שימו לב לשאלה 9. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.');
+  if(S.last && S.gain) openers.push(`כיול פרטי, לא לשיחה: העסקה האחרונה שלכם היתה ${S.last}, מול הרווח שהערכתם ב-${S.gain} אצל הלקוח. השתמשו ביחס הזה כדי לכייל בראש לפני שאלה 11 — לא להגיד בקול.`);
+  if(S.price) openers.push(`מחיר היחידה שלכם הוא ${S.price}. זו הרצפה הפנימית שלכם למה שכדאי בכלל להמשיך אליו, לא מספר שנאמר בשיחה.`);
+  if(S.src) openers.push(`הלקוח האחרון שלכם הגיע דרך ${SRC_LABEL[S.src]||S.src}. בשאלה 5 תשמעו מאיפה הגיע הלקוח שלו — אם זה ערוץ אחר משלכם, זה סימן שהערוץ ששכנע אתכם לא בהכרח ישכנע אותו.`);
 
   const q=(n,txt,why)=>`<div class="q"><span class="qn">${n}</span>${esc(txt)}${why?`<span class="why">${esc(why)}</span>`:''}</div>`;
 
