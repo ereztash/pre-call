@@ -282,7 +282,21 @@ const recompute = guard('recompute', function (){
   el('s_effort').textContent  = chosenSystems.size ? m.effort : '—';
   const priceTxt = (m.annualValue || chosenSystems.size) ? ils(m.price) : '—';
   el('s_price').textContent = priceTxt;
-  el('s_price_top').textContent = priceTxt; // the headline copy in the document bar
+  /* The one micro-interaction worth having. The whole premise of the tool is
+     that what you say in the room moves the number, and a figure that
+     changes silently three sections above where you are typing does not
+     teach that — it just quietly differs the next time you look. A brief
+     beat on change makes the causal link visible, once, without a sound and
+     without blocking anything. Honoured by prefers-reduced-motion. */
+  const top = el('s_price_top');
+  if (top.textContent !== priceTxt) {
+    top.textContent = priceTxt;
+    if (priceTxt !== '—') {
+      top.classList.remove('bumped');
+      void top.offsetWidth;              // restart the animation on a rapid edit
+      top.classList.add('bumped');
+    }
+  }
   el('s_payback').textContent = m.payback ? m.payback.toFixed(1) : '—';
   el('s_band').textContent = m.annualValue
     ? ils(m.low) + ' – ' + ils(m.high)
@@ -372,6 +386,8 @@ const recompute = guard('recompute', function (){
    "go fill question 6" is only an instruction to someone who already knows
    where question 6 is. */
 let scopeConfirmed = false, skipped = new Set();
+// which steps were already complete last render, so only a fresh one animates
+let doneSteps = new Set();
 
 function guideState(){
   return {
@@ -459,8 +475,12 @@ const renderGuide = guard('guide', function (){
     '<div class="guide-bar"><div class="guide-fill"></div></div>' +
     '<div class="guide-dots">' + g.steps.map(st =>
       '<span class="guide-dot' + (st.complete ? ' done' : '') +
-      (st.id === g.stepId ? ' now' : '') + '">' +
+      (st.id === g.stepId ? ' now' : '') +
+      // only a step that just flipped gets the beat; re-rendering the strip
+      // on every keystroke would otherwise make the whole row twitch
+      (st.complete && !doneSteps.has(st.id) ? ' just' : '') + '">' +
       (st.complete ? '✓ ' : '') + esc(st.short) + '</span>').join('') + '</div>';
+  doneSteps = new Set(g.steps.filter(st => st.complete).map(st => st.id));
 
   /* The bar's width is set through the CSSOM rather than an inline style
      attribute: style-src 'self' blocks the attribute in parsed markup but not
@@ -653,6 +673,13 @@ function sendVia(id){
 
 /* ---------- the document ---------- */
 const renderProposal = guard('proposal', function (){
+  /* Nothing entered yet means no document — not a document with the blanks
+     showing. See PC.proposal.blank for why that distinction matters. */
+  if (!txt('q_process') && !num('q_freq') && !chosenSystems.size) {
+    const g = PC.guide.next(guideState());
+    el('proposal').innerHTML = PC.proposal.blank(g.title);
+    return;
+  }
   el('proposal').innerHTML = PC.proposal.build({
     m: model(),
     ils,

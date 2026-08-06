@@ -68,6 +68,28 @@ for (const f of SCRIPTS) {
   });
 }
 
+console.log('\ncopy');
+/* The jargon rule was enforced on the guide module only, so the page around
+   it went on saying "סקופ" in four places while the guide it wrapped was
+   clean. A rule that holds in one file and not on the screen is not a rule. */
+test('the page uses no word the reader has to already own', () => {
+  const BANNED = ['סקופ', 'טריאנגולציה', 'provenance', 'payback', 'ולידציה',
+                  'קונברסיה', 'back-office', 'onboarding'];
+  const visible = PAGES.map(f => html[f]
+    .replace(/<!--[\s\S]*?-->/g, '')      // comments are for us, not for them
+    .replace(/<[^>]+>/g, ' ')).join(' ');
+  BANNED.forEach(w => assert.ok(!visible.includes(w),
+    '"' + w + '" is on screen — if it needs a glossary it needs a rewrite'));
+});
+test('no button is labelled with a bare verb that hides its outcome', () => {
+  // "שמור" tells you an action; "שמור לפנקס" tells you where it goes
+  const labels = [...html['post-call.html'].matchAll(/data-act="[a-z]+">([^<]+)</g)]
+    .map(m => m[1].trim());
+  assert.ok(labels.length >= 4, 'no action buttons found — has the markup moved?');
+  labels.forEach(l => assert.ok(l.split(/\s+/).length >= 2 || l.length > 6,
+    'bare label: "' + l + '"'));
+});
+
 console.log('\ntelemetry contract');
 /* The client sends an event name; the server checks it against a fixed list
    and answers 400 for anything else. Nothing surfaces that rejection — the

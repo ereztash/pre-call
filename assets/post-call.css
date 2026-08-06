@@ -354,6 +354,36 @@
   details.methodpick{margin-bottom:10px}
   details.methodpick>summary{font-size:13.5px;font-weight:500;color:var(--muted)}
 
+  /* ---- micro-interactions ----
+     Two, both earning their place. The price beat exists because the tool's
+     whole premise is that what the client says moves the number, and a
+     figure that changes silently teaches nothing. The step tick exists
+     because completing something invisible feels like nothing happened.
+     Both are brief, neither blocks, and both stop entirely under
+     prefers-reduced-motion — where the state is still carried by the text. */
+  @keyframes pricebump{
+    0%{transform:scale(1)}
+    35%{transform:scale(1.06);color:var(--copper)}
+    100%{transform:scale(1)}}
+  .docprice .v.bumped{animation:pricebump .42s cubic-bezier(.2,.7,.3,1);
+                      transform-origin:right center}
+
+  @keyframes dotpop{
+    0%{transform:scale(.82);opacity:.5}
+    60%{transform:scale(1.05)}
+    100%{transform:scale(1);opacity:1}}
+  .guide-dot.just{animation:dotpop .34s ease-out}
+
+  @media(prefers-reduced-motion:reduce){
+    .docprice .v.bumped,.guide-dot.just{animation:none}}
+
+  /* ---- the document before there is a document ---- */
+  .doc-empty{padding:34px 30px;text-align:center;color:#5f6673}
+  .doc-empty-t{font-size:19px;font-weight:700;color:#33383f;margin-bottom:8px}
+  .doc-empty p{font-size:14.5px;line-height:1.7;max-width:44ch;margin:0 auto}
+  .doc-empty-n{margin-top:14px;padding-top:14px;border-top:1px solid #e2ded7;
+               color:#33383f}
+
   /* ---- visuals ----
      Icon array and part-to-whole only. Every state carries a word as well as
      a hue (WCAG 1.4.1), and there is nothing here that exists to look nice —

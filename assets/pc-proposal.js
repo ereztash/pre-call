@@ -59,6 +59,22 @@
 
   const DEFAULT_TERMS = 'תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.';
 
+  /* What stands where the document goes before there is a document.
+     The page used to render a complete, official-looking proposal for a
+     client called "הלקוח" with no price in it — which teaches a first-time
+     reader two wrong things at once: that the tool already finished, and
+     that a proposal is a form letter. Worse, it is sendable by accident.
+     This says plainly that nothing has been written yet, and what the one
+     next thing is. */
+  function blank(next) {
+    return `
+<div class="doc-empty">
+  <div class="doc-empty-t">כאן תיכתב ההצעה</div>
+  <p>היא נבנית תוך כדי המילוי, ומתעדכנת אחרי כל שינוי. אין שלב נפרד של כתיבה.</p>
+  ${next ? `<p class="doc-empty-n"><b>הדבר הבא:</b> ${escape(next)}</p>` : ''}
+</div>`;
+  }
+
   function build(ctx) {
     const { m, scope, systems, f } = ctx;
     const ils = ctx.ils || (root.PC && root.PC.model && root.PC.model.ils) || String;
@@ -136,7 +152,7 @@ ${f.prev ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${escape(f.pr
   }
 
   root.PC = root.PC || {};
-  root.PC.proposal = { build, rationaleFor, titleFrom, escape, DEFAULT_TERMS };
+  root.PC.proposal = { build, blank, rationaleFor, titleFrom, escape, DEFAULT_TERMS };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.proposal;
 })(typeof window !== 'undefined' ? window : globalThis);

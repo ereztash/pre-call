@@ -34,14 +34,14 @@
 <div class="sec">
   <div class="sec-h">שלב 1 · שלושים שניות</div>
   <h2>ההצעה נכתבת תוך כדי שאתה ממלא</h2>
-  <p class="lead">ארבעה שדות מספיקים למסמך מלא. כל השאר מדייק אותו ויושב למטה.</p>
+  <p class="lead">ארבעה שדות מספיקים למסמך שלם. כל השאר רק מדייק, ויושב למטה.</p>
 
   <!-- The fastest route to a document worth arguing with. Sets systems,
        typical numbers, opening text, and the scope decisions for that kind
        of job — which is where the time actually goes. -->
   <div class="box tplbox">
     <h3 class="tpl-h">תהליך מוכר? התחל מכאן</h3>
-    <p class="hint-p">לחיצה אחת ממלאת מערכות, מספרים טיפוסיים, ואת החלטות הסקופ שמתאימות לסוג העבודה הזה. הכול ניתן לעריכה.</p>
+    <p class="hint-p">לחיצה אחת ממלאת את התוכנות, מספרים טיפוסיים, וגם את ההחלטות על מה נכלל ומה לא — לפי סוג העבודה. הכול ניתן לעריכה.</p>
     <div class="tpls" id="tplChips"></div>
     <div class="tpl-note hidden" id="tplNote"></div>
   </div>
@@ -49,7 +49,7 @@
   <div class="box">
     <div class="qa">
       <div class="qt" id="qt1"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
-      <div class="why">תן לו לתאר עד הסוף. התיאור המפורט הוא מה שיהפוך לסקופ בהצעה.</div>
+      <div class="why">כדאי לתת לו לתאר עד הסוף. מה שהוא מספר כאן הופך למה שכתוב בהצעה שאתם מתחייבים לעשות.</div>
       <textarea aria-labelledby="qt1" id="q_process" placeholder="למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת"></textarea>
     </div>
     <div class="qa">
@@ -93,14 +93,14 @@
      hides every sibling. Renaming it prints a blank page. -->
 <div class="sec doc">
   <div class="sec-h">שלב 2 · התוצר</div>
-  <h2>ההצעה שאתה שולח</h2>
+  <h2>ההצעה שתישלח</h2>
   <div class="docbar">
     <div class="docprice"><span class="k">מחיר מוצע</span><span class="v" id="s_price_top">—</span></div>
     <div class="docacts">
-      <button class="act" data-act="copy">העתק</button>
-      <button class="ghost" data-act="print">PDF</button>
-      <button class="ghost" data-act="send">שלח</button>
-      <button class="ghost" data-act="save">שמור</button>
+      <button class="act" data-act="copy">העתק הצעה</button>
+      <button class="ghost" data-act="print">שמור כ-PDF</button>
+      <button class="ghost" data-act="send">שלח ללקוח</button>
+      <button class="ghost" data-act="save">שמור לפנקס</button>
       <span class="copied" id="cpFlag">הועתק</span>
     </div>
   </div>
@@ -128,21 +128,21 @@
     <button class="act" id="payBtn">קנה וקבל מפתח</button>
     <div class="keyrow">
       <input type="text" id="keyIn" aria-label="מפתח פתיחה" placeholder="הדבק כאן את המפתח" autocomplete="off">
-      <button class="ghost" data-act="unlock">פתח</button>
+      <button class="ghost" data-act="unlock">הפעל את המפתח</button>
     </div>
     <div class="err hidden" id="keyErr">המפתח לא תקין. בדוק שהעתקת אותו במלואו.</div>
   </div>
 </div>
 
-<!-- ============ הסקופ — כאן נשרף הזמן ============ -->
+<!-- ============ מה נכלל ומה לא — כאן נשרף הזמן ============ -->
 <div class="sec">
   <div class="sec-h">שלב 3 · כאן נשרף הזמן</div>
-  <h2>מה נכנס, מה יוצא, ומה בתוספת תשלום</h2>
-  <p class="lead">כל שורה עם ברירת מחדל ועם הסיבה. שלוש הקשות והסקופ סגור, והמסמך למעלה מתעדכן.</p>
+  <h2>על מה מתחייבים, ומה נשאר בחוץ</h2>
+  <p class="lead">כל שורה כבר מסומנת, עם הסיבה לידה. משנים רק מה שלא מתאים — והמסמך למעלה מתעדכן מיד.</p>
   <div class="box" id="scopeBox"></div>
   <div class="scope-confirm">
     <button class="act" data-act="confirmscope" id="scopeConfirmBtn">עברתי על הרשימה, ממשיכים</button>
-    <span class="hint-p" id="scopeConfirmNote">ברירות המחדל כבר מסומנות. אם כולן מתאימות, פשוט אשר.</span>
+    <span class="hint-p" id="scopeConfirmNote">רוב הפעמים אין מה לשנות. אם הכול נראה בסדר — אישור ומתקדמים.</span>
   </div>
 </div>
 
@@ -156,7 +156,7 @@
       <div class="why">התפקיד קובע את עלות השעה. אם זה בעל העסק בעצמו, המספר קופץ פי שלושה.</div>
       <label for="q_role">תפקיד</label>
       <select id="q_role">
-        <option value="60">עובד/ת back-office · כ-60 ₪ לשעה בעלות מלאה</option>
+        <option value="60">מי שמזין נתונים · כ-60 ₪ לשעה בעלות מלאה</option>
         <option value="85" selected>רכז/ת תפעול · כ-85 ₪ לשעה</option>
         <option value="145">מנהל/ת מחלקה · כ-145 ₪ לשעה</option>
         <option value="215">בעל/ת העסק · כ-215 ₪ לשעה</option>

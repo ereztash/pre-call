@@ -134,6 +134,20 @@ test('every step says what answering it buys the user', () => {
     assert.ok(st.why && st.why.length > 40,
       st.id + ' has no reason a first-timer would accept'));
 });
+test('the guide never addresses one gender', () => {
+  /* Hebrew forces a choice the moment a verb or pronoun is inflected, and
+     the automation community here is not one gender. Rewriting around it
+     costs nothing and "בחר/י" everywhere is its own kind of noise, so the
+     wording avoids the inflection instead. */
+  const all = G.STEPS.flatMap(st => [st.title, st.ask, st.why, st.cta])
+    .concat(G.sanity({ freq: 100, freqUnit: 365, minutes: 45, errCost: 50000,
+                       numbersAreMine: true }).map(p => p.text))
+    .concat([{}, { freq: 1, minutes: 1 }, { numbersAreMine: true }, { comparableLast: 1 }]
+            .map(s2 => G.pickMethod(s2).because))
+    .filter(Boolean).join(' ');
+  [/\bאתה\b/, /שאתה/, /אותך/, /\bתמלא\b/, /\bתבחר\b/, /\bתשלח\b/].forEach(re =>
+    assert.ok(!re.test(all), 'gendered address: ' + (all.match(re) || [])[0]));
+});
 test('every step points somewhere concrete on the page', () => {
   G.STEPS.forEach(st => assert.ok(st.anchor, st.id + ' has nowhere to send you'));
 });
@@ -198,7 +212,7 @@ test('the client gave numbers — price on what it costs him', () => {
 test('the numbers are the operator\'s own — do not price on them', () => {
   const p = G.pickMethod({ freq: 20, minutes: 7, numbersAreMine: true });
   assert.strictEqual(p.method, 'market');
-  assert.ok(/הערכה שלך/.test(p.because));
+  assert.ok(/הערכה שלכם/.test(p.because));
 });
 test('nothing entered yet still yields a usable method and a reason', () => {
   const p = G.pickMethod({});
