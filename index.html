@@ -147,7 +147,8 @@
     <p style="font-size:14.5px;color:#b8bec6">
       עוגן המחיר בהצעה לא מגיע מהשוק. הוא מגיע מהעסקה האחרונה שלכם, ומהמספר שהלקוח הקודם הרוויח.
       בלי שני אלה, השאלות בשיחה יישארו כלליות ותצאו ממנה עם תיאור במקום עם מספר.
-      הפרופיל נשמר בזיכרון הדפדפן לאורך הסשן. סגירת הדף מוחקת אותו.
+      הפרופיל נשמר בדפדפן הזה (localStorage) גם אחרי שסוגרים את הדף, ונטען אוטומטית בפעם הבאה.
+      הנתונים על הצד השני בשיחה, בשלב 3, לא נשמרים ונמחקים בסגירת הדף — בכוונה, כי אלה פרטים על אדם ספציפי לכל שיחה.
     </p>
   </div>
 </div>
@@ -214,6 +215,8 @@
     <label>מה אתם לא מוכרים
       <span class="hint">הגבול. מונע מכם להגיד כן בשיחה למשהו שתתחרטו עליו.</span></label>
     <input type="text" id="f_no" placeholder="למשל: לא מפעיל את התהליך במקומם, לא ליווי חודשי">
+    <button class="ghost" onclick="clearProfile()">מחק פרופיל שמור מהדפדפן הזה</button>
+    <span class="copied" id="c4">נמחק</span>
   </div>
 
   <div class="err" id="err2"></div>
@@ -395,6 +398,37 @@ function parseBiz(){
     else if(/תוכן/.test(src))s.value='content';
     else if(/יזומ/.test(src))s.value='out';
   }
+  saveProfile();
+}
+
+/* ---------- profile persistence (localStorage) ----------
+   Only the business profile (step 2) persists across page loads — it's
+   filled once and reused for every call. Prospect details (step 3) stay
+   in-memory only and vanish on close, on purpose: those are private
+   specifics about one person, not something to leave sitting in the
+   browser after the call is over. */
+const PROFILE_FIELDS = ['f_what','f_who','f_unit','f_price','f_last','f_src','f_gain','f_edge','f_no'];
+const PROFILE_KEY = 'precall_profile_v1';
+
+function saveProfile(){
+  try{
+    const data={};
+    PROFILE_FIELDS.forEach(id=>{ data[id]=document.getElementById(id).value; });
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
+  }catch(e){ /* private browsing / storage blocked — profile just won't persist */ }
+}
+function loadProfile(){
+  try{
+    const raw=localStorage.getItem(PROFILE_KEY);
+    if(!raw)return;
+    const data=JSON.parse(raw);
+    PROFILE_FIELDS.forEach(id=>{ if(data[id])document.getElementById(id).value=data[id]; });
+  }catch(e){}
+}
+function clearProfile(){
+  try{ localStorage.removeItem(PROFILE_KEY); }catch(e){}
+  PROFILE_FIELDS.forEach(id=>{ document.getElementById(id).value=''; });
+  flash('c4');
 }
 
 function buildDR(){
@@ -580,6 +614,12 @@ ${openers.length?`<div class="blk">
 /* ---------- init ---------- */
 document.getElementById('promptBiz').innerText=P_BIZ;
 buildDR();
+loadProfile();
+PROFILE_FIELDS.forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('input', saveProfile);
+  el.addEventListener('change', saveProfile); // belt-and-suspenders for the <select>
+});
 </script>
 </body>
 </html>
