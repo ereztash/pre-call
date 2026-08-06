@@ -85,7 +85,7 @@
   .q{background:#fff;border-right:3px solid var(--copper);padding:11px 14px;margin-bottom:9px;
      border-radius:3px;font-size:15.5px;color:#16191d;box-shadow:0 1px 2px rgba(0,0,0,.05)}
   .q .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;padding:1px 7px;
-         border-radius:3px;margin-left:8px;font-weight:600;vertical-align:middle}
+         border-radius:3px;margin-left:4px;font-weight:600;vertical-align:middle}
   .q .why{display:block;font-size:12.5px;color:#7a8290;margin-top:6px;font-weight:400}
   .stop{background:#fdf0f1;border-right:3px solid var(--red);padding:10px 14px;border-radius:3px;
         font-size:13.5px;color:#6b2129;margin:8px 0}
@@ -96,6 +96,19 @@
   table.read td.no{color:var(--red)}
   .rule{background:#eef4f3;border-right:3px solid var(--turq);padding:11px 14px;border-radius:3px;
         font-size:13.5px;color:#1f4e48;margin:10px 0}
+  ul.prep{margin:6px 0 0;padding:0 18px 0 0;list-style:disc}
+  ul.prep li{font-size:13.5px;color:#33383f;margin-bottom:5px;line-height:1.55}
+  /* Screen-only. Holds your own numbers (last deal, price floor) — the things the
+     script itself tells you not to say out loud. Deliberately outside #outArea so
+     "copy as text" and print can never carry them into the room. */
+  .priv{background:var(--charcoal-2);border:1px solid var(--line);
+        border-right:3px solid var(--turq);border-radius:6px;padding:14px 16px;margin-top:14px}
+  .priv h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--turq);
+           font-weight:700;margin-bottom:8px}
+  .priv ul{margin:0;padding:0 18px 0 0}
+  .priv li{font-size:13.5px;color:#c9cdd3;margin-bottom:6px;line-height:1.6}
+  .priv .seal{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .empty{color:#6b7280;font-size:14.5px;text-align:center;padding:26px 10px;line-height:1.7}
   .err{background:#fdf0f1;border:1px solid #e8bcc0;color:#8b2635;padding:11px 14px;
        border-radius:5px;font-size:14px;margin-top:12px;display:none}
   .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
@@ -105,7 +118,10 @@
   @media print{
     body{background:#fff;color:#000}
     .wrap{max-width:100%;padding:0}
-    header,.steps,.note,button,.panel:not(.on),footer,#p4 .box:first-of-type{display:none!important}
+    /* #p1..#p3 explicitly: `.panel:not(.on)` only hides the INACTIVE panels, so printing
+       while standing on step 2 printed the form itself. Only the script ever prints. */
+    header,.steps,.note,button,.panel:not(.on),#p1,#p2,#p3,.priv,footer,
+    #p4 .box:first-of-type{display:none!important}
     .out{padding:0}
     .q{box-shadow:none;border-right:3px solid #999}
   }
@@ -287,6 +303,7 @@
     <span class="copied" id="c3">הועתק</span>
   </div>
   <div class="out" id="outArea"></div>
+  <div class="priv" id="privArea" style="display:none"></div>
 </div>
 
 <footer>
@@ -468,6 +485,7 @@ function newProspect(){
   PROSPECT_FIELDS.forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('p_pair').value='1';
   buildDR();
+  resetOutput(); // the previous prospect's script was staying on step 4, name and all
 }
 
 /* ---------- build script ---------- */
@@ -489,7 +507,26 @@ function build(){
   err2.style.display='none';
 
   document.getElementById('outArea').innerHTML=render();
+  renderPrivate();
   go(4);
+}
+
+/* Rendered outside #outArea on purpose — see the .priv CSS note. */
+function renderPrivate(){
+  const el=document.getElementById('privArea');
+  const items=(S.priv||[]);
+  if(!items.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.innerHTML =
+    '<h4>לעיניכם בלבד</h4><ul>'+items.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>'+
+    '<div class="seal">לא נכלל בהעתקה ולא בהדפסה. אלה המספרים שלכם, לא של השיחה.</div>';
+  el.style.display='';
+}
+
+const EMPTY_OUT = '<div class="empty">עוד לא נבנה תסריט.<br>מלאו את שלב 2, ואז לחצו "בנה את התסריט" בשלב 3.</div>';
+function resetOutput(){
+  document.getElementById('outArea').innerHTML=EMPTY_OUT;
+  S.priv=[];
+  renderPrivate();
 }
 
 function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
@@ -510,23 +547,31 @@ function render(){
   if(S.gain && numFirst){
     anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך ${S.gain}. אצלך זה יותר או פחות?`;
   }else if(S.gain){
-    anchor = `אצל לקוח שעבדתי איתו במצב דומה, ${S.gain}. אצלך זה דומה, פחות, או יותר?`;
+    // "אצל לקוח..., חסך 12 שעות" reads as if YOU saved them — the verb loses its subject.
+    // Making the client the grammatical subject fixes it for any narrative phrasing.
+    anchor = `לקוח שעבדתי איתו במצב דומה — ${S.gain}. אצלך זה דומה, פחות, או יותר?`;
   }else{
     anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך [כאן נכנס המספר מהעסקה האחרונה שלכם]. אצלך זה יותר או פחות?`;
   }
 
-  /* --- ownership move, built from THEIR edge. Wrapped as an actual line to
-     say, not just an instruction — but a static template can't conjugate
-     Hebrew person/gender, so it ships with a visible caveat to adjust it. */
+  /* --- ownership move. The edge field is a general observation about YOUR clients,
+     so it can't be handed over as a guess about this specific person, and splicing it
+     into a sentence dropped every line after the first. It's shown whole, as reference
+     material, and the phrasing stays the operator's job. */
   let own;
   if(S.edge){
-    own = `אמרו לו, במילים קרובות לאלה: "אני מנחש/ת - ${S.edge.split('\n')[0]}. תקן/י אותי אם אני טועה." התאימו גוף וזמן למה שכתבתם, השאירו את זה מעט לא מדויק בכוונה, ואז שאלו:`;
+    const edgeFull = S.edge.split('\n').map(l=>l.trim()).filter(Boolean).join(' ');
+    own = `מה שאתם רואים אצל לקוחות כאלה, והם עצמם לא: "${edgeFull}" — זו אבחנה כללית שלכם, לא עובדה עליו. נסחו ממנה משפט אחד עליו, בגוף שני, מעט לא מדויק בכוונה. ואז שאלו:`;
   }else{
     own = `נסחו לו את הצוואר שלו במשפט אחד, מעט לא מדויק בכוונה, ואז שאלו:`;
   }
 
-  /* --- contextual openers --- */
-  const openers=[];
+  /* --- contextual openers ---
+     Split in two. `openers` are things said or watched for in the room, and belong in
+     the script. `priv` holds your own figures — they used to sit in the same list, i.e.
+     inside the document that gets copied and printed, under a label saying not to say
+     them out loud. They now render outside #outArea entirely. */
+  const openers=[], priv=[];
   if(S.phow==='in') openers.push('הוא פנה אליכם. אל תסבירו מה אתם עושים. פתחו בשאלה, ותנו לו לתאר למה פנה.');
   if(S.phow==='out') openers.push('אתם פניתם אליו. תנו משפט אחד על למה פניתם דווקא אליו, ומיד עברו לשאלה. לא הצגה עצמית ארוכה.');
   if(S.phow==='ref') openers.push('הגעתם דרך הפניה. שאלו קודם מה נאמר לו עליכם. זה מגלה איזו ציפייה כבר נבנתה.');
@@ -534,11 +579,16 @@ function render(){
   if(S.ppair==='2') openers.push('שניים בשיחה. בשאלת הבעלות, בקשו תשובה מכל אחד בנפרד. אם ענו שונה, ההצעה מותנית בסבב שני עם שניהם.');
   if(S.ptext) openers.push('יש לכם טקסט ציבורי עליו. השוו בשאלה 6 בין מה שהוא כתב על עצמו למה שהוא אומר עכשיו. הפער הוא הסימן.');
   if(!S.unit) openers.push('אין לכם יחידה תחומה. שימו לב לשאלה 8. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.');
-  if(S.last && S.gain) openers.push(`כיול פרטי, לא לשיחה: העסקה האחרונה שלכם היתה ${S.last}, מול הרווח שהערכתם אצל הלקוח: ${S.gain}. השתמשו ביחס הזה כדי לכייל בראש לפני שאלה 11 — לא להגיד בקול.`);
-  if(S.price) openers.push(`מחיר היחידה שלכם הוא ${S.price}. זו הרצפה הפנימית שלכם למה שכדאי בכלל להמשיך אליו, לא מספר שנאמר בשיחה.`);
   if(S.src) openers.push(`הלקוח האחרון שלכם הגיע דרך ${SRC_LABEL[S.src]||S.src}. בשאלה 5 תשמעו מאיפה הגיע הלקוח שלו — אם זה ערוץ אחר משלכם, זה סימן שהערוץ ששכנע אתכם לא בהכרח ישכנע אותו.`);
 
-  const q=(n,txt,why)=>`<div class="q"><span class="qn">${n}</span>${esc(txt)}${why?`<span class="why">${esc(why)}</span>`:''}</div>`;
+  if(S.last && S.gain) priv.push(`העסקה האחרונה שלכם: ${S.last}. הרווח שהערכתם אצל הלקוח: ${S.gain}. היחס הזה הוא הכיול שלכם בראש לפני שאלה 11.`);
+  else if(S.last) priv.push(`העסקה האחרונה שלכם: ${S.last}.`);
+  if(S.price) priv.push(`מחיר היחידה שלכם: ${S.price}. רצפה פנימית למה שכדאי בכלל להמשיך אליו.`);
+  S.priv = priv;
+
+  // the space after the badge is load-bearing: without it innerText (what the copy
+  // button emits) glued the number to the question — "1מה אתה צריך ממני?"
+  const q=(n,txt,why)=>`<div class="q"><span class="qn">${n}</span> ${esc(txt)}${why?`<span class="why">${esc(why)}</span>`:''}</div>`;
 
   return `
 <h3>תסריט שיחת אפיון · ${esc(name)}</h3>
@@ -549,7 +599,7 @@ function render(){
 
 ${openers.length?`<div class="blk">
   <div class="blk-h">לפני שמתחילים</div>
-  ${openers.map(o=>`<div class="rule">${esc(o)}</div>`).join('')}
+  <ul class="prep">${openers.map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
 </div>`:''}
 
 <div class="blk">
@@ -648,6 +698,7 @@ ${openers.length?`<div class="blk">
 /* ---------- init ---------- */
 document.getElementById('promptBiz').innerText=P_BIZ;
 buildDR();
+resetOutput(); // step 4 opened as a blank white slab before anything was built
 loadProfile();
 PROFILE_FIELDS.forEach(id=>{
   const el=document.getElementById(id);
