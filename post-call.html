@@ -12,25 +12,23 @@
 <header>
   <h1>POST<span class="mark">·</span>CALL</h1>
   <div class="sub">מהשיחה להצעה מתומחרת. לפרויקטי אוטומציה וייעול תהליכים.</div>
-  <div class="note">
-    אתה לא צריך לדעת כמה לגבות. אתה צריך את המספר של <b>הלקוח</b>: כמה התהליך הידני עולה לו בשנה.
-    המחיר נגזר ממנו, לא מהוותק שלך ולא מהעסקה הקודמת שלך. אם עוד לא סגרת אף עסקה, זה עדיין עובד.
-  </div>
 </header>
 
-<!-- ============ שאלות השיחה ============ -->
-<div class="sec">
-  <div class="sec-h">בשיחה · חינם</div>
-  <h2>13 שאלות שמוציאות את המספר</h2>
-  <p class="lead">מלא תוך כדי השיחה או מיד אחריה. המספרים למטה מתעדכנים בזמן אמת.</p>
+<!-- ============ העסקאות ============ -->
+<div class="dealbar" id="dealBar"></div>
 
+<!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->
+<main>
+<div class="sec">
+  <div class="sec-h">שלב 1 · שלושים שניות</div>
+  <h2>ההצעה נכתבת תוך כדי שאתה ממלא</h2>
+  <p class="lead">ארבעה שדות מספיקים למסמך מלא. כל השאר מדייק אותו ויושב למטה.</p>
   <div class="box">
     <div class="qa">
       <div class="qt" id="qt1"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
       <div class="why">תן לו לתאר עד הסוף. התיאור המפורט הוא מה שיהפוך לסקופ בהצעה.</div>
       <textarea aria-labelledby="qt1" id="q_process" placeholder="למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת"></textarea>
     </div>
-
     <div class="qa">
       <div class="qt" id="qt2"><span class="qn">2</span>כמה פעמים זה קורה?</div>
       <div class="why">אם הוא אומר "המון", בקש מספר. "בערך כמה ביום?"</div>
@@ -45,15 +43,64 @@
         </div>
       </div>
     </div>
-
     <div class="qa">
       <div class="qt" id="qt3"><span class="qn">3</span>כמה זמן לוקח כל פעם, מהתחלה עד הסוף?</div>
       <div class="why">כולל ההקשר: לפתוח מסך, לחפש, לוודא. לא רק ההקלדה עצמה.</div>
       <label for="q_minutes">דקות לכל פעם</label>
       <input type="number" id="q_minutes" min="0" step="1" placeholder="7">
     </div>
-
     <div class="qa">
+      <div class="qt" id="qt7"><span class="qn">7</span>אילו מערכות מעורבות בתהליך?</div>
+      <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
+      <div class="chips" id="sysChips"></div>
+    </div>
+    <label for="q_client">שם הלקוח או העסק</label>
+    <input type="text" id="q_client" placeholder="לכותרת ההצעה">
+  </div>
+</div>
+
+<!-- ============ המסמך — הוא הממשק ============ -->
+<div class="sec">
+  <div class="sec-h">שלב 2 · התוצר</div>
+  <h2>ההצעה שאתה שולח</h2>
+  <div class="docbar">
+    <div class="docprice"><span class="k">מחיר מוצע</span><span class="v" id="s_price_top">—</span></div>
+    <div class="docacts">
+      <button class="act" onclick="requireKey(copyProposal)">העתק</button>
+      <button class="ghost" onclick="requireKey(()=>window.print())">PDF</button>
+      <button class="ghost" onclick="saveCurrentDeal()">שמור</button>
+      <button class="ghost" onclick="markSent()">סמן כנשלחה</button>
+      <span class="copied" id="cpFlag">הועתק</span>
+    </div>
+  </div>
+  <div class="out" id="proposal"></div>
+  <div id="wall" class="wall" style="display:none">
+    <h3>לייצוא ההצעה נדרש מפתח</h3>
+    <p>המסמך והמספרים חינם ותמיד יישארו. התשלום הוא על לקיחתו החוצה.</p>
+    <div class="price">₪49</div>
+    <button class="act" id="payBtn">קנה וקבל מפתח</button>
+    <div class="keyrow">
+      <input type="text" id="keyIn" aria-label="מפתח פתיחה" placeholder="הדבק כאן את המפתח" autocomplete="off">
+      <button class="ghost" onclick="tryUnlock()">פתח</button>
+    </div>
+    <div class="err" id="keyErr">המפתח לא תקין. בדוק שהעתקת אותו במלואו.</div>
+  </div>
+</div>
+
+<!-- ============ הסקופ — כאן נשרף הזמן ============ -->
+<div class="sec">
+  <div class="sec-h">שלב 3 · כאן נשרף הזמן</div>
+  <h2>מה נכנס, מה יוצא, ומה בתוספת תשלום</h2>
+  <p class="lead">כל שורה עם ברירת מחדל ועם הסיבה. שלוש הקשות והסקופ סגור, והמסמך למעלה מתעדכן.</p>
+  <div class="box" id="scopeBox"></div>
+</div>
+
+<!-- ============ מגירות ============ -->
+<div class="sec">
+  <details class="drawer">
+    <summary>שאר השאלות · מדייקות את המסמך</summary>
+    <div class="box">
+      <div class="qa">
       <div class="qt" id="qt4"><span class="qn">4</span>מי עושה את זה היום?</div>
       <div class="why">התפקיד קובע את עלות השעה. אם זה בעל העסק בעצמו, המספר קופץ פי שלושה.</div>
       <label for="q_role">תפקיד</label>
@@ -68,30 +115,18 @@
         <label for="q_rate_custom">עלות שעה מלאה בשקלים</label>
         <input type="number" id="q_rate_custom" min="0" step="5" placeholder="100">
       </div>
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt5"><span class="qn">5</span>מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?</div>
       <div class="why">בלי אירוע, אין דחיפות, וההצעה תישאר פתוחה חודשים. זה נכנס לפתיחת ההצעה.</div>
       <textarea aria-labelledby="qt5" id="q_trigger" placeholder="למשל: בחודש שעבר פספסנו שתי הזמנות והלקוח עבר למתחרה"></textarea>
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt6"><span class="qn">6</span>כשזה משתבש, מה קורה בפועל? כמה פעמים בחודש?</div>
       <div class="why">זה הערך השני, וברוב השיחות הוא גדול מחיסכון הזמן. אל תדלג עליו.</div>
       <div class="row">
         <div><label for="q_err_freq">תקלות בחודש</label><input type="number" id="q_err_freq" min="0" step="1" placeholder="3"></div>
         <div><label for="q_err_cost">עלות ממוצעת לתקלה (₪)</label><input type="number" id="q_err_cost" min="0" step="50" placeholder="400"></div>
       </div>
-    </div>
-
-    <div class="qa">
-      <div class="qt" id="qt7"><span class="qn">7</span>אילו מערכות מעורבות בתהליך?</div>
-      <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
-      <div class="chips" id="sysChips"></div>
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt8"><span class="qn">8</span>למערכות האלה יש חיבור קיים, או שהכל ידני?</div>
       <div class="why">שאל אם יש להן API או אינטגרציה מובנית. "אני לא יודע" = כמו ידני, לצורך האומדן.</div>
       <select aria-labelledby="qt8" id="q_integration">
@@ -99,9 +134,7 @@
         <option value="1.4" selected>לחלקן. לפחות אחת דורשת עבודה</option>
         <option value="1.9">ידני לגמרי, או שלא ידוע</option>
       </select>
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt9"><span class="qn">9</span>כמה אחוז מהמקרים הם חריגים שדורשים טיפול שונה?</div>
       <div class="why">כאן נשברים פרויקטי אוטומציה. אם הוא אומר "רוב המקרים דומים", בקש אחוז.</div>
       <select aria-labelledby="qt9" id="q_edge">
@@ -109,50 +142,30 @@
         <option value="1.25" selected>בין 10% ל-25%</option>
         <option value="1.6">יותר מרבע מהמקרים חריגים</option>
       </select>
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt10"><span class="qn">10</span>ניסיתם כבר לפתור את זה? מה לא עבד?</div>
       <div class="why">אם יש ספק קודם שנכשל, זה נכנס להצעה כ"מה שונה הפעם". זה סוגר עסקאות.</div>
       <textarea aria-labelledby="qt10" id="q_prev" placeholder="למשל: קנינו תוסף אבל אף אחד לא הטמיע אותו"></textarea>
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt11"><span class="qn">11</span>מי עוד צריך לאשר את זה חוץ ממך?</div>
       <div class="why">אם יש עוד מחליט ולא ידעת, ההצעה נתקעת שבועיים. שאל בשיחה, לא אחריה.</div>
       <input aria-labelledby="qt11" type="text" id="q_decider" placeholder="למשל: השותף שלי. או: אף אחד, אני מחליט">
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt12"><span class="qn">12</span>עד מתי אתה צריך שזה יעבוד?</div>
       <div class="why">תאריך, לא "בהקדם". זה נכנס להצעה כלוח זמנים ולתאריך החלטה.</div>
       <input aria-labelledby="qt12" type="text" id="q_deadline" placeholder="למשל: לפני עונת החגים, אמצע ספטמבר">
-    </div>
-
-    <div class="qa">
+    </div><div class="qa">
       <div class="qt" id="qt13"><span class="qn">13</span>איך נדע בעוד חודש שזה עבד?</div>
       <div class="why">התשובה שלו הופכת לקריטריון ההצלחה בהצעה. אם אין, הצע: "שעות שחזרו".</div>
       <input type="text" id="q_success" aria-labelledby="qt13" placeholder="למשל: שאף הזמנה לא תיפול בין הכיסאות">
     </div>
-  </div>
+    </div>
+  </details>
 
-  <div class="box">
-    <label for="q_client">שם הלקוח או העסק</label>
-    <input type="text" id="q_client" placeholder="לכותרת ההצעה">
-  </div>
-</div>
-
-<!-- ============ המספרים ============ -->
-<div class="sec">
-  <div class="sec-h">הכיול · חינם</div>
-  <h2>איך אתה מתמחר את זה</h2>
-  <p class="lead">
-    אין שיטה אחת נכונה. השוק עובד בשלוש משפחות — עלות, שוק, ערך — ורוב המנוסים מצליבים ביניהן.
-    בחר את השיטה שאתה יכול <b>להגן עליה בשיחה</b>. השאר יחושבו ברקע כבדיקת שפיות.
-  </p>
-
-  <div class="box">
-    <label for="c_last">שיטה ראשית</label>
+  <details class="drawer">
+    <summary>תמחור · שיטה, מספרים והצלבה</summary>
+    <div class="box">
+    <label for="methodChips">שיטה ראשית</label>
     <div class="chips" id="methodChips"></div>
     <p style="font-size:12.5px;color:var(--muted);margin-top:8px" id="methodHint"></p>
 
@@ -191,9 +204,6 @@
       </div>
     </div>
   </div>
-
-  <h2 style="margin-top:26px">מה התהליך עולה לו בשנה</h2>
-  <p class="lead">גם אם אתה לא מתמחר לפי ערך, המספר הזה הוא מה שאתה אומר בשיחה.</p>
 
   <div class="box">
     <label for="q_provenance">מאיפה הגיע המספר בשאלה 6
@@ -247,47 +257,22 @@
       </p>
     </details>
   </div>
+  </details>
+
+  <div class="priv" id="privArea" style="display:none"></div>
 </div>
 
-<!-- ============ הסקופ ============ -->
+<!-- ============ שלב 4 ============ -->
 <div class="sec">
-  <div class="sec-h">הסקופ · חינם</div>
-  <h2>מה נכנס, מה יוצא, ומה בתוספת תשלום</h2>
+  <div class="sec-h">שלב 4 · אחרי שנשלחה</div>
+  <h2>מה קרה בפועל</h2>
   <p class="lead">
-    זה החלק שגוזל את הזמן, ולכן הוא לא טקסט קבוע. כל שורה מגיעה עם ברירת מחדל ועם הסיבה —
-    שלוש הקשות והסקופ סגור. השורות שרלוונטיות רק למערכות שבחרת יופיעו לבד.
+    זה מה שהופך את האומדן ממעגלי למדוד. האומדן ננעל ברגע השמירה, ומושווה לשעות שתדווח אחרי המסירה.
+    הכול נשאר בדפדפן הזה — שום פרט לקוח לא עוזב אותו.
   </p>
-  <div class="box" id="scopeBox"></div>
+  <div class="box" id="ledgerBox"></div>
 </div>
-
-<!-- ============ ההצעה ============ -->
-<div class="sec">
-  <div class="sec-h">התוצר · בתשלום</div>
-  <h2>ההצעה שאתה שולח</h2>
-  <p class="lead">מסמך מלא: סקופ, מה לא כלול, מחיר עם נימוק שנשען על המספר שלו, לוח זמנים, קריטריון הצלחה ותאריך החלטה.</p>
-
-  <div id="wall" class="wall">
-    <h3>ההצעה מוכנה</h3>
-    <p>המספרים למעלה חינם ותמיד יישארו. המסמך שאתה שולח ללקוח הוא התוצר.</p>
-    <div class="price">₪49</div>
-    <p style="font-size:13px">תשלום חד-פעמי לכל הצעה. בלי מנוי.</p>
-    <button class="act" id="payBtn">קנה וקבל מפתח</button>
-    <div class="keyrow">
-      <input type="text" id="keyIn" aria-label="מפתח פתיחה" placeholder="הדבק כאן את המפתח" autocomplete="off">
-      <button class="ghost" onclick="tryUnlock()">פתח</button>
-    </div>
-    <div class="err" id="keyErr">המפתח לא תקין. בדוק שהעתקת אותו במלואו.</div>
-  </div>
-
-  <div id="proposalWrap" style="display:none">
-    <div class="hideprint" style="margin-bottom:10px">
-      <button class="act" onclick="copyProposal()">העתק כטקסט</button>
-      <button class="ghost" onclick="window.print()">הדפסה או PDF</button>
-      <span class="copied" id="cpFlag">הועתק</span>
-    </div>
-    <div class="out" id="proposal"></div>
-  </div>
-</div>
+</main>
 
 <footer>
   POST-CALL · לפרויקטי אוטומציה וייעול תהליכים · הנתונים נשארים בדפדפן שלך.<br>
@@ -297,6 +282,7 @@
 </div>
 
 <script src="assets/model.js"></script>
+<script src="assets/deals.js"></script>
 <script src="assets/post-call.js"></script>
 </body>
 </html>

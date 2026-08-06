@@ -103,7 +103,7 @@ function renderScope(){
   box.querySelectorAll('.sbtn').forEach(b => b.onclick = () => {
     scopeState[b.dataset.i] = b.dataset.s;
     renderScope();
-    if (unlocked) renderProposal();
+    renderProposal();
   });
 }
 function scopeList(state){
@@ -248,7 +248,9 @@ function recompute(){
   el('s_hours').textContent   = m.hours   ? Math.round(m.hours).toLocaleString('en-US') : '—';
   el('s_value').textContent   = m.annualValue ? ils(m.annualValue) : '—';
   el('s_effort').textContent  = chosenSystems.size ? m.effort : '—';
-  el('s_price').textContent   = (m.annualValue || chosenSystems.size) ? ils(m.price) : '—';
+  const priceTxt = (m.annualValue || chosenSystems.size) ? ils(m.price) : '—';
+  el('s_price').textContent = priceTxt;
+  el('s_price_top').textContent = priceTxt; // the headline copy in the document bar
   el('s_payback').textContent = m.payback ? m.payback.toFixed(1) : '—';
   el('s_band').textContent = m.annualValue
     ? ils(m.low) + ' – ' + ils(m.high)
@@ -324,7 +326,7 @@ function recompute(){
       ' בשנה. ההשקעה מחזירה את עצמה תוך פחות מ' +
       (m.payback < 4 ? '-חודש' : '-' + Math.ceil(m.payback / 4.3) + ' חודשים') + '."</div>';
   }
-  if (unlocked) renderProposal();
+  renderProposal();
 }
 
 document.querySelectorAll('input,select,textarea').forEach(n =>
@@ -337,7 +339,18 @@ document.querySelectorAll('input,select,textarea').forEach(n =>
    anyone pays at all, not to stop copying. Real enforcement needs the key
    checked server-side before the document is returned. */
 const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
-let unlocked = false;
+let unlocked = false, pendingExport = null;
+
+/* The document stays on screen for everyone — it is the interface, and hiding
+   it would hide the only thing that shows the tool works. The key is required
+   to take it out of the page. */
+function requireKey(fn){
+  if (unlocked) return fn();
+  pendingExport = fn;
+  track('export_attempted');
+  el('wall').style.display = '';
+  el('wall').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
 el('payBtn').onclick = () => {
   if (PAYMENT_URL.includes('example.com')) {
@@ -359,18 +372,15 @@ function tryUnlock(){
   if (keyValid(el('keyIn').value)) {
     unlocked = true;
     el('wall').style.display = 'none';
-    el('proposalWrap').style.display = '';
     try { localStorage.setItem('postcall_key', el('keyIn').value.trim().toUpperCase()); } catch(e){}
-    renderProposal();
-    el('proposalWrap').scrollIntoView({ behavior: 'smooth' });
+    if (pendingExport) { const f = pendingExport; pendingExport = null; f(); }
   } else {
     el('keyErr').style.display = 'block';
   }
 }
 try {
   const saved = localStorage.getItem('postcall_key');
-  if (saved && keyValid(saved)) { unlocked = true;
-    el('wall').style.display = 'none'; el('proposalWrap').style.display = ''; }
+  if (saved && keyValid(saved)) unlocked = true;
 } catch(e){}
 
 /* ---------- proposal ---------- */
@@ -442,7 +452,7 @@ ${scopeList('in').length ? `<h4>מה נכלל</h4>
 
 ${scopeList('out').length ? `<h4>מה לא נכלל</h4>
 <ul>${scopeList('out').map(i => `<li class="no">${esc(i.t)}</li>`).join('')}</ul>
-<p style="font-size:13px;color:#6b7280">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
+<p style="font-size:13px;color:#5f6673">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
 
 ${scopeList('extra').length ? `<h4>זמין בתוספת תשלום</h4>
 <ul>${scopeList('extra').map(i => `<li>${esc(i.t)}</li>`).join('')}</ul>` : ''}
@@ -450,7 +460,7 @@ ${scopeList('extra').length ? `<h4>זמין בתוספת תשלום</h4>
 <h4>המחיר</h4>
 <div class="pricebox">
   <div class="amt">${ils(m.price)}</div>
-  <div style="font-size:13px;color:#6b7280;margin-top:4px">
+  <div style="font-size:13px;color:#5f6673;margin-top:4px">
     תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.
   </div>
 </div>
@@ -496,3 +506,142 @@ function fallbackCopy(t, done){
 
 renderScope();
 recompute();
+
+/* ============================================================
+   Stage 4 — the deal ledger in the page.
+   The estimate is locked when a deal is saved; hours reported after delivery
+   are compared against that locked number. That comparison is the only thing
+   that can turn the effort table from fitted-backwards into measured, so the
+   "not calibrated" marker is removed by evidence here rather than by editing
+   a label.
+   ============================================================ */
+let currentDealId = null;
+
+function dealSnapshot(){
+  const m = model();
+  return {
+    id: currentDealId || undefined,
+    client: txt('q_client') || 'ללא שם',
+    process: txt('q_process').slice(0, 120),
+    estimatedHours: m.effort,      // locked at save time — see deals.js
+    priceQuoted: m.price,
+    method: m.method,
+    systems: [...chosenSystems]
+  };
+}
+
+function saveCurrentDeal(){
+  const rec = PC.deals.save(dealSnapshot());
+  if (!rec) { flashDoc('השמירה נכשלה — ייתכן שאחסון הדפדפן חסום'); return; }
+  currentDealId = rec.id;
+  renderLedger(); flashDoc('נשמר'); track('deal_saved');
+}
+function markSent(){
+  if (!currentDealId) saveCurrentDeal();
+  if (!currentDealId) return;
+  PC.deals.setStatus(currentDealId, 'sent');
+  renderLedger(); flashDoc('סומנה כנשלחה'); track('deal_sent');
+}
+function flashDoc(msg){
+  const f = el('cpFlag'); f.textContent = msg;
+  f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2000);
+}
+
+function setStatus(id, s){ PC.deals.setStatus(id, s); renderLedger(); }
+function removeDeal(id){
+  if (currentDealId === id) currentDealId = null;
+  PC.deals.remove(id); renderLedger();
+}
+function saveOutcome(id){
+  PC.deals.recordOutcome(id, {
+    closedPrice: el('oc_price_' + id).value,
+    actualHours: el('oc_hours_' + id).value
+  });
+  renderLedger(); recompute(); track('outcome_recorded');
+}
+
+function renderLedger(){
+  const box = el('ledgerBox'); if (!box) return;
+  const list = PC.deals.list();
+  const cal = PC.deals.calibration();
+  const win = PC.deals.winRate();
+
+  const summary = list.length ? `
+    <div class="ledger-sum">
+      <span>${list.length} הצעות</span>
+      <span>${win.won} נסגרו · ${win.lost} נדחו · ${win.undecided} פתוחות</span>
+      ${win.rate !== null ? `<span>שיעור סגירה ${Math.round(win.rate*100)}%</span>` : ''}
+    </div>
+    ${cal.enough
+      ? `<div class="ok"><b>הכיול נמדד על ${cal.n} מסירות.</b> ${cal.suggestion}.
+           אומדן מצטבר ${cal.estimatedTotal} שעות מול ${cal.actualTotal} בפועל.
+           אפשר לעדכן את התעריף או את האומדן בהתאם.</div>`
+      : `<div class="tri-warn">כיול האומדן דורש ${5 - cal.n} מסירות נוספות עם שעות מדווחות.
+           עד אז טבלת האומדן נשארת מסומנת כלא-מכוילת — היא הותאמה אחורה למחיר, ולא נמדדה.</div>`}` : '';
+
+  box.innerHTML = summary + (list.length ? list.map(d => {
+    const o = d.outcome || {};
+    const done = o.actualHours > 0;
+    return `<div class="deal">
+      <div class="deal-h">
+        <b>${esc(d.client)}</b>
+        <span class="deal-st st-${d.status}">${PC.STATUS_LABEL[d.status]}</span>
+        <span class="deal-meta">${d.priceQuoted ? ils(d.priceQuoted) : '—'} · אומדן ${d.estimatedHours || '—'} ש׳ · ${d.created.slice(0,10)}</span>
+      </div>
+      ${d.process ? `<div class="deal-p">${esc(d.process)}</div>` : ''}
+      <div class="deal-acts">
+        ${['sent','won','lost','no_answer'].map(s =>
+          `<button type="button" class="sbtn${d.status===s?' on s-in':''}" aria-pressed="${d.status===s}"
+            onclick="setStatus('${d.id}','${s}')">${PC.STATUS_LABEL[s]}</button>`).join('')}
+        <button type="button" class="sbtn" onclick="removeDeal('${d.id}')">מחק</button>
+      </div>
+      ${d.status === 'won' || done ? `
+        <div class="deal-out">
+          <div><label for="oc_price_${d.id}">מחיר שנסגר בפועל</label>
+            <input type="number" id="oc_price_${d.id}" value="${o.closedPrice || ''}" placeholder="${d.priceQuoted || ''}"></div>
+          <div><label for="oc_hours_${d.id}">שעות עבודה בפועל</label>
+            <input type="number" id="oc_hours_${d.id}" value="${o.actualHours || ''}" placeholder="${d.estimatedHours || ''}"></div>
+          <button type="button" class="ghost" onclick="saveOutcome('${d.id}')">שמור תוצאה</button>
+        </div>` : ''}
+    </div>`;
+  }).join('') : '<p class="lead" style="margin:0">עוד לא נשמרה אף הצעה. בנה אחת למעלה ולחץ "שמור".</p>');
+
+  const bar = el('dealBar');
+  if (bar) bar.innerHTML = list.length
+    ? `<button type="button" class="ghost" onclick="newDeal()">הצעה חדשה</button>
+       <span class="dealbar-n">${list.length} שמורות · ${win.undecided} ממתינות לתשובה</span>` : '';
+}
+
+function newDeal(){
+  currentDealId = null;
+  ['q_process','q_client','q_trigger','q_prev','q_decider','q_deadline','q_success',
+   'q_freq','q_minutes','q_err_freq','q_err_cost'].forEach(id => { const e = el(id); if (e) e.value = ''; });
+  [...el('sysChips').children].forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed','false'); });
+  chosenSystems.clear();
+  SCOPE_ITEMS.forEach(i => scopeState[i.id] = i.d);
+  renderScope(); renderLedger(); recompute();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+renderLedger();
+
+/* ---------- optional telemetry ----------
+   The page is fully functional with no network at all — this is additive and
+   silent on failure. Buckets only: no client names, no proposal text, no exact
+   prices. If the endpoint is absent (opened from file://, or deployed without
+   the function) nothing happens and nothing breaks. */
+function track(event, extra){
+  try {
+    if (location.protocol === 'file:') return;
+    const m = model();
+    fetch('/api/event', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify(Object.assign({
+        event, method: m.method, systems: chosenSystems.size,
+        price: m.price, provenance: el('q_provenance') ? el('q_provenance').value : null
+      }, extra || {}))
+    }).catch(() => {});
+  } catch (e) {}
+}
+track('opened');

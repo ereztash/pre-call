@@ -127,7 +127,7 @@
   /* ---- proposal ---- */
   .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:14px}
   .out h3{color:#16191d;font-size:21px;margin:0 0 4px;font-weight:700}
-  .out .meta{color:#6b7280;font-size:13px;margin-bottom:20px;
+  .out .meta{color:#5f6673;font-size:13px;margin-bottom:20px;
              border-bottom:1px solid #ddd9d2;padding-bottom:12px}
   .out h4{font-size:12px;letter-spacing:1.1px;text-transform:uppercase;color:var(--copper-dim);
           font-weight:700;margin:22px 0 7px}
@@ -159,3 +159,49 @@
     #proposal{display:block!important}
     .out{padding:0}
   }
+
+  /* ---- document-first shell ----
+     The proposal used to sit 9.6 screens down behind 124 controls. It is the
+     only reason anyone opens this, so it now comes second, right after the
+     four inputs that generate it, and the rest folds away. */
+  .dealbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+           padding:10px 0 0;margin-bottom:4px}
+  .dealbar-n{font-size:13px;color:var(--muted)}
+  .docbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+          background:var(--charcoal-2);border:1px solid var(--line);border-radius:8px 8px 0 0;
+          padding:12px 16px;border-bottom:0}
+  .docprice{display:flex;flex-direction:column}
+  .docprice .k{font-size:12px;color:var(--muted)}
+  .docprice .v{font-size:24px;font-weight:700;color:#f2f0ec;
+               font-variant-numeric:tabular-nums;direction:ltr}
+  .docacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .docacts button{margin:0}
+  .out{border-radius:0 0 8px 8px;margin-top:0}
+
+  details.drawer{background:var(--charcoal-2);border:1px solid var(--line);
+                 border-radius:6px;margin-bottom:10px}
+  details.drawer>summary{cursor:pointer;padding:14px 16px;font-size:15px;font-weight:600;
+                         color:#e2e5e9;min-height:44px;display:flex;align-items:center}
+  details.drawer>summary:hover{color:#fff}
+  details.drawer[open]>summary{border-bottom:1px solid var(--line)}
+  details.drawer .box{border:0;background:transparent;margin-bottom:0}
+  details.drawer .nums{border:0;border-radius:0}
+
+  /* ---- deal ledger ---- */
+  .ledger-sum{display:flex;flex-wrap:wrap;gap:14px;font-size:13.5px;color:var(--muted);
+              padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .deal{border-bottom:1px solid var(--line);padding:12px 0}
+  .deal:last-child{border-bottom:0}
+  .deal-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+  .deal-h b{font-size:15px;color:#eceef1}
+  .deal-meta{font-size:12.5px;color:var(--muted);margin-right:auto;direction:rtl}
+  .deal-st{font-size:12px;padding:2px 9px;border-radius:12px;background:#0f1216;color:var(--muted)}
+  .deal-st.st-won{background:var(--turq);color:#0d1a18;font-weight:600}
+  .deal-st.st-lost{background:var(--red);color:#fff;font-weight:600}
+  .deal-st.st-sent{background:var(--copper);color:#12151a;font-weight:600}
+  .deal-p{font-size:13px;color:var(--muted);margin:4px 0 8px}
+  .deal-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .deal-out{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:12px;
+            background:#0f1216;border-radius:6px;padding:12px}
+  .deal-out>div{flex:1 1 140px}
+  .deal-out label{margin-top:0}
