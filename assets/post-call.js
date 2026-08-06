@@ -60,6 +60,7 @@ SYSTEMS.forEach(s => {
     on ? chosenSystems.add(s) : chosenSystems.delete(s);
     renderScope(); // system-conditional scope rows appear and disappear with this
     recompute();
+    saveDraftSoon(); // chips fire no input event of their own
   };
   el('sysChips').appendChild(c);
 });
@@ -106,6 +107,7 @@ function applyTemplate(id){
   renderTemplates();
   renderScope();
   recompute();
+  saveDraft();   // immediately: a template rewrites everything at once
   track('template_used');
   const doc = el('proposal');
   if (doc) doc.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -175,6 +177,7 @@ const renderScope = guard('scope', function (){
     scopeState[b.dataset.i] = b.dataset.s;
     renderScope();
     renderProposal();   // the client read does not depend on scope
+    saveDraftSoon();
   });
 });
 
@@ -368,6 +371,13 @@ const renderClientRead = guard('client', function (){
   const p = clientProfile();
   const a = PC.client.adapt(p);
 
+  /* The focus marks are cleared here rather than after the early return
+     below. They used to be cleared only on the path that also re-applied
+     them, so once the read went quiet — a template swapped, a field emptied —
+     the old markers stayed on screen pointing at questions that no longer
+     mattered. Measured: they survived every subsequent edit. */
+  document.querySelectorAll('.focus').forEach(n => n.classList.remove('focus'));
+
   // nothing inferred and nothing changed — an empty panel is just noise
   if (!p.evidence.length && !a.changes.length) { show('clientRead', false); return; }
 
@@ -397,7 +407,6 @@ const renderClientRead = guard('client', function (){
   // the questions that move this particular client's document, marked where
   // they already sit — moving them between drawers would cost more in lost
   // orientation than it buys in emphasis
-  document.querySelectorAll('.focus').forEach(n => n.classList.remove('focus'));
   a.focus.forEach(id => {
     const f = el(id); if (!f) return;
     // not every question is wrapped in .qa — the provenance select sits in a
@@ -442,6 +451,70 @@ function fallbackCopy(t, done){
   document.body.removeChild(ta); done(ok);
 }
 
+/* ---------- the unfinished draft ----------
+   Separate from the ledger on purpose: the ledger holds what you chose to
+   save, this holds what you have not finished. A reload used to cost the
+   whole session — measured, not theorised. */
+let draftTimer = null, draftWarned = false;
+
+function collectDraft(){
+  const fields = {};
+  PC.DRAFT_FIELDS.forEach(id => { const f = el(id); if (f) fields[id] = f.value; });
+  return { fields, systems: [...chosenSystems], scope: scopeState,
+           template: activeTemplate, dealId: currentDealId, override: clientOverride };
+}
+
+function saveDraft(){
+  if (!PC.draft) return;
+  if (PC.draft.save(collectDraft())) { draftWarned = false; return; }
+  if (draftWarned) return;
+  draftWarned = true;
+  flashDoc('הדפדפן חוסם שמירה — הטיוטה לא תשרוד רענון');
+}
+// debounced: one write per pause, not one per keystroke
+function saveDraftSoon(){ clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 500); }
+
+/* The form exactly as it comes up, read off the page before anything is
+   restored into it. Everything compares against this instead of against a
+   hand-written list of defaults, which would go stale the first time a
+   select's initial value changed. */
+const PRISTINE = (() => {
+  const o = {};
+  PC.DRAFT_FIELDS.forEach(id => { const f = el(id); if (f) o[id] = f.value; });
+  return o;
+})();
+
+function restoreDraft(){
+  if (!PC.draft) return;
+  const d = PC.draft.load();
+  if (PC.draft.isEmpty(d, PRISTINE)) return;
+
+  Object.entries(d.fields || {}).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
+  if (d.systems) selectSystems(d.systems);
+  if (d.scope) scopeState = Object.assign(defaultScopeState(), d.scope);
+  activeTemplate = d.template || null;
+  currentDealId = d.dealId || null;
+  clientOverride = d.override || 'auto';
+  show('customRateWrap', el('q_role').value === 'custom');
+
+  /* Announced, never silent. A form that fills itself on load with no
+     explanation is indistinguishable from a form showing the wrong client —
+     and the operator is about to send whatever is on it. */
+  const bar = el('draftNote');
+  if (bar) {
+    bar.innerHTML = 'שוחזרה טיוטה שלא הסתיימה' +
+      (PC.draft.age(d) ? ' · נשמרה ' + esc(PC.draft.age(d)) : '') +
+      ' <button type="button" class="ghost" data-act="discard">התחל מחדש</button>';
+    show('draftNote', true);
+  }
+}
+
+function discardDraft(){
+  PC.draft && PC.draft.clear();
+  show('draftNote', false);
+  newDeal();
+}
+
 /* ---------- optional telemetry ----------
    The page is fully functional with no network at all — this is additive and
    silent on failure. Buckets only: no client names, no proposal text, no exact
@@ -473,7 +546,8 @@ const ACTIONS = {
   save:    saveCurrentDeal,
   sent:    markSent,
   unlock:  tryUnlock,
-  newdeal: newDeal
+  newdeal: newDeal,
+  discard: discardDraft
 };
 document.addEventListener('click', e => {
   const d = e.target.closest('[data-deal]');
@@ -491,14 +565,17 @@ document.addEventListener('click', e => {
   if (fn) { e.preventDefault(); fn(); }
 });
 
-document.querySelectorAll('input,select,textarea').forEach(n =>
-  n.addEventListener('input', recompute));
+document.querySelectorAll('input,select,textarea').forEach(n => {
+  n.addEventListener('input', recompute);
+  n.addEventListener('input', saveDraftSoon);
+});
 
 /* ---------- start ----------
    Every module is loaded by now, so first render happens here rather than at
    the bottom of whichever file happened to define the function. */
 mountGate();
 renderTemplates();
+restoreDraft();   // before the first render, so the page comes up as it was left
 renderScope();
 recompute();   // recompute drives the client read and the document
 renderLedger();

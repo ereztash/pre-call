@@ -294,6 +294,12 @@
     color:#0f1216;background:var(--turq);border-radius:3px;padding:1px 7px;
     vertical-align:middle}
 
+  /* ---- restored draft ---- */
+  .draftnote{background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);
+             border-radius:6px;padding:10px 14px;margin:12px 0;font-size:13.5px;color:#bfe3dd;
+             display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .draftnote button{margin:0}
+
   /* ---- error boundary ---- */
   .errbound{background:#2a1d20;border:1px solid #7a3b45;border-right:3px solid var(--red-text);
             border-radius:6px;padding:12px 16px;margin:12px 0;font-size:13.5px;

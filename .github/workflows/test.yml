@@ -29,6 +29,8 @@ jobs:
         run: node assets/catalog.test.js
       - name: reading the specific client
         run: node assets/client.test.js
+      - name: the unfinished draft
+        run: node assets/draft.test.js
       - name: the proposal document
         run: node assets/proposal.test.js
       - name: markup, CSP, print and telemetry contracts

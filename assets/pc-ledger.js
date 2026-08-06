@@ -121,5 +121,9 @@ function newDeal(){
   resetScope();
   clearTemplateChoice();
   renderScope(); renderLedger(); recompute();
+  // a new proposal means there is nothing half-finished to come back to;
+  // re-saving the blank form here made the recovery notice reappear forever
+  PC.draft && PC.draft.clear();
+  show('draftNote', false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }

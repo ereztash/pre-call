@@ -18,6 +18,10 @@
 <div class="dealbar" id="dealBar"></div>
 <!-- A render that throws says so here instead of taking the page down. -->
 <div class="errbound hidden" id="errBoundary" role="status" aria-live="polite"></div>
+<!-- A restored draft is announced, never silent: a form that fills itself
+     on load with no explanation looks exactly like one showing the wrong
+     client, and the operator is about to send whatever is on it. -->
+<div class="draftnote hidden" id="draftNote" role="status" aria-live="polite"></div>
 
 <!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->
 <main>
@@ -308,6 +312,7 @@
 <script src="assets/deals.js"></script>
 <script src="assets/pc-dom.js"></script>
 <script src="assets/pc-catalog.js"></script>
+<script src="assets/pc-draft.js"></script>
 <script src="assets/pc-client.js"></script>
 <script src="assets/pc-proposal.js"></script>
 <script src="assets/pc-gate.js"></script>
