@@ -168,7 +168,7 @@
   </div>
 
   <div class="box">
-    <h3>הפרופיל</h3>
+    <h3>הפרופיל <span class="copied" id="profileSaved" style="font-size:12px">✓ נשמר בדפדפן</span></h3>
     <div class="grid2">
       <div>
         <label>מה אתם מוכרים, במילים שלכם
@@ -227,6 +227,8 @@
 <div class="panel" id="p3">
   <h2>שלב 3 · הצד השני</h2>
   <p class="lead">שתי דרכים. מהירה, או מעמיקה. הפרטים כאן משנים את הניסוח של השאלות, לא את המבנה.</p>
+  <button class="ghost" onclick="newProspect()" style="margin-bottom:6px">שיחה חדשה · נקה פרטי לקוח קודם</button>
+  <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 14px">אם זו הכנה לשיחה עם מישהו אחר, לחצו כאן קודם — אחרת פרטים מהשיחה הקודמת עלולים להישאר בטופס.</p>
 
   <div class="box">
     <h3>מסלול מהיר · הדבקת פרופיל</h3>
@@ -430,7 +432,8 @@ function saveProfile(){
     const data={};
     PROFILE_FIELDS.forEach(id=>{ data[id]=document.getElementById(id).value; });
     localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
-  }catch(e){ /* private browsing / storage blocked — profile just won't persist */ }
+    flash('profileSaved');
+  }catch(e){ /* private browsing / storage blocked — profile just won't persist, no flash */ }
 }
 let saveProfileTimer=null;
 function saveProfileDebounced(){
@@ -454,6 +457,17 @@ function clearProfile(){
 function buildDR(){
   document.getElementById('promptDR').innerText =
     drPrompt(document.getElementById('p_name').value, document.getElementById('p_co').value);
+}
+
+/* Step 3 (the prospect) never persists — but its fields DO sit in the DOM
+   between calls if you generate one script and come back to prep another.
+   Nothing clears them on its own, so leftover info from the last prospect
+   quietly rides along into the next script. This wipes it explicitly. */
+const PROSPECT_FIELDS = ['p_paste','p_name','p_co','p_trig','p_how'];
+function newProspect(){
+  PROSPECT_FIELDS.forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('p_pair').value='1';
+  buildDR();
 }
 
 /* ---------- build script ---------- */
