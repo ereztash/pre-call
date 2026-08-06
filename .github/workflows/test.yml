@@ -27,3 +27,5 @@ jobs:
         run: node assets/deals.test.js
       - name: markup, CSP and print contracts
         run: node assets/markup.test.js
+      - name: api request guards
+        run: node api/guard.test.js

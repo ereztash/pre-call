@@ -49,9 +49,13 @@ for (const f of PAGES) {
   });
 }
 
+/* Comments explaining these rules quote the very patterns they forbid, so a
+   scanner that reads them finds itself. Code only. */
+const stripComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
 for (const f of ['assets/pre-call.js', 'assets/post-call.js']) {
   test(f + ' injects no inline style or handler either', () => {
-    const src = read(f);
+    const src = stripComments(read(f));
     // template strings that build markup are just as subject to the policy
     assert.ok(!/\sstyle\s*=\s*['"\\]/.test(src), 'inline style in generated markup');
     assert.ok(!/\son(click|input|change)\s*=\s*['"\\]/.test(src), 'inline handler in generated markup');
@@ -86,6 +90,30 @@ test('pre-call still prints the script and never the private notes', () => {
   assert.ok(/[,\s]\.priv[,\s]/.test(rules),
     'the private calibration notes are for the seller, not for the printed script');
   assert.ok(/#p1,#p2,#p3/.test(rules), 'the input steps must not print');
+});
+
+console.log('\nshow/hide mechanism');
+/* Removing the inline styles for the CSP turned style="display:none" into
+   class="hidden", and every site that un-hid with style.display='' silently
+   stopped working — clearing an inline style cannot outrank a class rule.
+   The paywall never opened and three of the four pricing methods lost their
+   inputs, with no error anywhere. So: one mechanism, enforced. */
+test('nothing toggles display through the style property', () => {
+  for (const f of ['assets/post-call.js', 'assets/pre-call.js']) {
+    const hits = stripComments(read(f)).match(/\.style\.display\s*=/g) || [];
+    assert.deepStrictEqual(hits, [], f + ' must toggle the hidden class instead');
+  }
+});
+test('every element hidden by the class is toggled through show()', () => {
+  const js = read('assets/post-call.js');
+  const ids = [...html['post-call.html'].matchAll(/<[^>]*\sid="([^"]+)"[^>]*\sclass="[^"]*\bhidden\b/g)]
+    .map(m => m[1])
+    .concat([...html['post-call.html'].matchAll(/<[^>]*\sclass="[^"]*\bhidden\b[^"]*"[^>]*\sid="([^"]+)"/g)]
+    .map(m => m[1]));
+  const untouched = [...new Set(ids)].filter(id =>
+    js.includes(id) && !new RegExp("show\\(\\s*'" + id + "'").test(js));
+  assert.deepStrictEqual(untouched, [],
+    'referenced in the script but never shown — it would stay hidden forever');
 });
 
 console.log('\nstructure');

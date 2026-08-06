@@ -17,6 +17,17 @@ const METHODS = {
 };
 
 const el = id => document.getElementById(id);
+
+/* Everything that hides is hidden by the .hidden class, and everything that
+   shows goes through here.
+
+   This exists because of a bug worth remembering: those elements used to
+   carry style="display:none", and the code un-hid them with style.display=''.
+   Removing the inline styles for the CSP left the class behind — and clearing
+   an inline style cannot beat a class rule, so the paywall stopped opening
+   and three of the four pricing methods lost their inputs, all without a
+   single error. One mechanism, used both ways, cannot drift like that. */
+const show = (id, on) => { const n = el(id); if (n) n.classList.toggle('hidden', !on); };
 const num = id => { const v = parseFloat(el(id).value); return isFinite(v) && v > 0 ? v : 0; };
 const txt = id => el(id).value.trim();
 const ils = PC.model.ils;
@@ -184,8 +195,8 @@ Object.entries(METHODS).forEach(([key, m]) => {
     [...mc.children].forEach(x => { const sel = x.dataset.k === key;
       x.classList.toggle('on', sel); x.setAttribute('aria-pressed', String(sel)); });
     el('methodHint').textContent = m.hint;
-    el('m_comparable_in').style.display = key === 'comparable' ? '' : 'none';
-    el('m_cost_in').style.display = key === 'cost' ? '' : 'none';
+    show('m_comparable_in', key === 'comparable');
+    show('m_cost_in', key === 'cost');
     recompute();
   };
   mc.appendChild(c);
@@ -193,7 +204,7 @@ Object.entries(METHODS).forEach(([key, m]) => {
 el('methodHint').textContent = METHODS.value.hint;
 
 el('q_role').addEventListener('change', () => {
-  el('customRateWrap').style.display = el('q_role').value === 'custom' ? '' : 'none';
+  show('customRateWrap', el('q_role').value === 'custom');
   recompute();
 });
 
@@ -333,11 +344,20 @@ document.querySelectorAll('input,select,textarea').forEach(n =>
   n.addEventListener('input', recompute));
 
 /* ---------- payment gate ----------
-   Client-side only, and deliberately not pretending otherwise: anyone who
-   opens devtools can bypass it. That is an acceptable trade for a first
-   paid test with a handful of buyers — the point is to find out whether
-   anyone pays at all, not to stop copying. Real enforcement needs the key
-   checked server-side before the document is returned. */
+   The key is checked server-side when a server is there to ask, and against
+   an in-page checksum when there isn't. That ordering matters:
+
+   - deployed with POSTCALL_KEYS set, /api/license is authoritative and the
+     checksum is irrelevant — a made-up key with a valid shape is refused
+   - deployed without it, the endpoint answers not_configured and the tool
+     falls back, so the gate is soft until there is something to sell
+   - opened from file://, or offline on a train, fetch fails and it falls
+     back too — a buyer who paid does not get locked out by their network
+
+   The fallback is bypassable by anyone with devtools, and that is still the
+   accepted trade for a first paid test. What changed is that it is no longer
+   the only check: once keys are configured, bypassing the page does not get
+   a key past the server. */
 const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
 let unlocked = false, pendingExport = null;
 
@@ -348,7 +368,7 @@ function requireKey(fn){
   if (unlocked) return fn();
   pendingExport = fn;
   track('export_attempted');
-  el('wall').style.display = '';
+  show('wall', true);
   el('wall').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -368,19 +388,91 @@ function keyValid(k){
   let sum = 0; for (const ch of body.slice(0, 7)) sum += ch.charCodeAt(0);
   return body[7] === '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[sum % 36];
 }
-function tryUnlock(){
-  if (keyValid(el('keyIn').value)) {
-    unlocked = true;
-    el('wall').style.display = 'none';
-    try { localStorage.setItem('postcall_key', el('keyIn').value.trim().toUpperCase()); } catch(e){}
-    if (pendingExport) { const f = pendingExport; pendingExport = null; f(); }
-  } else {
-    el('keyErr').style.display = 'block';
+/* Asks the server, and says what it could not decide rather than guessing.
+   Returns true / false / null, where null means "no answer available" and the
+   caller falls back to the local checksum. */
+async function keyValidRemote(k){
+  try {
+    const r = await fetch('/api/license', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: k })
+    });
+    if (r.status === 429) return 'throttled';
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.valid === null ? null : !!j.valid; // null = keys not configured yet
+  } catch (e) {
+    return null; // offline, file://, or no backend — fall back, do not lock out
   }
 }
+
+let unlockBusy = false;
+async function tryUnlock(){
+  if (unlockBusy) return;
+  const raw = el('keyIn').value.trim().toUpperCase();
+  const shapeOk = /^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(raw);
+
+  // A malformed key never reaches the network — no point spending one of the
+  // ten attempts per ten minutes on something the regex already rejected.
+  if (!shapeOk) return showKeyErr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.');
+
+  unlockBusy = true;
+  show('keyErr', false);
+  const remote = await keyValidRemote(raw);
+  unlockBusy = false;
+
+  if (remote === 'throttled')
+    return showKeyErr('יותר מדי ניסיונות. נסה שוב בעוד כמה דקות.');
+  // remote === null means the server had no opinion; the checksum decides
+  const ok = remote === null ? keyValid(raw) : remote;
+  if (!ok) return showKeyErr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.');
+
+  unlocked = true;
+  show('wall', false);
+  try {
+    localStorage.setItem('postcall_key', raw);
+    // only stamp a confirmation the server actually gave, so a fallback
+    // unlock does not buy itself a day of not being asked again
+    if (remote === true) localStorage.setItem(KEY_OK_AT, new Date().toISOString());
+  } catch(e){}
+  track('unlocked');
+  if (pendingExport) { const f = pendingExport; pendingExport = null; f(); }
+}
+
+function showKeyErr(msg){
+  el('keyErr').textContent = msg;
+  show('keyErr', true);
+}
+/* A key stored in localStorage used to be trusted forever on the strength of
+   the checksum alone, so anyone who wrote a shaped string into storage once
+   was permanently unlocked no matter what the server said. It is now
+   reconfirmed, but not on every load: that would spend the rate limit on
+   reloads and could lock out a whole office behind one address. Once a day is
+   enough to close a bypass that has to survive to be worth anything.
+
+   Unlocking is still optimistic so a paying user never watches a spinner. If
+   the server later says no, the gate comes back. */
+const KEY_OK_AT = 'postcall_key_ok_at';
+const RECHECK_MS = 24 * 60 * 60 * 1000;
+
 try {
   const saved = localStorage.getItem('postcall_key');
-  if (saved && keyValid(saved)) unlocked = true;
+  if (saved && keyValid(saved)) {
+    unlocked = true;
+    const last = Date.parse(localStorage.getItem(KEY_OK_AT) || '') || 0;
+    if (Date.now() - last > RECHECK_MS) {
+      keyValidRemote(saved).then(v => {
+        if (v === false) {
+          unlocked = false;
+          try { localStorage.removeItem('postcall_key'); localStorage.removeItem(KEY_OK_AT); } catch(e){}
+        } else if (v === true) {
+          try { localStorage.setItem(KEY_OK_AT, new Date().toISOString()); } catch(e){}
+        }
+        // 'throttled' or null: no verdict, leave it as it was
+      });
+    }
+  }
 } catch(e){}
 
 /* ---------- proposal ---------- */

@@ -5,7 +5,8 @@
     --copper:#c07d3e;
     --copper-dim:#8a5a2c;
     --turq:#2f9e8f;
-    --red:#9c3340;
+    --red:#9c3340;      /* on the printed paper background */
+    --red-text:#d46b78; /* on the dark UI — #9c3340 reads at 2.3:1 there */
     --paper:#f6f5f2;
     --ink:#e8e6e1;
     --muted:#9aa3ad;
@@ -106,7 +107,7 @@
   .priv .seal{font-size:12.5px;color:var(--muted);margin-top:8px}
   .empty{color:#6b7280;font-size:14.5px;text-align:center;padding:26px 10px;line-height:1.7}
   .err{background:#fdf0f1;border:1px solid #e8bcc0;color:#8b2635;padding:11px 14px;
-       border-radius:5px;font-size:14px;margin-top:12px;display:none}
+       border-radius:5px;font-size:14px;margin-top:12px}
   .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
   .copied.on{opacity:1}
   footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
@@ -132,3 +133,6 @@
   .body-p{font-size:14.5px;color:#b8bec6}
   .hint-p{font-size:14px;color:#a9b0b8;margin-bottom:8px}
   .hint-p.tight{font-size:12.5px;color:var(--muted);margin:-4px 0 14px}
+  /* the storage-blocked notice: stays put instead of fading, because it is a
+     standing condition rather than a confirmation */
+  .copied.u-warn{color:var(--red-text);opacity:1}

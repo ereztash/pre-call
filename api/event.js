@@ -22,15 +22,16 @@ const bucketPrice = n => {
   return '20k+';
 };
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'method not allowed' });
-  }
-  let body = req.body;
-  if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-  body = body || {};
+import { preflight, parseBody } from './_guard.js';
 
+export default async function handler(req, res) {
+  // A session that fills in a deal, edits the scope and exports fires on the
+  // order of twenty events. Sixty a minute leaves ordinary use untouched and
+  // stops one client from turning the log into a bill.
+  if (!preflight(req, res, { maxBytes: 1024, limit: 60, windowMs: 60_000, bucket: 'event' }))
+    return;
+
+  const body = parseBody(req);
   if (!EVENTS.has(body.event)) return res.status(400).json({ error: 'unknown event' });
 
   const row = {

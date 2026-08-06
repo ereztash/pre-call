@@ -122,7 +122,7 @@
   .wall .price{font-size:30px;font-weight:700;color:var(--copper);margin:8px 0}
   .keyrow{display:flex;gap:8px;max-width:400px;margin:14px auto 0}
   .keyrow input{flex:1}
-  .wall .err{color:#f0a8b0;font-size:13.5px;margin-top:8px;display:none}
+  .wall .err{color:#f0a8b0;font-size:13.5px;margin-top:8px}
 
   /* ---- proposal ---- */
   .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:14px}

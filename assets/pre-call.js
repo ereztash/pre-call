@@ -31,6 +31,13 @@ function fallback(t,flag){
   document.body.removeChild(ta);
   flash(flag, ok);
 }
+/* One mechanism for hiding, used both ways. The inline style="display:none"
+   attributes became class="hidden" when the CSP forbade inline styles, and
+   every site that un-hid with style.display='' quietly stopped working —
+   clearing an inline style does not outrank a class rule. The private-notes
+   panel was hidden permanently that way, with no error to show for it. */
+const show=(id,on)=>{ const n=document.getElementById(id); if(n) n.classList.toggle('hidden',!on); };
+
 function flash(f, ok=true){
   const e=document.getElementById(f);
   if(!e.dataset.orig) e.dataset.orig=e.textContent;
@@ -81,8 +88,25 @@ function saveProfile(){
     const data={};
     PROFILE_FIELDS.forEach(id=>{ data[id]=document.getElementById(id).value; });
     localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
+    storageWarned = false;
     flash('profileSaved');
-  }catch(e){ /* private browsing / storage blocked — profile just won't persist, no flash */ }
+  }catch(e){ warnStorage(); }
+}
+
+/* Private browsing, a full quota, or a blocked third-party context all land
+   here. Failing silently was worse than not saving at all: the page kept
+   showing "נשמר בדפדפן" from the last successful write, so the profile looked
+   safe right up until the next visit found it gone. Said once, then left
+   alone — repeating it on every keystroke would be its own kind of noise. */
+let storageWarned = false;
+function warnStorage(){
+  if (storageWarned) return;
+  storageWarned = true;
+  const e = document.getElementById('profileSaved');
+  if (!e) return;
+  if (!e.dataset.orig) e.dataset.orig = e.textContent;
+  e.textContent = 'הדפדפן חוסם שמירה — הפרופיל לא יישמר לפעם הבאה';
+  e.classList.add('on', 'u-warn');
 }
 let saveProfileTimer=null;
 function saveProfileDebounced(){
@@ -131,12 +155,12 @@ function build(){
   const err2=document.getElementById('err2');
   if(!S.what){
     err2.innerText='חסר השדה "מה אתם מוכרים". בלעדיו התסריט יוצא כללי, ואז הוא לא שווה יותר מרשימת שאלות באינטרנט.';
-    err2.style.display='block';
+    show('err2', true);
     go(2);
     setTimeout(()=>document.getElementById('f_what').focus(),250);
     return;
   }
-  err2.style.display='none';
+  show('err2', false);
 
   document.getElementById('outArea').innerHTML=render();
   renderPrivate();
@@ -147,11 +171,11 @@ function build(){
 function renderPrivate(){
   const el=document.getElementById('privArea');
   const items=(S.priv||[]);
-  if(!items.length){ el.style.display='none'; el.innerHTML=''; return; }
+  if(!items.length){ show('privArea', false); el.innerHTML=''; return; }
   el.innerHTML =
     '<h4>לעיניכם בלבד</h4><ul>'+items.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>'+
     '<div class="seal">לא נכלל בהעתקה ולא בהדפסה. אלה המספרים שלכם, לא של השיחה.</div>';
-  el.style.display='';
+  show('privArea', true);
 }
 
 const EMPTY_OUT = '<div class="empty">עוד לא נבנה תסריט.<br>מלאו את שלב 2, ואז לחצו "בנה את התסריט" בשלב 3.</div>';
