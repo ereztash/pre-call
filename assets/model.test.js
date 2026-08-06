@@ -99,5 +99,35 @@ test('prices round to 10, never to a bare hundred by accident', () => {
   assert.strictEqual(M.compute(base).price % 10, 0);
 });
 
+console.log('\nevery reported number is a number');
+test('nothing the UI prints comes back NaN', () => {
+  /* The defensible band read "₪NaN" for as long as it existed: PRICE has a
+     bandLow, never a low, so the multiplication produced NaN, nothing threw,
+     and no test looked. Anything the screen shows gets checked for being a
+     number at all. */
+  const cases = [
+    { freq: 20, freqUnit: 52, minutes: 7, rate: 85, capture: 0.7, errFreq: 3,
+      errCost: 400, systemCount: 2, integration: 1.4, edge: 1, myRate: 250, method: 'value' },
+    { systemCount: 1, integration: 1, edge: 1, myRate: 250, method: 'market' },
+    { freq: 1, freqUnit: 12, minutes: 1, rate: 60, capture: 0.5, systemCount: 0,
+      integration: 1, edge: 1, myRate: 250, method: 'cost' },
+    {}
+  ];
+  const NUMERIC = ['runs','hours','timeValue','errValue','annualValue','effort',
+                   'floor','costFloor','price','high','low','payback','errShare','spread'];
+  cases.forEach((c, i) => {
+    const m = M.compute(c);
+    NUMERIC.forEach(k => assert.ok(typeof m[k] === 'number' && !Number.isNaN(m[k]),
+      'case ' + i + ': ' + k + ' is ' + m[k]));
+  });
+});
+test('the defensible band sits below the ceiling and above zero', () => {
+  const m = M.compute({ freq: 20, freqUnit: 52, minutes: 7, rate: 85, capture: 0.7,
+                        errFreq: 3, errCost: 400, systemCount: 2, integration: 1.4,
+                        edge: 1, myRate: 250, method: 'value' });
+  assert.ok(m.low > 0);
+  assert.ok(m.low < m.high, 'a band whose bottom is not below its top is not a band');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

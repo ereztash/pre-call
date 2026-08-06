@@ -41,6 +41,8 @@ jobs:
         run: node assets/transcript.test.js
       - name: sending it out
         run: node assets/send.test.js
+      - name: where the price came from
+        run: node assets/flow.test.js
       - name: the visuals
         run: node assets/viz.test.js
       - name: markup, CSP, print and telemetry contracts

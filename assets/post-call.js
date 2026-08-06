@@ -236,6 +236,7 @@ function applyExtraction(){
   const keep = trCandidates.filter(c => !trRejected.has(c.key));
   if (!keep.length) { flashDoc('לא נשאר מה למלא'); return; }
   const st = PC.transcript.toState(keep);
+  appliedCites = keep;   // the evidence outlives the confirmation
   Object.entries(st.fields).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
   if (st.systems.length) selectSystems(matchSystems(st.systems));
 
@@ -516,6 +517,7 @@ const recompute = guard('recompute', function (){
   }
   renderClientRead();
   renderProposal();
+  renderFlow();
   renderViz();
   renderGuide();
   if (!el('sendBox').classList.contains('hidden')) renderSend();
@@ -649,6 +651,7 @@ function resetScopeConfirm(){
 }
 
 function resetGuide(){
+  appliedCites = [];
   resetScopeConfirm();
   skipped.clear(); methodPinned = false;
   show('sendBox', false);
@@ -737,6 +740,48 @@ const renderClientRead = guard('client', function (){
     const host = f.closest('.qa') || f.closest('.box');
     if (host) host.classList.add('focus');
   });
+});
+
+/* ---------- where the price came from ----------
+   The citations used to evaporate at confirmation: the transcript step knew
+   which sentence produced every number, the operator confirmed, and what
+   remained on screen was a bare price — the exact shape of thing this tool
+   argues against. They are kept now, and the chain is shown. */
+let appliedCites = [];
+
+const renderFlow = guard('flow', function (){
+  const box = el('flowBox'); if (!box) return;
+  const m = model();
+  const rows = PC.flow.build(m, readInputs(), appliedCites);
+  if (!rows.length) { show('flowBox', false); box.innerHTML = ''; return; }
+
+  const weak = PC.flow.weakest(m);
+  const head = PC.flow.headline(m, rows);
+  box.innerHTML =
+    '<summary>מאיפה יצא המחיר הזה' +
+      (appliedCites.length ? '<span class="flow-tag">' + appliedCites.length +
+        ' מספרים עם ציטוט מהשיחה</span>' : '') + '</summary>' +
+    '<div class="flow-body">' +
+      (head ? '<p class="flow-head">' + esc(head) + '</p>' : '') +
+      rows.map((r, ix) => {
+        const soft = weak && weak.id === r.id;
+        return '<div class="flow-step' + (r.emphasis ? ' big' : '') + (soft ? ' soft' : '') + '">' +
+          '<span class="flow-n">' + (ix + 1) + '</span>' +
+          '<div class="flow-c">' +
+            '<div class="flow-t">' + esc(r.title) + '</div>' +
+            '<div class="flow-f">' + esc(r.formula) + '</div>' +
+            '<div class="flow-o">' + esc(r.out) + '</div>' +
+            (r.note ? '<div class="flow-note">' + esc(r.note) + '</div>' : '') +
+            (soft ? '<div class="flow-weak">' + weak.share +
+              '% מהערך נשען על הצעד הזה. אם מספר אחד כאן לא מדויק, המחיר זז איתו.</div>' : '') +
+            (r.said.length ? '<div class="flow-said">' + r.said.map(q =>
+              '«' + esc(q.quote) + '»<span class="flow-who">' +
+              (q.speaker === 'client' ? 'הלקוח אמר' : q.speaker === 'seller' ? 'אתם אמרתם' : '') +
+              '</span>').join('') + '</div>' : '') +
+          '</div></div>';
+      }).join('') +
+    '</div>';
+  show('flowBox', true);
 });
 
 /* ---------- the visuals ----------

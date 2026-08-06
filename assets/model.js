@@ -129,7 +129,11 @@
       usedFallback: !chosen,
       belowCost: price > 0 && price < floor,
       tooThin: annualValue > 0 && price > high,
-      high, low: annualValue * PRICE.low,
+      /* bandLow, not low. PRICE has never had a `low` key, so this was NaN
+         from the day it was written and the defensible range on screen read
+         "₪NaN – ₪7,567". Nothing threw, nothing failed a test, and the one
+         number the operator is supposed to quote in the room was missing. */
+      high, low: annualValue * PRICE.bandLow,
       payback: netWeekly > 0 ? price / netWeekly : 0,
       errShare: annualValue > 0 ? errValue / annualValue : 0,
       deals: i.deals || 0
