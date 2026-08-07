@@ -48,23 +48,48 @@ function flash(f, ok=true){
 }
 
 /* ---------- parse pasted profile ---------- */
+// Every field the paste can carry. The profile prompt asks for all nine in a
+// fixed order and tells the model to return them "in this exact format" —
+// but nothing stops a real answer, or a real person editing the model's
+// output, from leaving one blank. `KNOWN_LABELS` exists so a blank field can
+// be told apart from a missing one, in both directions below.
+const KNOWN_LABELS = ['מה אני מוכר:','למי:','יחידה תחומה:','מחיר היחידה:','עסקה אחרונה:',
+  'מקור הלקוח האחרון:','מה הלקוח הרוויח:','מה רק אני רואה:','מה אני לא מוכר:'];
+
 function parseBiz(){
   const t=document.getElementById('pasteBiz').value;
   if(!t.trim())return;
+  /* A field left blank looks like "מה הלקוח הרוויח:\n" — label, then straight
+     to the next line. \s*(.+) used to close over that newline and keep
+     reading, so the "value" it found was the NEXT field's own label line —
+     one blank field made the script quote "מה רק אני רואה:" as if it were a
+     number the client said. [ \t]* stops the match at the end of the
+     label's own line: a value that only exists on the following line is not
+     a value here, it is a blank field, and the two must not be confused. */
   const g=(re)=>{const m=t.match(re);return m?m[1].trim():''};
-  const set=(id,v)=>{if(v)document.getElementById(id).value=v};
-  set('f_what', g(/מה אני מוכר:\s*(.+)/));
-  set('f_who',  g(/למי:\s*(.+)/));
-  set('f_unit', g(/יחידה תחומה:\s*(.+)/));
-  set('f_price',g(/מחיר היחידה:\s*(.+)/));
-  set('f_last', g(/עסקה אחרונה:\s*(.+)/));
-  set('f_gain', g(/מה הלקוח הרוויח:\s*(.+)/));
-  set('f_no',   g(/מה אני לא מוכר:\s*(.+)/));
+  // a value that turned out to BE one of the other labels is the same bug by
+  // a different route (an empty field with only whitespace before the next
+  // label still needs the labels list to catch it) — never worth keeping
+  const clean=v=>KNOWN_LABELS.some(l=>v===l||v.startsWith(l))?'':v;
+  const set=(id,v)=>{v=clean(v); if(v)document.getElementById(id).value=v};
+  set('f_what', g(/מה אני מוכר:[ \t]*(.+)/));
+  set('f_who',  g(/למי:[ \t]*(.+)/));
+  set('f_unit', g(/יחידה תחומה:[ \t]*(.+)/));
+  set('f_price',g(/מחיר היחידה:[ \t]*(.+)/));
+  set('f_last', g(/עסקה אחרונה:[ \t]*(.+)/));
+  set('f_gain', g(/מה הלקוח הרוויח:[ \t]*(.+)/));
+  set('f_no',   g(/מה אני לא מוכר:[ \t]*(.+)/));
   // stop only at the next KNOWN field label, not any line that happens to contain a colon
-  // (a multiline answer here easily contains its own "לדוגמה:"-style colon)
-  const edge=g(/מה רק אני רואה:\s*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/);
-  if(edge)document.getElementById('f_edge').value=edge.trim();
-  const src=g(/מקור הלקוח האחרון:\s*(.+)/);
+  // (a multiline answer here easily contains its own "לדוגמה:"-style colon).
+  // Multi-line on purpose, which is exactly why [ \t]* alone cannot fix a
+  // blank "מה רק אני רואה:" the way it fixes the single-line fields above —
+  // [\s\S]+? still crosses the first newline looking for content, so a blank
+  // field here swallowed the entire rest of the paste rather than one line
+  // of it. clean() is what actually stops that: a capture that starts with
+  // another field's label was never this field's answer.
+  const edge=clean(g(/מה רק אני רואה:[ \t]*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/));
+  if(edge)document.getElementById('f_edge').value=edge;
+  const src=clean(g(/מקור הלקוח האחרון:[ \t]*(.+)/));
   if(src){
     const s=document.getElementById('f_src');
     if(/הפני|היכר/.test(src))s.value='ref';

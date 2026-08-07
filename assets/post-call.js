@@ -423,7 +423,16 @@ const recompute = guard('recompute', function (){
   el('s_hours').textContent   = m.hours   ? Math.round(m.hours).toLocaleString('en-US') : '—';
   el('s_value').textContent   = m.annualValue ? ils(m.annualValue) : '—';
   el('s_effort').textContent  = chosenSystems.size ? m.effort : '—';
-  const priceTxt = (m.annualValue || chosenSystems.size) ? ils(m.price) : '—';
+  /* Found by simulating a real archetype this gate had never been checked
+     against: a repeat client, priced by a comparable past deal alone. That
+     method needs neither an annual value nor a system chip — c_last ×
+     c_scale is the whole basis — so the price it computes is completely
+     real (verified directly against model.js) while this line still showed
+     "—", the same dash a truly empty form shows. The proposal document
+     itself was never wrong; only the one number the operator actually looks
+     at while still on the call was. */
+  const priceTxt = (m.annualValue || chosenSystems.size ||
+    (m.method === 'comparable' && num('c_last'))) ? ils(m.price) : '—';
   el('s_price').textContent = priceTxt;
   /* The one micro-interaction worth having. The whole premise of the tool is
      that what you say in the room moves the number, and a figure that
