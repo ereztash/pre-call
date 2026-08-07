@@ -4,128 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PRE-CALL · תסריט שאלות לשיחת אפיון</title>
-<style>
-  :root{
-    --charcoal:#16191d;
-    --charcoal-2:#20252b;
-    --line:#2f363e;
-    --copper:#c07d3e;
-    --copper-dim:#8a5a2c;
-    --turq:#2f9e8f;
-    --red:#9c3340;
-    --paper:#f6f5f2;
-    --ink:#e8e6e1;
-    --muted:#9aa3ad;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    font-family:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
-    background:var(--charcoal);color:var(--ink);
-    line-height:1.65;font-size:16px;
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}
-  header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:28px}
-  h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
-  h1 .mark{color:var(--copper)}
-  .sub{color:var(--muted);font-size:15px;margin-top:6px}
-  .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
-        padding:12px 16px;border-radius:4px;font-size:14.5px;color:#c9cdd3;margin-top:18px}
-
-  .steps{display:flex;gap:6px;margin:26px 0 22px;flex-wrap:wrap}
-  .stepbtn{flex:1;min-width:140px;background:var(--charcoal-2);border:1px solid var(--line);
-    color:var(--muted);padding:11px 10px;border-radius:5px;cursor:pointer;font-size:14px;
-    font-family:inherit;text-align:center;transition:.15s}
-  .stepbtn:hover{border-color:var(--copper-dim);color:var(--ink)}
-  .stepbtn.on{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
-  .stepbtn .n{display:block;font-size:11px;opacity:.75;letter-spacing:1px}
-
-  .panel{display:none}
-  .panel.on{display:block;animation:fade .18s ease}
-  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-
-  h2{font-size:19px;font-weight:600;margin:0 0 6px}
-  .lead{color:var(--muted);font-size:14.5px;margin-bottom:18px}
-
-  .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:6px;
-       padding:18px;margin-bottom:16px}
-  .box h3{font-size:15px;font-weight:600;color:var(--copper);margin-bottom:10px}
-
-  pre.prompt{background:#0f1216;border:1px solid var(--line);border-radius:5px;
-    padding:16px;white-space:pre-wrap;word-wrap:break-word;font-size:13.5px;
-    font-family:ui-monospace,"Consolas",monospace;color:#cfd4da;max-height:340px;overflow:auto;
-    direction:rtl;text-align:right;line-height:1.7}
-
-  button.act{background:var(--copper);color:#12151a;border:0;padding:10px 20px;border-radius:5px;
-    font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:12px}
-  button.act:hover{background:#d38b47}
-  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
-    padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-family:inherit;margin:12px 8px 0 0}
-  button.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
-
-  label{display:block;font-size:14px;color:#c3c9d0;margin:14px 0 5px;font-weight:500}
-  label .hint{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
-  input[type=text],textarea,select{
-    width:100%;background:#0f1216;border:1px solid var(--line);border-radius:5px;
-    color:var(--ink);padding:10px 12px;font-size:14.5px;font-family:inherit;
-    direction:rtl;text-align:right}
-  input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
-  textarea{min-height:80px;resize:vertical;line-height:1.6}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
-  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
-
-  .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:8px}
-  .out h3{color:#16191d;font-size:20px;margin:0 0 4px;font-weight:700}
-  .out .meta{color:#6b7280;font-size:13px;margin-bottom:22px;border-bottom:1px solid #ddd9d2;padding-bottom:14px}
-  .blk{margin-bottom:26px}
-  .blk-h{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--copper-dim);
-         font-weight:700;margin-bottom:4px}
-  .blk-t{font-size:16.5px;font-weight:700;color:#16191d;margin-bottom:3px}
-  .blk-d{font-size:13.5px;color:#6b7280;margin-bottom:12px}
-  .q{background:#fff;border-right:3px solid var(--copper);padding:11px 14px;margin-bottom:9px;
-     border-radius:3px;font-size:15.5px;color:#16191d;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-  .q .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;padding:1px 7px;
-         border-radius:3px;margin-left:4px;font-weight:600;vertical-align:middle}
-  .q .why{display:block;font-size:12.5px;color:#7a8290;margin-top:6px;font-weight:400}
-  .stop{background:#fdf0f1;border-right:3px solid var(--red);padding:10px 14px;border-radius:3px;
-        font-size:13.5px;color:#6b2129;margin:8px 0}
-  .stop b{color:var(--red)}
-  table.read{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
-  table.read th{background:#16191d;color:#f6f5f2;padding:8px 10px;text-align:right;font-size:12.5px;font-weight:600}
-  table.read td{border-bottom:1px solid #e2ded7;padding:9px 10px;vertical-align:top;color:#33383f}
-  table.read td.no{color:var(--red)}
-  .rule{background:#eef4f3;border-right:3px solid var(--turq);padding:11px 14px;border-radius:3px;
-        font-size:13.5px;color:#1f4e48;margin:10px 0}
-  ul.prep{margin:6px 0 0;padding:0 18px 0 0;list-style:disc}
-  ul.prep li{font-size:13.5px;color:#33383f;margin-bottom:5px;line-height:1.55}
-  /* Screen-only. Holds your own numbers (last deal, price floor) — the things the
-     script itself tells you not to say out loud. Deliberately outside #outArea so
-     "copy as text" and print can never carry them into the room. */
-  .priv{background:var(--charcoal-2);border:1px solid var(--line);
-        border-right:3px solid var(--turq);border-radius:6px;padding:14px 16px;margin-top:14px}
-  .priv h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--turq);
-           font-weight:700;margin-bottom:8px}
-  .priv ul{margin:0;padding:0 18px 0 0}
-  .priv li{font-size:13.5px;color:#c9cdd3;margin-bottom:6px;line-height:1.6}
-  .priv .seal{font-size:12.5px;color:var(--muted);margin-top:8px}
-  .empty{color:#6b7280;font-size:14.5px;text-align:center;padding:26px 10px;line-height:1.7}
-  .err{background:#fdf0f1;border:1px solid #e8bcc0;color:#8b2635;padding:11px 14px;
-       border-radius:5px;font-size:14px;margin-top:12px;display:none}
-  .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
-  .copied.on{opacity:1}
-  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
-         color:#697280;font-size:12.5px;line-height:1.8}
-  @media print{
-    body{background:#fff;color:#000}
-    .wrap{max-width:100%;padding:0}
-    /* #p1..#p3 explicitly: `.panel:not(.on)` only hides the INACTIVE panels, so printing
-       while standing on step 2 printed the form itself. Only the script ever prints. */
-    header,.steps,.note,button,.panel:not(.on),#p1,#p2,#p3,.priv,footer,
-    #p4 .box:first-of-type{display:none!important}
-    .out{padding:0}
-    .q{box-shadow:none;border-right:3px solid #999}
-  }
-</style>
+<link rel="stylesheet" href="assets/pre-call.css">
 </head>
 <body>
 <div class="wrap">
@@ -154,13 +33,13 @@
   <div class="box">
     <h3>פרומפט לאפיון העסק</h3>
     <pre class="prompt" id="promptBiz"></pre>
-    <button class="act" onclick="cp('promptBiz','c1')">העתק פרומפט</button>
+    <button class="act" data-act="cp-biz">העתק פרומפט</button>
     <span class="copied" id="c1">הועתק</span>
   </div>
 
   <div class="box">
     <h3>למה זה נדרש פעם אחת בלבד</h3>
-    <p style="font-size:14.5px;color:#b8bec6">
+    <p class="body-p">
       עוגן המחיר בהצעה לא מגיע מהשוק. הוא מגיע מהעסקה האחרונה שלכם, ומהמספר שהלקוח הקודם הרוויח.
       בלי שני אלה, השאלות בשיחה יישארו כלליות ותצאו ממנה עם תיאור במקום עם מספר.
       הפרופיל נשמר בדפדפן הזה (localStorage) גם אחרי שסוגרים את הדף, ונטען אוטומטית בפעם הבאה.
@@ -176,43 +55,43 @@
 
   <div class="box">
     <h3>הדבקה מהירה</h3>
-    <label>הדביקו כאן את הפלט מהפרומפט
+    <label for="pasteBiz">הדביקו כאן את הפלט מהפרומפט
       <span class="hint">הכלי ינסה לחלץ את השדות לבד. אפשר גם לדלג ולמלא ידנית למטה.</span>
     </label>
-    <textarea id="pasteBiz" style="min-height:120px" placeholder="הדביקו כאן..."></textarea>
-    <button class="ghost" onclick="parseBiz()">חלץ שדות מההדבקה</button>
+    <textarea id="pasteBiz" class="ta-md" placeholder="הדביקו כאן..."></textarea>
+    <button class="ghost" data-act="parse">חלץ שדות מההדבקה</button>
   </div>
 
   <div class="box">
-    <h3>הפרופיל <span class="copied" id="profileSaved" style="font-size:12px">✓ נשמר בדפדפן</span></h3>
+    <h3>הפרופיל <span id="profileSaved" class="copied tiny">✓ נשמר בדפדפן</span></h3>
     <div class="grid2">
       <div>
-        <label>מה אתם מוכרים, במילים שלכם
+        <label for="f_what">מה אתם מוכרים, במילים שלכם
           <span class="hint">משפט אחד. לא סלוגן.</span></label>
         <input type="text" id="f_what" placeholder="למשל: מסדר תהליכי גבייה לעסקים קטנים">
       </div>
       <div>
-        <label>למי
+        <label for="f_who">למי
           <span class="hint">הקהל שבפועל שילם, לא הקהל שאתם רוצים.</span></label>
         <input type="text" id="f_who" placeholder="למשל: משרדי רו״ח עד 10 עובדים">
       </div>
       <div>
-        <label>היחידה התחומה שלכם, אם יש
+        <label for="f_unit">היחידה התחומה שלכם, אם יש
           <span class="hint">פורמט + תוצר. אם אין, השאירו ריק. זה משנה את התסריט.</span></label>
         <input type="text" id="f_unit" placeholder="למשל: 3 מפגשים, יוצא מהם נוהל גבייה כתוב">
       </div>
       <div>
-        <label>מחיר היחידה, אם יש
+        <label for="f_price">מחיר היחידה, אם יש
           <span class="hint">הרצפה הפנימית שלכם. לא נאמרת בשיחה, רק תזכורת לכם לפני שאלה 11.</span></label>
         <input type="text" id="f_price" placeholder="למשל: 6,500 ₪">
       </div>
       <div>
-        <label>העסקה האחרונה, סכום
+        <label for="f_last">העסקה האחרונה, סכום
           <span class="hint">מה שהוא שילם לכם. לא נכנס לשיחה בקול, רק לכיול הפנימי שלכם מול מה שהרוויח.</span></label>
         <input type="text" id="f_last" placeholder="למשל: 8,000 ₪">
       </div>
       <div>
-        <label>איך הלקוח האחרון הגיע אליכם</label>
+        <label for="f_src">איך הלקוח האחרון הגיע אליכם</label>
         <select id="f_src">
           <option value="">בחרו</option>
           <option value="ref">הפניה או היכרות אישית</option>
@@ -222,46 +101,46 @@
         </select>
       </div>
     </div>
-    <label>מה הלקוח האחרון הרוויח מזה, במספר
+    <label for="f_gain">מה הלקוח האחרון הרוויח מזה, במספר
       <span class="hint">התחילו במספר או בטווח, ואז הקשר קצר אם צריך. זה נכנס ישירות למשפט העוגן בשיחה.</span></label>
     <input type="text" id="f_gain" placeholder="למשל: כ-40,000 ₪ תזרים, אחרי שקיצר את זמן הגבייה מ-60 ל-25 יום">
-    <label>מה רק אתם רואים אצל הלקוחות שלכם, שאחרים לא רואים
+    <label for="f_edge">מה רק אתם רואים אצל הלקוחות שלכם, שאחרים לא רואים
       <span class="hint">זה מה שהופך את שאלת הבעלות בשיחה למדויקת. שתיים או שלוש שורות, שיאוחדו למשפט אחד מצוטט בתסריט.</span></label>
     <textarea id="f_edge" placeholder="למשל: שהבעיה אף פעם לא בתוכנה, היא בזה שאף אחד לא הוגדר כאחראי על המעקב"></textarea>
-    <label>מה אתם לא מוכרים
+    <label for="f_no">מה אתם לא מוכרים
       <span class="hint">הגבול. מונע מכם להגיד כן בשיחה למשהו שתתחרטו עליו.</span></label>
     <input type="text" id="f_no" placeholder="למשל: לא מפעיל את התהליך במקומם, לא ליווי חודשי">
-    <button class="ghost" onclick="clearProfile()">מחק פרופיל שמור מהדפדפן הזה</button>
+    <button class="ghost" data-act="clearprofile">מחק פרופיל שמור מהדפדפן הזה</button>
     <span class="copied" id="c4">נמחק</span>
   </div>
 
-  <div class="err" id="err2"></div>
-  <button class="act" onclick="go(3)">המשך לצד השני</button>
+  <div class="err hidden" id="err2"></div>
+  <button class="act" data-act="go3">המשך לצד השני</button>
 </div>
 
 <!-- ============ STEP 3 ============ -->
 <div class="panel" id="p3">
   <h2>שלב 3 · הצד השני</h2>
   <p class="lead">שתי דרכים. מהירה, או מעמיקה. הפרטים כאן משנים את הניסוח של השאלות, לא את המבנה.</p>
-  <button class="ghost" onclick="newProspect()" style="margin-bottom:6px">שיחה חדשה · נקה פרטי לקוח קודם</button>
-  <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 14px">אם זו הכנה לשיחה עם מישהו אחר, לחצו כאן קודם — אחרת פרטים מהשיחה הקודמת עלולים להישאר בטופס.</p>
+  <button data-act="newprospect" class="ghost mb6">שיחה חדשה · נקה פרטי לקוח קודם</button>
+  <p class="hint-p tight">אם זו הכנה לשיחה עם מישהו אחר, לחצו כאן קודם — אחרת פרטים מהשיחה הקודמת עלולים להישאר בטופס.</p>
 
   <div class="box">
     <h3>מסלול מהיר · הדבקת פרופיל</h3>
-    <label>הדביקו את הכותרת, ה-About והתפקידים מהפרופיל שלו בלינקדאין, או כל טקסט ציבורי עליו
+    <label for="p_paste">הדביקו את הכותרת, ה-About והתפקידים מהפרופיל שלו בלינקדאין, או כל טקסט ציבורי עליו
       <span class="hint">אתר, פוסט, דף שירותים. כל דבר שהוא כתב על עצמו.</span></label>
-    <textarea id="p_paste" style="min-height:130px" placeholder="הדביקו כאן..."></textarea>
+    <textarea id="p_paste" class="ta-lg" placeholder="הדביקו כאן..."></textarea>
   </div>
 
   <div class="box">
     <h3>מסלול מעמיק · פרומפט ל-Deep Research</h3>
-    <p style="font-size:14px;color:#a9b0b8;margin-bottom:8px">מלאו את שני השדות למטה, ואז העתיקו את הפרומפט והריצו אותו במחקר מעמיק. את הפלט הדביקו בתיבה למעלה.</p>
+    <p class="hint-p">מלאו את שני השדות למטה, ואז העתיקו את הפרומפט והריצו אותו במחקר מעמיק. את הפלט הדביקו בתיבה למעלה.</p>
     <div class="grid2">
-      <div><label>שם</label><input type="text" id="p_name" placeholder="שם מלא" oninput="buildDR()"></div>
-      <div><label>העסק או התפקיד</label><input type="text" id="p_co" placeholder="שם החברה או התחום" oninput="buildDR()"></div>
+      <div><label for="p_name">שם</label><input type="text" id="p_name" placeholder="שם מלא" data-oninput="builddr"></div>
+      <div><label for="p_co">העסק או התפקיד</label><input type="text" id="p_co" placeholder="שם החברה או התחום" data-oninput="builddr"></div>
     </div>
-    <pre class="prompt" id="promptDR" style="margin-top:14px"></pre>
-    <button class="act" onclick="cp('promptDR','c2')">העתק פרומפט מחקר</button>
+    <pre id="promptDR" class="prompt mt14"></pre>
+    <button class="act" data-act="cp-dr">העתק פרומפט מחקר</button>
     <span class="copied" id="c2">הועתק</span>
   </div>
 
@@ -269,12 +148,12 @@
     <h3>מה שכבר ידוע לכם</h3>
     <div class="grid2">
       <div>
-        <label>יש טריגר ידוע
+        <label for="p_trig">יש טריגר ידוע
           <span class="hint">אירוע שקרה לאחרונה ובגללו הוא מחפש עכשיו.</span></label>
         <input type="text" id="p_trig" placeholder="למשל: איבד לקוח גדול בחודש שעבר">
       </div>
       <div>
-        <label>איך הגעתם זה לזה</label>
+        <label for="p_how">איך הגעתם זה לזה</label>
         <select id="p_how">
           <option value="">בחרו</option>
           <option value="in">הוא פנה אליי</option>
@@ -283,428 +162,38 @@
         </select>
       </div>
     </div>
-    <label>שניים או שלושה, יחיד או צמד</label>
+    <label for="p_pair">שניים או שלושה, יחיד או צמד</label>
     <select id="p_pair">
       <option value="1">אדם אחד</option>
       <option value="2">שניים או יותר בשיחה</option>
     </select>
   </div>
 
-  <button class="act" onclick="build()">בנה את התסריט</button>
-  <div class="err" id="err"></div>
+  <button class="act" data-act="build">בנה את התסריט</button>
+  <div class="err hidden" id="err"></div>
 </div>
 
 <!-- ============ STEP 4 ============ -->
 <div class="panel" id="p4">
   <div class="box">
-    <button class="act" onclick="cpText('outArea','c3')">העתק את התסריט כטקסט</button>
-    <button class="ghost" onclick="window.print()">הדפסה או PDF</button>
-    <button class="ghost" onclick="go(3)">חזרה לעריכה</button>
+    <button class="act" data-act="cp-out">העתק את התסריט כטקסט</button>
+    <button class="ghost" data-act="print">הדפסה או PDF</button>
+    <button class="ghost" data-act="go3">חזרה לעריכה</button>
     <span class="copied" id="c3">הועתק</span>
   </div>
   <div class="out" id="outArea"></div>
-  <div class="priv" id="privArea" style="display:none"></div>
+  <div id="privArea" class="priv hidden"></div>
 </div>
 
 <footer>
   PRE-CALL · גרסה 0.1 · כלי הכנה לשיחה. אינו מייצר מחיר ואינו מייצר הצעה.<br>
-  כל הנתונים נשארים בדפדפן שלכם. שום דבר לא נשלח לשום שרת.
+  כל הנתונים נשארים בדפדפן שלכם. שום דבר לא נשלח לשום שרת.<br>
+  <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
 </footer>
 
 </div>
 
-<script>
-/* ---------- prompts ---------- */
-const P_BIZ = `אני מכין את עצמי לשיחת אפיון עם לקוח פוטנציאלי, ואחריה אצטרך לכתוב לו הצעת מחיר.
-לפני זה אני צריך לאפיין את העסק שלי עצמי, כדי שהשאלות שאשאל בשיחה יהיו מדויקות.
-
-ראיין אותי. שאל אותי שאלה אחת בכל פעם, וחכה לתשובה לפני השאלה הבאה.
-אל תציע לי תשובות. אם התשובה שלי כללית, בקש דוגמה אחת קונקרטית.
-
-אלה הדברים שאתה צריך להוציא ממני:
-
-1. מה אני מוכר, במשפט אחד ובמילים שלי. לא סלוגן.
-2. למי מכרתי בפועל. לא הקהל שאני רוצה, הקהל ששילם.
-3. האם יש לי יחידה תחומה, כלומר פורמט קבוע עם תוצר ומחיר, או שאני מתמחר כל פעם מחדש.
-4. העסקה האחרונה שלי. כמה, ממי, ואיך הלקוח הזה הגיע אליי.
-5. מה הלקוח האחרון הרוויח מזה, במספר. אם אני לא יודע, תעזור לי לאמוד את זה
-   דרך מה שהשתנה אצלו: זמן שנחסך, כסף שנכנס, טעות שלא קרתה.
-6. מה אני רואה אצל הלקוחות שלי שהם עצמם לא רואים. לא סיסמה, אבחנה.
-   אם אני נותן תשובה כללית, בקש ממני לתאר מקרה אחד שבו זיהיתי את זה.
-7. מה אני לא מוכר. איפה עובר הגבול.
-
-בסוף, החזר לי את הפרופיל בפורמט הזה בדיוק, בלי טקסט נוסף לפניו או אחריו:
-
-מה אני מוכר: ...
-למי: ...
-יחידה תחומה: ...
-מחיר היחידה: ...
-עסקה אחרונה: ...
-מקור הלקוח האחרון: הפניה / תוכן / פנייה יזומה
-מה הלקוח הרוויח: ...
-מה רק אני רואה: ...
-מה אני לא מוכר: ...`;
-
-function drPrompt(n,c){
-  const who = (n||c) ? (n||'') + (n&&c?' , ':'') + (c||'') : '[שם] , [חברה]';
-  return `מחקר הכנה לשיחת אפיון. הנושא: ${who}
-
-אני נפגש איתו בקרוב ואצטרך להבין איפה העסק שלו נעצר, לא מה הוא עושה.
-חפש מקורות ציבוריים בלבד. אל תשער ואל תמלא פערים. מה שלא מצאת, כתוב "לא נמצא".
-
-הוצא לי:
-
-1. מה הוא אומר שהוא עושה, בציטוט מדויק מהמקור. ציין מאיפה.
-2. פער בין איך הוא מתאר לקוח לבין איך הוא מתאר את עצמו, אם קיים.
-3. מה מפורסם החוצה בשמו. תוכן, אתר, הרצאה, המלצה, מוצר. מתי פורסם לאחרונה.
-4. סימנים לשינוי בשנה האחרונה. תפקיד חדש, גיוס, סגירה, מעבר, השקה, פרסום חריג.
-5. איך נראה שלקוחות מגיעים אליו. הפניות, תוכן, פנייה יזומה, או שלא ברור.
-6. האם יש עדות למחיר או ליחידה תחומה שהוא מוכר, ובאיזה ניסוח.
-7. שלושה דברים שהוא לא אומר על עצמו ושהיה סביר שיאמר, בהינתן התחום שלו.
-
-בסוף, תן לי שלוש שורות בלבד:
-הצוואר הסביר ביותר: ...
-מה שכנגדו: ...
-מה שאני לא יכול לדעת בלי לשאול: ...`;
-}
-
-/* ---------- state ---------- */
-const S = {};
-
-/* ---------- nav ---------- */
-document.querySelectorAll('.stepbtn').forEach(b=>b.onclick=()=>go(+b.dataset.s));
-function go(n){
-  document.querySelectorAll('.stepbtn').forEach(b=>b.classList.toggle('on',+b.dataset.s===n));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  document.getElementById('p'+n).classList.add('on');
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-/* ---------- copy ---------- */
-function cp(id,flag){ copyText(document.getElementById(id).innerText, flag); }
-function cpText(id,flag){ copyText(document.getElementById(id).innerText, flag); }
-
-async function copyText(t, flag){
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    try{ await navigator.clipboard.writeText(t); flash(flag, true); return; }
-    catch(e){ /* clipboard API present but denied/failed — fall through to manual-select */ }
-  }
-  fallback(t, flag);
-}
-function fallback(t,flag){
-  const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);
-  ta.select();
-  let ok=false;
-  try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
-  document.body.removeChild(ta);
-  flash(flag, ok);
-}
-function flash(f, ok=true){
-  const e=document.getElementById(f);
-  if(!e.dataset.orig) e.dataset.orig=e.textContent;
-  e.textContent = ok ? e.dataset.orig : 'ההעתקה נכשלה — סמנו והעתיקו ידנית';
-  e.style.color = ok ? '' : 'var(--red)';
-  e.classList.add('on');
-  setTimeout(()=>e.classList.remove('on'), ok?1600:3200);
-}
-
-/* ---------- parse pasted profile ---------- */
-function parseBiz(){
-  const t=document.getElementById('pasteBiz').value;
-  if(!t.trim())return;
-  const g=(re)=>{const m=t.match(re);return m?m[1].trim():''};
-  const set=(id,v)=>{if(v)document.getElementById(id).value=v};
-  set('f_what', g(/מה אני מוכר:\s*(.+)/));
-  set('f_who',  g(/למי:\s*(.+)/));
-  set('f_unit', g(/יחידה תחומה:\s*(.+)/));
-  set('f_price',g(/מחיר היחידה:\s*(.+)/));
-  set('f_last', g(/עסקה אחרונה:\s*(.+)/));
-  set('f_gain', g(/מה הלקוח הרוויח:\s*(.+)/));
-  set('f_no',   g(/מה אני לא מוכר:\s*(.+)/));
-  // stop only at the next KNOWN field label, not any line that happens to contain a colon
-  // (a multiline answer here easily contains its own "לדוגמה:"-style colon)
-  const edge=g(/מה רק אני רואה:\s*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/);
-  if(edge)document.getElementById('f_edge').value=edge.trim();
-  const src=g(/מקור הלקוח האחרון:\s*(.+)/);
-  if(src){
-    const s=document.getElementById('f_src');
-    if(/הפני|היכר/.test(src))s.value='ref';
-    else if(/תוכן/.test(src))s.value='content';
-    else if(/יזומ/.test(src))s.value='out';
-  }
-  saveProfile();
-}
-
-/* ---------- profile persistence (localStorage) ----------
-   Only the business profile (step 2) persists across page loads — it's
-   filled once and reused for every call. Prospect details (step 3) stay
-   in-memory only and vanish on close, on purpose: those are private
-   specifics about one person, not something to leave sitting in the
-   browser after the call is over. */
-const PROFILE_FIELDS = ['f_what','f_who','f_unit','f_price','f_last','f_src','f_gain','f_edge','f_no'];
-const PROFILE_KEY = 'precall_profile_v1';
-
-function saveProfile(){
-  try{
-    const data={};
-    PROFILE_FIELDS.forEach(id=>{ data[id]=document.getElementById(id).value; });
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
-    flash('profileSaved');
-  }catch(e){ /* private browsing / storage blocked — profile just won't persist, no flash */ }
-}
-let saveProfileTimer=null;
-function saveProfileDebounced(){
-  clearTimeout(saveProfileTimer);
-  saveProfileTimer=setTimeout(saveProfile, 400);
-}
-function loadProfile(){
-  try{
-    const raw=localStorage.getItem(PROFILE_KEY);
-    if(!raw)return;
-    const data=JSON.parse(raw);
-    PROFILE_FIELDS.forEach(id=>{ if(data[id])document.getElementById(id).value=data[id]; });
-  }catch(e){}
-}
-function clearProfile(){
-  try{ localStorage.removeItem(PROFILE_KEY); }catch(e){}
-  PROFILE_FIELDS.forEach(id=>{ document.getElementById(id).value=''; });
-  flash('c4');
-}
-
-function buildDR(){
-  document.getElementById('promptDR').innerText =
-    drPrompt(document.getElementById('p_name').value, document.getElementById('p_co').value);
-}
-
-/* Step 3 (the prospect) never persists — but its fields DO sit in the DOM
-   between calls if you generate one script and come back to prep another.
-   Nothing clears them on its own, so leftover info from the last prospect
-   quietly rides along into the next script. This wipes it explicitly. */
-const PROSPECT_FIELDS = ['p_paste','p_name','p_co','p_trig','p_how'];
-function newProspect(){
-  PROSPECT_FIELDS.forEach(id=>{ document.getElementById(id).value=''; });
-  document.getElementById('p_pair').value='1';
-  buildDR();
-  resetOutput(); // the previous prospect's script was staying on step 4, name and all
-}
-
-/* ---------- build script ---------- */
-function build(){
-  const v=id=>document.getElementById(id).value.trim();
-  S.what=v('f_what'); S.who=v('f_who'); S.unit=v('f_unit'); S.price=v('f_price');
-  S.last=v('f_last'); S.src=v('f_src'); S.gain=v('f_gain'); S.edge=v('f_edge'); S.no=v('f_no');
-  S.pname=v('p_name'); S.pco=v('p_co'); S.ptext=v('p_paste'); S.ptrig=v('p_trig');
-  S.phow=v('p_how'); S.ppair=v('p_pair');
-
-  const err2=document.getElementById('err2');
-  if(!S.what){
-    err2.innerText='חסר השדה "מה אתם מוכרים". בלעדיו התסריט יוצא כללי, ואז הוא לא שווה יותר מרשימת שאלות באינטרנט.';
-    err2.style.display='block';
-    go(2);
-    setTimeout(()=>document.getElementById('f_what').focus(),250);
-    return;
-  }
-  err2.style.display='none';
-
-  document.getElementById('outArea').innerHTML=render();
-  renderPrivate();
-  go(4);
-}
-
-/* Rendered outside #outArea on purpose — see the .priv CSS note. */
-function renderPrivate(){
-  const el=document.getElementById('privArea');
-  const items=(S.priv||[]);
-  if(!items.length){ el.style.display='none'; el.innerHTML=''; return; }
-  el.innerHTML =
-    '<h4>לעיניכם בלבד</h4><ul>'+items.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>'+
-    '<div class="seal">לא נכלל בהעתקה ולא בהדפסה. אלה המספרים שלכם, לא של השיחה.</div>';
-  el.style.display='';
-}
-
-const EMPTY_OUT = '<div class="empty">עוד לא נבנה תסריט.<br>מלאו את שלב 2, ואז לחצו "בנה את התסריט" בשלב 3.</div>';
-function resetOutput(){
-  document.getElementById('outArea').innerHTML=EMPTY_OUT;
-  S.priv=[];
-  renderPrivate();
-}
-
-function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
-
-const SRC_LABEL = {ref:'הפניה או היכרות אישית', content:'התוכן שאתם מפרסמים', out:'פנייה יזומה שלכם', other:'ערוץ אחר'};
-
-function render(){
-  const name = S.pname ? (S.pname + (S.pco?' · '+S.pco:'')) : 'הצד השני';
-  const d = new Date();
-  const dstr = d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear();
-
-  /* --- price anchor sentence, built from what THEIR last client gained ---
-     S.gain drives the sentence. If it reads as a number/amount up front, it slots
-     into "היה שווה בערך X". If it's a narrative, that phrasing breaks grammatically
-     ("שווה בערך מצא 3 לקוחות..."), so it gets its own sentence structure instead. */
-  const numFirst = /^\s*(כ-|~|בערך)?\s*[\d₪$€]/.test(S.gain||'');
-  let anchor;
-  if(S.gain && numFirst){
-    anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך ${S.gain}. אצלך זה יותר או פחות?`;
-  }else if(S.gain){
-    // "אצל לקוח..., חסך 12 שעות" reads as if YOU saved them — the verb loses its subject.
-    // Making the client the grammatical subject fixes it for any narrative phrasing.
-    anchor = `לקוח שעבדתי איתו במצב דומה — ${S.gain}. אצלך זה דומה, פחות, או יותר?`;
-  }else{
-    anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך [כאן נכנס המספר מהעסקה האחרונה שלכם]. אצלך זה יותר או פחות?`;
-  }
-
-  /* --- ownership move. The edge field is a general observation about YOUR clients,
-     so it can't be handed over as a guess about this specific person, and splicing it
-     into a sentence dropped every line after the first. It's shown whole, as reference
-     material, and the phrasing stays the operator's job. */
-  let own;
-  if(S.edge){
-    const edgeFull = S.edge.split('\n').map(l=>l.trim()).filter(Boolean).join(' ');
-    own = `מה שאתם רואים אצל לקוחות כאלה, והם עצמם לא: "${edgeFull}" — זו אבחנה כללית שלכם, לא עובדה עליו. נסחו ממנה משפט אחד עליו, בגוף שני, מעט לא מדויק בכוונה. ואז שאלו:`;
-  }else{
-    own = `נסחו לו את הצוואר שלו במשפט אחד, מעט לא מדויק בכוונה, ואז שאלו:`;
-  }
-
-  /* --- contextual openers ---
-     Split in two. `openers` are things said or watched for in the room, and belong in
-     the script. `priv` holds your own figures — they used to sit in the same list, i.e.
-     inside the document that gets copied and printed, under a label saying not to say
-     them out loud. They now render outside #outArea entirely. */
-  const openers=[], priv=[];
-  if(S.phow==='in') openers.push('הוא פנה אליכם. אל תסבירו מה אתם עושים. פתחו בשאלה, ותנו לו לתאר למה פנה.');
-  if(S.phow==='out') openers.push('אתם פניתם אליו. תנו משפט אחד על למה פניתם דווקא אליו, ומיד עברו לשאלה. לא הצגה עצמית ארוכה.');
-  if(S.phow==='ref') openers.push('הגעתם דרך הפניה. שאלו קודם מה נאמר לו עליכם. זה מגלה איזו ציפייה כבר נבנתה.');
-  if(S.ptrig) openers.push(`יש טריגר ידוע: ${S.ptrig}. אל תזכירו אותו ראשונים. חכו לראות אם הוא מעלה אותו בשאלה 3.`);
-  if(S.ppair==='2') openers.push('שניים בשיחה. בשאלת הבעלות, בקשו תשובה מכל אחד בנפרד. אם ענו שונה, ההצעה מותנית בסבב שני עם שניהם.');
-  if(S.ptext) openers.push('יש לכם טקסט ציבורי עליו. השוו בשאלה 6 בין מה שהוא כתב על עצמו למה שהוא אומר עכשיו. הפער הוא הסימן.');
-  if(!S.unit) openers.push('אין לכם יחידה תחומה. שימו לב לשאלה 8. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.');
-  if(S.src) openers.push(`הלקוח האחרון שלכם הגיע דרך ${SRC_LABEL[S.src]||S.src}. בשאלה 5 תשמעו מאיפה הגיע הלקוח שלו — אם זה ערוץ אחר משלכם, זה סימן שהערוץ ששכנע אתכם לא בהכרח ישכנע אותו.`);
-
-  if(S.last && S.gain) priv.push(`העסקה האחרונה שלכם: ${S.last}. הרווח שהערכתם אצל הלקוח: ${S.gain}. היחס הזה הוא הכיול שלכם בראש לפני שאלה 11.`);
-  else if(S.last) priv.push(`העסקה האחרונה שלכם: ${S.last}.`);
-  if(S.price) priv.push(`מחיר היחידה שלכם: ${S.price}. רצפה פנימית למה שכדאי בכלל להמשיך אליו.`);
-  S.priv = priv;
-
-  // the space after the badge is load-bearing: without it innerText (what the copy
-  // button emits) glued the number to the question — "1מה אתה צריך ממני?"
-  const q=(n,txt,why)=>`<div class="q"><span class="qn">${n}</span> ${esc(txt)}${why?`<span class="why">${esc(why)}</span>`:''}</div>`;
-
-  return `
-<h3>תסריט שיחת אפיון · ${esc(name)}</h3>
-<div class="meta">
-  ${esc(S.what)}${S.who?' · '+esc(S.who):''} · הוכן ${dstr}<br>
-  משך מוערך 25 עד 35 דקות. סדר השאלות הוא חלק מהכלי. אל תדלגו קדימה.
-</div>
-
-${openers.length?`<div class="blk">
-  <div class="blk-h">לפני שמתחילים</div>
-  <ul class="prep">${openers.map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
-</div>`:''}
-
-<div class="blk">
-  <div class="blk-h">חלק א · 7 דקות</div>
-  <div class="blk-t">האם יש כאן בכלל עסקה</div>
-  <div class="blk-d">שלוש השאלות האלה קובעות אם שווה להמשיך. אם שתיים מהן נופלות, אין הצעה בסוף השיחה, ועדיף לדעת את זה עכשיו ולא אחרי שכתבתם מסמך.</div>
-  ${q(1,'מה אתה צריך ממני?','הפתיחה. אל תמלאו את השקט. מה שהוא אומר ראשון הוא מה שהוא באמת בא בשבילו.')}
-  ${q(2,'מתי בפעם האחרונה מישהו העביר לך כסף על זה. מתי, כמה, ממי.','אתם מחפשים מספר וזהות. "היה לי פעם", "פרו בונו", "התנסות" זה לא מספר. אז שאלו: וכמה לקוחות משלמים יש לך עכשיו.')}
-  ${q(3,'מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?','בלי אירוע ספציפי אין דחיפות, ובלי דחיפות ההצעה תישאר פתוחה חודשים.')}
-  ${q(4,'בעוד שנה מהיום, איפה אתה רואה את עצמך?','תשובה שמכילה משרה, ביטחון או "אחרי שאתבסס" מסמנת שהמטרה היא עבודה ולא עסק. תשובה שמכילה לקוחות, מחזור או מוצר, ממשיכים.')}
-  <div class="stop"><b>עצירה.</b> ממשיכים רק כשיש שלושה יחד: לקוחות משלמים בהווה, אירוע שקרה, ויעד עסקי. שניים מתוך שלושה זה שיחת המשך בעוד חודשיים, לא הצעה.</div>
-</div>
-
-<div class="blk">
-  <div class="blk-h">חלק ב · 12 דקות</div>
-  <div class="blk-t">איפה בדיוק זה נעצר אצלו</div>
-  <div class="blk-d">חמש שאלות, בסדר הזה. הן חותכות בין חמש סיבות שונות לכך שעסק לא זז. הכרטיס בסוף המסמך מתרגם את התשובות.</div>
-  ${q(5,'מאיפה הגיע הלקוח האחרון שלך?','הפניה, תוכן, או פנייה יזומה. שלוש תשובות, שלושה מסלולים שונים.')}
-  ${q(6,'מה מפורסם היום בחוץ שמתאר את מה שאתה עושה?','"כלום" זו תשובה משמעותית. "יש, אבל זה כללי" זו תשובה אחרת לגמרי.')}
-  ${q(7,'כמה שעות בשבוע הולכות לפנייה יזומה, ומתי הן ביומן?','שאלו על היומן, לא על הכוונה. "אני משתדל" זה אפס.')}
-  ${q(8,'כשלקוח שואל כמה זה עולה, מה אתה עונה לו?','תעריף שעה, "תלוי", או "אני לא כל כך מבין בזה" מסמנים שאין לו יחידה. זו הסיבה השכיחה ביותר.')}
-  ${q(9,'הלקוח האחרון שסיים, מה קרה אחרי?','רק אם יש לו לקוחות שסיימו. "עבר לעשות לבד" או "התשלום נגרר" הם סימן נפרד.')}
-  <div class="rule">אם שתי סיבות מתחרות, רשמו ראשית ומשנית. אל תמזגו אותן להצעה אחת רחבה.</div>
-</div>
-
-<div class="blk">
-  <div class="blk-h">חלק ג · מהלך אחד</div>
-  <div class="blk-t">מי מנסח את הבעיה</div>
-  <div class="blk-d">${esc(own)}</div>
-  ${q(10,'זה נשמע לך מדויק, או שאתה היית מנסח אחרת?','בקשו אישור על אבחנה, לא על כיוון. "הכיוון בסדר?" מקבל "כן" ומעביר נושא.')}
-  <table class="read">
-    <tr><th>מה שהוא עושה</th><th>מה זה אומר</th><th>מה מותר להציע</th></tr>
-    <tr><td>מנסח מחדש בשפתו ומוסיף חומר</td><td>הוא הבעלים של הבעיה</td><td>תהליך מלא</td></tr>
-    <tr><td>דוחה ומחדד גרסה משלו</td><td>יש בעלות, הניסוח שלכם החטיא</td><td>תהליך שמתחיל מהניסוח שלו</td></tr>
-    <tr><td>מהנהן, "כן", "נכון"</td><td>הוא לא אוחז בבעיה</td><td class="no">לא תהליך. מפגש בודד או שיחת המשך.</td></tr>
-  </table>
-</div>
-
-<div class="blk">
-  <div class="blk-h">חלק ד · הנעילה</div>
-  <div class="blk-t">המספר, ומי מחזיק אותו</div>
-  <div class="blk-d">אל תשאלו "כמה זה שווה לך לדעתך". השאלה הזו מייצרת "אני לא יודע" כמעט תמיד, ואז הלחץ נשאר בחדר. תנו עוגן שהוא מכייל.</div>
-  ${q(11,anchor,'הוא מכייל מספר קיים במקום לייצר מאפס. אם הוא אומר "פחות", בקשו כמה פחות. זה עדיין מספר שלו.')}
-  ${q(12,'עד מתי, ואיזה מספר קונקרטי צריך לזוז כדי שתגיד שזה היה שווה?','זו הנעילה. חסר תאריך או חסר מספר, לא עוברים לדבר על מחיר.')}
-  <div class="stop"><b>הכלל.</b> אם בסוף החלק הזה אין מספר שהוא אמר, אין מחיר בשיחה הזאת. שלחו את ההצעה אחרי שהוא נקב, לא לפני.</div>
-</div>
-
-<div class="blk">
-  <div class="blk-h">אחרי השיחה</div>
-  <div class="blk-t">כרטיס קריאה · חמש הסיבות</div>
-  <div class="blk-d">מצאו את השורה שמתאימה לתשובות בחלק ב. העמודה האחרונה היא מה שלא לכתוב בהצעה, גם אם מתחשק.</div>
-  <table class="read">
-    <tr><th>אם שמעתם</th><th>מה נעצר</th><th>מה ההצעה מכילה</th><th>מה לא להציע</th></tr>
-    <tr>
-      <td>שאלה 8: תעריף שעה או "תלוי"</td>
-      <td>אין לו יחידה מתומחרת</td>
-      <td>בניית יחידה אחת. פורמט, תוצר, מחיר, רציונל.</td>
-      <td class="no">תמחור לפי ערך לפני שיש יחידה. תפריט אפשרויות.</td>
-    </tr>
-    <tr>
-      <td>שאלה 5 "מהתוכן" + שאלה 6 "יש אבל כללי"</td>
-      <td>הערוץ לא נושא את הערך</td>
-      <td>העברת האבחון שהוא כבר עושה בשיחה, אל תוך הערוץ. תוצר ספיר.</td>
-      <td class="no">תוכנית תוכן. שיפור פוסטים.</td>
-    </tr>
-    <tr>
-      <td>שאלה 6 "כלום" + שאלה 5 "היכרות"</td>
-      <td>שום דבר לא יוצא החוצה</td>
-      <td>הוצאה של נכס אחד קיים, בשבוע. עם נמען מוגדר.</td>
-      <td class="no">בניית מוצר חדש. תיק עבודות. הוא לא צריך עוד נכס.</td>
-    </tr>
-    <tr>
-      <td>שאלה 7 "אין שעות" ויש לו נכסים</td>
-      <td>הקשב לא מוקצה לרכישה</td>
-      <td>שעה קבועה, רשימה תחומה, מדד שבועי אחד.</td>
-      <td class="no">אסטרטגיה. מיצוב. זה לא הצוואר שלו.</td>
-    </tr>
-    <tr>
-      <td>שאלה 9 "עבר לעשות לבד" או "נגרר"</td>
-      <td>אין ניסוח למה עדיין צריך אותו</td>
-      <td>שלב שני שהוא לא המשך של הראשון, עם קריטריון סיום כתוב.</td>
-      <td class="no">ליווי חודשי. הרחבת סקופ. הבעיה היא הגבול.</td>
-    </tr>
-  </table>
-</div>
-
-<div class="blk">
-  <div class="blk-h">שלושה כללים לכתיבת ההצעה</div>
-  <div class="rule">המספר בהצעה נגזר מהעוגן שהוא נקב בשאלה 11, לא מהשוק ולא משעות.</div>
-  <div class="rule">אין הנחה יזומה. אם צריך להוריד, מורידים סקופ ולא מחיר.</div>
-  ${S.no?`<div class="rule">הגבול שהגדרתם: ${esc(S.no)}. אם ההצעה חורגת ממנו, זו כבר לא ההצעה שלכם.</div>`:''}
-</div>
-`;
-}
-
-/* ---------- init ---------- */
-document.getElementById('promptBiz').innerText=P_BIZ;
-buildDR();
-resetOutput(); // step 4 opened as a blank white slab before anything was built
-loadProfile();
-PROFILE_FIELDS.forEach(id=>{
-  const el=document.getElementById(id);
-  el.addEventListener('input', saveProfileDebounced); // debounced: don't hit localStorage on every keystroke
-  el.addEventListener('change', saveProfile); // immediate on blur/select-change — belt-and-suspenders for the <select>
-});
-</script>
+<script src="assets/pre-call-content.js"></script>
+<script src="assets/pre-call.js"></script>
 </body>
 </html>

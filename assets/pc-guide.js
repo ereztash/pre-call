@@ -1,0 +1,243 @@
+/* ============================================================
+   POST-CALL · the conductor.
+
+   Everything before this assumed an operator who could drive a workspace:
+   who knows what a scope is, can choose between four pricing methods, and
+   knows what to do once a document appears on screen. That is a tool for
+   someone who already knows how to write a proposal — which is not who this
+   is for. 118 controls visible at rest is "here is everything, help
+   yourself."
+
+   This module inverts it. At any moment it answers one question — what
+   should this person do right now, and why, in one sentence of plain Hebrew
+   — and the interface is built around that answer instead of around a form.
+
+   Three rules it enforces:
+
+     1. Exactly one next action. Never two, never zero. A finished state is
+        still an action ("send it"), because a screen with nothing to do is
+        where a first-time user stops and closes the tab.
+     2. No vocabulary the user has to already own. No scope, no ROI, no
+        triangulation, no provenance. If a word needs a glossary it needs a
+        rewrite.
+     3. Never blame the user for not knowing where something is. A step that
+        lives behind a closed drawer carries the instruction to open it, so
+        "go fill question 6" is never something they have to decode.
+
+   Pure: takes a state object, returns what to say. No DOM, tested in Node.
+   ============================================================ */
+(function (root) {
+  'use strict';
+
+  /* Ordered. Each step knows what counts as done, where it lives on the
+     page, and — the part that matters for someone who has never priced a
+     job — why it is worth answering at all. `why` is written as what it buys
+     the user, never as what the tool needs. */
+  const STEPS = [
+    {
+      id: 'process',
+      short: 'התהליך',
+      title: 'מה קורה אצלו היום',
+      ask: 'במילים פשוטות: מה נכנס, מי מקליד, לאן זה הולך.',
+      why: 'זה מה שהופך להיות "מה נכלל" בהצעה. בלי זה ההצעה מדברת כללית והלקוח לא מזהה את עצמו בה.',
+      cta: 'למלא את התהליך',
+      anchor: 'q_process',
+      fields: ['q_process'],
+      done: s => !!(s.process || '').trim()
+    },
+    {
+      id: 'volume',
+      short: 'כמה וכמה זמן',
+      title: 'כמה פעמים ביום זה קורה, וכמה זמן זה לוקח',
+      ask: 'שני מספרים. אם הוא אמר "המון" — שווה לשאול כמה בערך ביום.',
+      why: 'שני המספרים האלה הם כל המחיר. בלעדיהם אין על מה להישען כשהוא יגיד "זה יקר לי".',
+      cta: 'למלא את המספרים',
+      anchor: 'q_freq',
+      fields: ['q_freq', 'q_minutes'],
+      done: s => s.freq > 0 && s.minutes > 0
+    },
+    {
+      id: 'systems',
+      short: 'תוכנות',
+      title: 'באילו תוכנות זה נוגע',
+      ask: 'וואטסאפ, אקסל, מערכת חשבוניות — לסמן כל מה שעלה בשיחה.',
+      why: 'ככל שיש יותר תוכנות, העבודה ארוכה יותר והמחיר עולה בהתאם. זה מה שקובע כמה זמן זה ייקח.',
+      cta: 'לסמן תוכנות',
+      anchor: 'sysChips',
+      done: s => (s.systems || []).length > 0
+    },
+    {
+      id: 'breaks',
+      short: 'תקלות',
+      title: 'מה קורה כשמשהו נופל',
+      ask: 'כמה פעמים בחודש משהו נופל, וכמה זה עולה להם בכל פעם.',
+      why: 'זה בדרך כלל גדול יותר מחיסכון הזמן, וזה מה שמצדיק את המחיר בעיניו. בלי זה ההצעה יוצאת זולה בלי סיבה.',
+      cta: 'פתח ומלא',
+      anchor: 'q_err_freq',
+      fields: ['q_err_freq', 'q_err_cost'],
+      done: s => s.errFreq > 0 && s.errCost > 0,
+      optional: true
+    },
+    {
+      id: 'scope',
+      short: 'מה כלול',
+      title: 'מה נכלל בעבודה ומה לא',
+      ask: 'כל שורה כבר מסומנת בהמלצה. לשנות רק מה שלא מתאים, ואז לאשר.',
+      why: 'זה החלק שחוסך את הוויכוחים אחר כך. מה שלא כתוב שהוא בחוץ — הלקוח יניח שהוא בפנים.',
+      cta: 'לעבור על הרשימה',
+      anchor: 'scopeBox',
+      done: s => !!s.scopeConfirmed
+    },
+    {
+      id: 'client',
+      short: 'הלקוח',
+      title: 'שם הלקוח ומי מאשר',
+      ask: 'השם נכנס לכותרת ההצעה. מי שמאשר קובע כמה זמן היא בתוקף.',
+      why: 'הצעה בלי שם נראית כמו תבנית ששלחו לעוד עשרה. ומי שמאשר קובע אם שבועיים בתוקף מספיקים.',
+      cta: 'למלא פרטי לקוח',
+      anchor: 'q_client',
+      fields: ['q_client', 'q_decider'],
+      done: s => !!(s.client || '').trim()
+    },
+    {
+      id: 'send',
+      short: 'שליחה',
+      title: 'ההצעה מוכנה',
+      ask: 'שווה לעבור עליה פעם אחת מלמעלה למטה. אחר כך אפשר לשלוח.',
+      why: '',
+      cta: 'שלח ללקוח',
+      anchor: 'sendBox',
+      /* The last step is an action, not a destination. Pointing it at an
+         element was measured landing on a hidden panel — the final
+         instruction in the whole flow was a dead end. A step that names an
+         `act` is dispatched through the app's own action table, which is
+         also what puts it behind the same gate as every other export. */
+      act: 'send',
+      done: s => !!s.sent,
+      terminal: true
+    }
+  ];
+
+  /* Numbers that cannot be true. Written as an observation with the
+     arithmetic shown, never as "invalid input" — someone who does not know
+     why 15 hours a day is impossible learns nothing from a red border. */
+  function sanity(s) {
+    const out = [];
+    const runs = (+s.freq || 0) * (+s.freqUnit || 0);
+    const hours = runs * (+s.minutes || 0) / 60;
+
+    if (hours > 2000) {
+      out.push({ id: 'toomuch', field: 'q_minutes',
+        text: 'לפי מה שהזנת, התהליך לוקח כ-' + Math.round(hours).toLocaleString('en-US') +
+              ' שעות בשנה — יותר מעובד אחד במשרה מלאה. כנראה שאחד משני המספרים גבוה מדי. ' +
+              'שווה לוודא: באמת ' + (+s.minutes) + ' דקות בכל פעם?' });
+    }
+    if (hours > 0 && hours < 5) {
+      out.push({ id: 'toolittle', field: 'q_freq',
+        text: 'לפי מה שהזנת, כל התהליך לוקח כ-' + Math.round(hours) +
+              ' שעות בשנה. זה מעט מדי מכדי שמישהו ישלם על אוטומציה שלו. ' +
+              'אולי זה קורה יותר פעמים ממה שרשמת, או שכדאי לתמחר תהליך אחר.' });
+    }
+    if (+s.errCost > 0 && +s.errCost >= 20000) {
+      out.push({ id: 'bigerr', field: 'q_err_cost',
+        text: 'רשמת ' + Math.round(+s.errCost).toLocaleString('en-US') +
+              ' ₪ לכל תקלה. זה מספר גדול, והמחיר כולו יישען עליו. ' +
+              'לפני השליחה שווה לבקש ממנו דוגמה אחת ספציפית לתקלה כזאת.' });
+    }
+    if (s.numbersAreMine && (+s.errCost > 0 || +s.freq > 0)) {
+      out.push({ id: 'mine', field: 'q_provenance',
+        text: 'סומן שהמספרים הם הערכה שלכם ולא של הלקוח. זה בסדר גמור, אבל אז הם לא נכנסים למסמך ' +
+              'כהצדקה — כי אם הוא ישאל "מאיפה זה?", אין תשובה. עדיף שאלה אחת אליו, ומספר משלו.' });
+    }
+    return out;
+  }
+
+  /* The whole point of the module. Returns exactly one instruction. */
+  function next(state) {
+    const s = state || {};
+    const steps = STEPS.map(st => Object.assign({}, st, { complete: !!st.done(s) }));
+    const required = steps.filter(st => !st.optional && !st.terminal);
+    const doneCount = required.filter(st => st.complete).length;
+
+    const ready = required.every(st => st.complete);
+
+    /* Once nothing required is missing the instruction is to send, full stop.
+       An earlier version offered the optional step here instead, which put a
+       skippable question between the operator and the only outcome that
+       matters — and measured as the guide's final button pointing at question
+       six rather than at the send panel. The optional step still gets
+       surfaced, as a suggestion alongside the instruction rather than as the
+       instruction. */
+    const pending = steps.find(st => !st.terminal && !st.complete && !st.optional)
+                 || (ready ? steps[steps.length - 1] : null)
+                 || steps.find(st => !st.terminal && !st.complete && st.optional)
+                 || steps[steps.length - 1];
+
+    const suggest = ready
+      ? steps.find(st => !st.terminal && !st.complete && st.optional) || null
+      : null;
+    const problems = sanity(s);
+
+    return {
+      stepId: pending.id,
+      index: Math.min(doneCount + 1, required.length),
+      total: required.length,
+      percent: Math.round(doneCount / required.length * 100),
+      title: pending.title,
+      ask: pending.ask,
+      why: pending.why,
+      cta: pending.cta,
+      anchor: pending.anchor,
+      /* A step can need more than one field. Sending the cursor to the first
+         of them and stopping is how a person who does exactly what they are
+         told fills one box and lands back on the same instruction — so the
+         step carries all of its fields and the caller focuses the first one
+         still empty. */
+      fields: pending.fields || [],
+      act: pending.act || null,
+      optional: !!pending.optional,
+      ready,
+      /* Worth doing, not required, and never in the way. */
+      suggestion: suggest ? { stepId: suggest.id, title: suggest.title,
+                              why: suggest.why, cta: suggest.cta,
+                              anchor: suggest.anchor, fields: suggest.fields || [] } : null,
+      // a warning never replaces the instruction; it rides alongside it, so
+      // there is still exactly one thing to do
+      problems,
+      steps: steps.filter(st => !st.terminal)
+                  /* `short` is written per step rather than cut from the title.
+                     Truncating produced labels like "עבור על מה" — a guess that
+                     reads as a broken sentence on the one strip a lost user
+                     scans to see where they are. */
+                  .map(st => ({ id: st.id, title: st.title, short: st.short || st.title,
+                                complete: st.complete, optional: !!st.optional }))
+    };
+  }
+
+  /* Which pricing method to use, decided for the operator instead of by
+     them. Four chips asking someone to pick between value, market rate,
+     cost-plus and comparable is a question only a person who already prices
+     work can answer — and getting it wrong costs them money. The tool picks
+     and says why in one plain sentence; changing it stays available but off
+     the main path. */
+  function pickMethod(s) {
+    const hasClientNumbers = (+s.freq > 0 && +s.minutes > 0) && !s.numbersAreMine;
+    if (hasClientNumbers) return { method: 'value',
+      because: 'המחיר נבנה ממה שהתהליך עולה ללקוח בשנה, כי הוא נתן לך את המספרים. ' +
+               'זו הדרך שמחזיקה הכי טוב בשיחה — הדיבור הוא על הכסף שלו, לא על השעות שלכם.' };
+    if (+s.comparableLast > 0) return { method: 'comparable',
+      because: 'המחיר נבנה מעבודה דומה שכבר עשית, מותאם להיקף כאן. ' +
+               'זה מספר שקל להגן עליו, כי הוא באמת קרה.' };
+    if (s.numbersAreMine) return { method: 'market',
+      because: 'המספרים הם הערכה שלכם ולא של הלקוח, אז המחיר נבנה מהטווח המקובל בשוק לעבודה כזאת. ' +
+               'ברגע שיתקבל ממנו מספר אמיתי, החישוב יעבור לערך אצלו — וזה בדרך כלל מעלה את המחיר.' };
+    return { method: 'market',
+      because: 'עוד אין מספיק מספרים מהלקוח, אז בינתיים המחיר לפי הטווח המקובל בשוק. ' +
+               'ברגע שיהיו כמה פעמים זה קורה וכמה זמן זה לוקח, המחיר יתחיל להישען על העסק שלו.' };
+  }
+
+  root.PC = root.PC || {};
+  root.PC.guide = { STEPS, next, sanity, pickMethod };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.guide;
+})(typeof window !== 'undefined' ? window : globalThis);

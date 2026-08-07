@@ -4,127 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POST-CALL · מהשיחה להצעה מתומחרת · אוטומציות</title>
-<style>
-  :root{
-    --charcoal:#16191d; --charcoal-2:#20252b; --line:#2f363e;
-    --copper:#c07d3e; --copper-dim:#8a5a2c; --turq:#2f9e8f; --red:#9c3340;
-    --paper:#f6f5f2; --ink:#e8e6e1; --muted:#9aa3ad;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
-    background:var(--charcoal);color:var(--ink);line-height:1.65;font-size:16px;
-    -webkit-font-smoothing:antialiased}
-  .wrap{max-width:920px;margin:0 auto;padding:28px 18px 80px}
-  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
-  h1{font-size:25px;font-weight:600;letter-spacing:-.3px}
-  h1 .mark{color:var(--copper)}
-  .sub{color:var(--muted);font-size:15px;margin-top:6px}
-  .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
-        padding:12px 16px;border-radius:4px;font-size:14.5px;color:#c9cdd3;margin-top:16px}
-
-  h2{font-size:19px;font-weight:600;margin:0 0 4px}
-  .sec{margin:30px 0 0}
-  .sec-h{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;
-         color:var(--copper-dim);font-weight:700;margin-bottom:5px}
-  .lead{color:var(--muted);font-size:14.5px;margin-bottom:16px}
-
-  .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:6px;
-       padding:16px 18px;margin-bottom:14px}
-
-  .qa{border-bottom:1px solid var(--line);padding:14px 0}
-  .qa:last-child{border-bottom:0}
-  .qa .qt{font-size:16px;color:#eceef1;margin-bottom:3px}
-  .qa .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;
-          padding:1px 7px;border-radius:3px;margin-left:6px;font-weight:600;vertical-align:middle}
-  .qa .why{font-size:12.5px;color:var(--muted);margin-bottom:8px}
-
-  label{display:block;font-size:13.5px;color:#c3c9d0;margin:10px 0 4px;font-weight:500}
-  input[type=text],input[type=number],textarea,select{
-    width:100%;background:#0f1216;border:1px solid var(--line);border-radius:5px;
-    color:var(--ink);padding:9px 11px;font-size:15px;font-family:inherit;
-    direction:rtl;text-align:right}
-  input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
-  textarea{min-height:62px;resize:vertical;line-height:1.55}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  .row>*{flex:1 1 150px;min-width:0}
-  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
-  .chip{background:#0f1216;border:1px solid var(--line);border-radius:20px;
-        padding:6px 13px;font-size:13.5px;cursor:pointer;color:#c3c9d0;user-select:none;
-        min-height:34px;display:flex;align-items:center}
-  .chip.on{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
-
-  /* ---- live numbers ---- */
-  .nums{background:#0f1216;border:1px solid var(--line);border-radius:8px;padding:18px;
-        position:sticky;bottom:0;margin-top:8px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
-  .stat{background:var(--charcoal-2);border-radius:6px;padding:12px 14px;
-        border-right:3px solid var(--turq)}
-  .stat.big{border-right-color:var(--copper)}
-  .stat .k{font-size:12px;color:var(--muted);letter-spacing:.3px}
-  .stat .v{font-size:22px;font-weight:700;color:#f2f0ec;margin-top:2px;
-           font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
-  .stat .u{font-size:12.5px;color:var(--muted);margin-top:1px}
-  .flag{border-right:3px solid var(--red);background:#2a1b1f;color:#f0c6cc;
-        padding:11px 14px;border-radius:5px;font-size:13.5px;margin-top:12px}
-  .ok{border-right:3px solid var(--turq);background:#16262a;color:#bfe3dd;
-      padding:11px 14px;border-radius:5px;font-size:13.5px;margin-top:12px}
-
-  details.assump{margin-top:12px}
-  details.assump summary{cursor:pointer;font-size:13px;color:var(--muted);padding:4px 0}
-  details.assump summary:hover{color:var(--ink)}
-
-  button.act{background:var(--copper);color:#12151a;border:0;padding:12px 22px;border-radius:5px;
-    font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;min-height:46px}
-  button.act:hover{background:#d38b47}
-  button.act:disabled{background:#3a3f46;color:#7d848c;cursor:not-allowed}
-  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
-    padding:10px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-family:inherit;min-height:44px}
-  button.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
-
-  /* ---- paywall ---- */
-  .wall{background:var(--charcoal-2);border:1px solid var(--copper-dim);border-radius:8px;
-        padding:22px;text-align:center;margin-top:16px}
-  .wall h3{font-size:18px;margin-bottom:6px}
-  .wall p{font-size:14.5px;color:#c3c9d0;margin-bottom:14px}
-  .wall .price{font-size:30px;font-weight:700;color:var(--copper);margin:8px 0}
-  .keyrow{display:flex;gap:8px;max-width:400px;margin:14px auto 0}
-  .keyrow input{flex:1}
-  .wall .err{color:#f0a8b0;font-size:13.5px;margin-top:8px;display:none}
-
-  /* ---- proposal ---- */
-  .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:14px}
-  .out h3{color:#16191d;font-size:21px;margin:0 0 4px;font-weight:700}
-  .out .meta{color:#6b7280;font-size:13px;margin-bottom:20px;
-             border-bottom:1px solid #ddd9d2;padding-bottom:12px}
-  .out h4{font-size:12px;letter-spacing:1.1px;text-transform:uppercase;color:var(--copper-dim);
-          font-weight:700;margin:22px 0 7px}
-  .out p,.out li{font-size:14.5px;color:#33383f;line-height:1.7}
-  .out ul{padding:0 20px 0 0;margin:4px 0}
-  .out li{margin-bottom:5px}
-  .out .pricebox{background:#fff;border:1px solid #e2ded7;border-right:3px solid var(--copper);
-                 border-radius:4px;padding:16px 18px;margin:10px 0}
-  .out .pricebox .amt{font-size:28px;font-weight:700;color:#16191d;
-                      font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
-  .out .rationale{background:#eef4f3;border-right:3px solid var(--turq);padding:12px 15px;
-                  border-radius:4px;font-size:13.5px;color:#1f4e48;margin:10px 0}
-  .out table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
-  .out th{background:#16191d;color:#f6f5f2;padding:8px 10px;text-align:right;font-size:12.5px}
-  .out td{border-bottom:1px solid #e2ded7;padding:8px 10px;color:#33383f}
-  .out .no{color:var(--red)}
-
-  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
-         color:#697280;font-size:12.5px;line-height:1.8}
-  .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
-  .copied.on{opacity:1}
-
-  @media print{
-    body{background:#fff;color:#000}
-    .wrap{max-width:100%;padding:0}
-    header,.sec,.box,.nums,.wall,button,footer,.hideprint{display:none!important}
-    #proposal{display:block!important}
-    .out{padding:0}
-  }
-</style>
+<link rel="stylesheet" href="assets/post-call.css">
 </head>
 <body>
 <div class="wrap">
@@ -132,31 +12,71 @@
 <header>
   <h1>POST<span class="mark">·</span>CALL</h1>
   <div class="sub">מהשיחה להצעה מתומחרת. לפרויקטי אוטומציה וייעול תהליכים.</div>
-  <div class="note">
-    אתה לא צריך לדעת כמה לגבות. אתה צריך את המספר של <b>הלקוח</b>: כמה התהליך הידני עולה לו בשנה.
-    המחיר נגזר ממנו, לא מהוותק שלך ולא מהעסקה הקודמת שלך. אם עוד לא סגרת אף עסקה, זה עדיין עובד.
-  </div>
 </header>
 
-<!-- ============ שאלות השיחה ============ -->
+<!-- ============ העסקאות ============ -->
+<div class="dealbar" id="dealBar"></div>
+<!-- A render that throws says so here instead of taking the page down. -->
+<div class="errbound hidden" id="errBoundary" role="status" aria-live="polite"></div>
+<!-- A restored draft is announced, never silent: a form that fills itself
+     on load with no explanation looks exactly like one showing the wrong
+     client, and the operator is about to send whatever is on it. -->
+<div class="draftnote hidden" id="draftNote" role="status" aria-live="polite"></div>
+
+<!-- ============ המדריך — הוא שמוביל, לא המשתמש ============
+     Exactly one instruction, always on screen, always taking you to the
+     one place that instruction is about. Everything else on the page is
+     optional detail; this is the spine. -->
+<div class="guide" id="guideBar" role="status" aria-live="polite"></div>
+
+<!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->
+<main>
 <div class="sec">
-  <div class="sec-h">בשיחה · חינם</div>
-  <h2>13 שאלות שמוציאות את המספר</h2>
-  <p class="lead">מלא תוך כדי השיחה או מיד אחריה. המספרים למטה מתעדכנים בזמן אמת.</p>
+  <div class="sec-h">שלב 1 · שלושים שניות</div>
+  <h2>ההצעה נכתבת תוך כדי שאתה ממלא</h2>
+  <p class="lead">ארבעה שדות מספיקים למסמך שלם. כל השאר רק מדייק, ויושב למטה.</p>
+
+  <!-- ============ מהשיחה עצמה ============
+       The transcript is not a shortcut around the form; it is what turns
+       provenance from something the operator asserts into something the
+       recording shows. Nothing here applies itself — every candidate
+       arrives with the sentence it came from. -->
+  <div class="box trbox">
+    <h3 class="tpl-h">יש לך תמלול של השיחה?</h3>
+    <p class="hint-p">הדבק אותו, והכלי יוציא ממנו את המספרים — כל אחד עם המשפט שממנו הוא נלקח ועם מי אמר אותו. שום דבר לא נכנס לטופס לפני שאתה מאשר.</p>
+    <label for="trIn">תמלול השיחה</label>
+    <textarea id="trIn" placeholder="הדבק כאן את התמלול המלא..."></textarea>
+    <div class="tr-acts">
+      <button class="act" data-act="trprompt">קבל פרומפט לחילוץ</button>
+      <button class="ghost" data-act="trlocal">נסה בלי בינה מלאכותית</button>
+      <button class="ghost" data-act="trdemo">טען שיחת דוגמה</button>
+    </div>
+    <div class="tr-step hidden" id="trPrompt"></div>
+    <div class="tr-review hidden" id="trReview"></div>
+  </div>
+
+  <!-- The fastest route to a document worth arguing with. Sets systems,
+       typical numbers, opening text, and the scope decisions for that kind
+       of job — which is where the time actually goes. -->
+  <div class="box tplbox">
+    <h3 class="tpl-h">תהליך מוכר? התחל מכאן</h3>
+    <p class="hint-p">לחיצה אחת ממלאת את התוכנות, מספרים טיפוסיים, וגם את ההחלטות על מה נכלל ומה לא — לפי סוג העבודה. הכול ניתן לעריכה.</p>
+    <div class="tpls" id="tplChips"></div>
+    <div class="tpl-note hidden" id="tplNote"></div>
+  </div>
 
   <div class="box">
     <div class="qa">
-      <div class="qt"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
-      <div class="why">תן לו לתאר עד הסוף. התיאור המפורט הוא מה שיהפוך לסקופ בהצעה.</div>
-      <textarea id="q_process" placeholder="למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת"></textarea>
+      <div class="qt" id="qt1"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
+      <div class="why">כדאי לתת לו לתאר עד הסוף. מה שהוא מספר כאן הופך למה שכתוב בהצעה שאתם מתחייבים לעשות.</div>
+      <textarea aria-labelledby="qt1" id="q_process" placeholder="למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת"></textarea>
     </div>
-
     <div class="qa">
-      <div class="qt"><span class="qn">2</span>כמה פעמים זה קורה?</div>
+      <div class="qt" id="qt2"><span class="qn">2</span>כמה פעמים זה קורה?</div>
       <div class="why">אם הוא אומר "המון", בקש מספר. "בערך כמה ביום?"</div>
       <div class="row">
-        <div><label>כמות</label><input type="number" id="q_freq" min="0" step="1" placeholder="20"></div>
-        <div><label>לכל</label>
+        <div><label for="q_freq">כמות</label><input type="number" id="q_freq" min="0" step="1" placeholder="20"></div>
+        <div><label for="q_freq_unit">לכל</label>
           <select id="q_freq_unit">
             <option value="365">יום</option>
             <option value="52" selected>שבוע</option>
@@ -165,128 +85,251 @@
         </div>
       </div>
     </div>
-
     <div class="qa">
-      <div class="qt"><span class="qn">3</span>כמה זמן לוקח כל פעם, מהתחלה עד הסוף?</div>
+      <div class="qt" id="qt3"><span class="qn">3</span>כמה זמן לוקח כל פעם, מהתחלה עד הסוף?</div>
       <div class="why">כולל ההקשר: לפתוח מסך, לחפש, לוודא. לא רק ההקלדה עצמה.</div>
-      <label>דקות לכל פעם</label>
+      <label for="q_minutes">דקות לכל פעם</label>
       <input type="number" id="q_minutes" min="0" step="1" placeholder="7">
     </div>
-
     <div class="qa">
-      <div class="qt"><span class="qn">4</span>מי עושה את זה היום?</div>
+      <div class="qt" id="qt7"><span class="qn">7</span>אילו מערכות מעורבות בתהליך?</div>
+      <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
+      <div class="chips" id="sysChips"></div>
+    </div>
+    <label for="q_client">שם הלקוח או העסק</label>
+    <input type="text" id="q_client" placeholder="לכותרת ההצעה">
+    <div class="row mt12">
+      <div><label for="q_phone">טלפון <span class="hint">לא חובה. אם תמלא, כפתור השליחה יפתח את הצ׳אט שלו</span></label>
+        <input type="tel" id="q_phone" placeholder="052-1234567" autocomplete="off"></div>
+      <div><label for="q_email">אימייל <span class="hint">לא חובה. לשליחה במייל בלחיצה אחת</span></label>
+        <input type="email" id="q_email" placeholder="name@company.co.il" autocomplete="off"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ המסמך — הוא הממשק ============ -->
+<!-- .doc is load bearing: the print sheet allows this one section through and
+     hides every sibling. Renaming it prints a blank page. -->
+<div class="sec doc">
+  <div class="sec-h">שלב 2 · התוצר</div>
+  <h2>ההצעה שתישלח</h2>
+  <div class="docbar">
+    <div class="docprice"><span class="k">מחיר מוצע</span><span class="v" id="s_price_top">—</span></div>
+    <div class="docacts">
+      <button class="act" data-act="copy">העתק הצעה</button>
+      <button class="ghost" data-act="print">שמור כ-PDF</button>
+      <button class="ghost" data-act="send">שלח ללקוח</button>
+      <button class="ghost" data-act="save">שמור לפנקס</button>
+      <span class="copied" id="cpFlag">הועתק</span>
+    </div>
+  </div>
+  <!-- The three sanity checks the chain and the verdict box already compute,
+       as a row that reads in one glance instead of a paragraph — see the
+       comment on PC.flow.guardrails() for why this exists and why it is
+       empty until there is a real annual value. Sits outside #proposal, so
+       — like .docbar above it — it never reaches the printed document; the
+       print rule already hides everything in .sec.doc except #proposal. -->
+  <div class="guardrails hidden" id="guardBox"></div>
+  <!-- What the tool concluded about this particular client, from what, and
+       what it changed in the document. Shown rather than applied silently:
+       the operator signs the proposal either way, and only a visible
+       inference is one they can check. -->
+  <div class="cread hidden" id="clientRead"></div>
+  <div class="out" id="proposal"></div>
+
+  <!-- Evidence-led, and smaller than it could be. Icon arrays and part-to-whole
+       bars are here because visual aids measurably help people with low
+       numeracy read a quantity. Decorative illustration is absent because the
+       seductive-details literature says task-irrelevant pictures lower recall
+       — worst for exactly the readers this is for. -->
+  <!-- Where the price came from, step by step, in the language of the room.
+       The transcript's citations are kept rather than discarded at
+       confirmation, so each step can show the sentence that fed it. -->
+  <details class="flow hidden" id="flowBox"></details>
+
+  <div class="viz hidden" id="vizBox"></div>
+
+  <!-- The last step, which the tool used to leave entirely to the operator. -->
+  <div class="sendbox hidden" id="sendBox"></div>
+
+  <div id="wall" class="wall hidden">
+    <h3>לייצוא ההצעה נדרש מפתח</h3>
+    <p>המסמך והמספרים חינם ותמיד יישארו. התשלום הוא על לקיחתו החוצה.</p>
+    <div class="price">₪49</div>
+    <button class="act" id="payBtn">קנה וקבל מפתח</button>
+    <div class="keyrow">
+      <input type="text" id="keyIn" aria-label="מפתח פתיחה" placeholder="הדבק כאן את המפתח" autocomplete="off">
+      <button class="ghost" data-act="unlock">הפעל את המפתח</button>
+    </div>
+    <div class="err hidden" id="keyErr">המפתח לא תקין. בדוק שהעתקת אותו במלואו.</div>
+  </div>
+</div>
+
+<!-- ============ מה נכלל ומה לא — כאן נשרף הזמן ============ -->
+<div class="sec">
+  <div class="sec-h">שלב 3 · כאן נשרף הזמן</div>
+  <h2>על מה מתחייבים, ומה נשאר בחוץ</h2>
+  <p class="lead">כל שורה כבר מסומנת, עם הסיבה לידה. משנים רק מה שלא מתאים — והמסמך למעלה מתעדכן מיד.</p>
+  <div class="box" id="scopeBox"></div>
+  <div class="scope-confirm">
+    <button class="act" data-act="confirmscope" id="scopeConfirmBtn">עברתי על הרשימה, ממשיכים</button>
+    <span class="hint-p" id="scopeConfirmNote">רוב הפעמים אין מה לשנות. אם הכול נראה בסדר — אישור ומתקדמים.</span>
+  </div>
+</div>
+
+<!-- ============ מגירות ============ -->
+<div class="sec">
+  <details class="drawer">
+    <summary>שאר השאלות · מדייקות את המסמך</summary>
+    <div class="box">
+      <div class="qa">
+      <div class="qt" id="qt4"><span class="qn">4</span>מי עושה את זה היום?</div>
       <div class="why">התפקיד קובע את עלות השעה. אם זה בעל העסק בעצמו, המספר קופץ פי שלושה.</div>
-      <label>תפקיד</label>
+      <label for="q_role">תפקיד</label>
       <select id="q_role">
-        <option value="60">עובד/ת back-office · כ-60 ₪ לשעה בעלות מלאה</option>
+        <option value="60">מי שמזין נתונים · כ-60 ₪ לשעה בעלות מלאה</option>
         <option value="85" selected>רכז/ת תפעול · כ-85 ₪ לשעה</option>
         <option value="145">מנהל/ת מחלקה · כ-145 ₪ לשעה</option>
         <option value="215">בעל/ת העסק · כ-215 ₪ לשעה</option>
         <option value="custom">אחר, אזין ידנית</option>
       </select>
-      <div id="customRateWrap" style="display:none">
-        <label>עלות שעה מלאה בשקלים</label>
+      <div id="customRateWrap" class="hidden">
+        <label for="q_rate_custom">עלות שעה מלאה בשקלים</label>
         <input type="number" id="q_rate_custom" min="0" step="5" placeholder="100">
       </div>
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">5</span>מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?</div>
+    </div><div class="qa">
+      <div class="qt" id="qt5"><span class="qn">5</span>מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?</div>
       <div class="why">בלי אירוע, אין דחיפות, וההצעה תישאר פתוחה חודשים. זה נכנס לפתיחת ההצעה.</div>
-      <textarea id="q_trigger" placeholder="למשל: בחודש שעבר פספסנו שתי הזמנות והלקוח עבר למתחרה"></textarea>
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">6</span>כשזה משתבש, מה קורה בפועל? כמה פעמים בחודש?</div>
+      <textarea aria-labelledby="qt5" id="q_trigger" placeholder="למשל: בחודש שעבר פספסנו שתי הזמנות והלקוח עבר למתחרה"></textarea>
+    </div><div class="qa">
+      <div class="qt" id="qt6"><span class="qn">6</span>כשזה משתבש, מה קורה בפועל? כמה פעמים בחודש?</div>
       <div class="why">זה הערך השני, וברוב השיחות הוא גדול מחיסכון הזמן. אל תדלג עליו.</div>
       <div class="row">
-        <div><label>תקלות בחודש</label><input type="number" id="q_err_freq" min="0" step="1" placeholder="3"></div>
-        <div><label>עלות ממוצעת לתקלה (₪)</label><input type="number" id="q_err_cost" min="0" step="50" placeholder="400"></div>
+        <div><label for="q_err_freq">תקלות בחודש</label><input type="number" id="q_err_freq" min="0" step="1" placeholder="3"></div>
+        <div><label for="q_err_cost">עלות ממוצעת לתקלה (₪)</label><input type="number" id="q_err_cost" min="0" step="50" placeholder="400"></div>
       </div>
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">7</span>אילו מערכות מעורבות בתהליך?</div>
-      <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
-      <div class="chips" id="sysChips"></div>
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">8</span>למערכות האלה יש חיבור קיים, או שהכל ידני?</div>
+    </div><div class="qa">
+      <div class="qt" id="qt8"><span class="qn">8</span>למערכות האלה יש חיבור קיים, או שהכל ידני?</div>
       <div class="why">שאל אם יש להן API או אינטגרציה מובנית. "אני לא יודע" = כמו ידני, לצורך האומדן.</div>
-      <select id="q_integration">
+      <select aria-labelledby="qt8" id="q_integration">
         <option value="1.0">יש API או אינטגרציה מובנית לכולן</option>
         <option value="1.4" selected>לחלקן. לפחות אחת דורשת עבודה</option>
         <option value="1.9">ידני לגמרי, או שלא ידוע</option>
       </select>
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">9</span>כמה אחוז מהמקרים הם חריגים שדורשים טיפול שונה?</div>
+    </div><div class="qa">
+      <div class="qt" id="qt9"><span class="qn">9</span>כמה אחוז מהמקרים הם חריגים שדורשים טיפול שונה?</div>
       <div class="why">כאן נשברים פרויקטי אוטומציה. אם הוא אומר "רוב המקרים דומים", בקש אחוז.</div>
-      <select id="q_edge">
+      <select aria-labelledby="qt9" id="q_edge">
         <option value="1.0">כמעט אין חריגים, פחות מ-10%</option>
         <option value="1.25" selected>בין 10% ל-25%</option>
         <option value="1.6">יותר מרבע מהמקרים חריגים</option>
       </select>
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">10</span>ניסיתם כבר לפתור את זה? מה לא עבד?</div>
+    </div><div class="qa">
+      <div class="qt" id="qt10"><span class="qn">10</span>ניסיתם כבר לפתור את זה? מה לא עבד?</div>
       <div class="why">אם יש ספק קודם שנכשל, זה נכנס להצעה כ"מה שונה הפעם". זה סוגר עסקאות.</div>
-      <textarea id="q_prev" placeholder="למשל: קנינו תוסף אבל אף אחד לא הטמיע אותו"></textarea>
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">11</span>מי עוד צריך לאשר את זה חוץ ממך?</div>
+      <textarea aria-labelledby="qt10" id="q_prev" placeholder="למשל: קנינו תוסף אבל אף אחד לא הטמיע אותו"></textarea>
+    </div><div class="qa">
+      <div class="qt" id="qt11"><span class="qn">11</span>מי עוד צריך לאשר את זה חוץ ממך?</div>
       <div class="why">אם יש עוד מחליט ולא ידעת, ההצעה נתקעת שבועיים. שאל בשיחה, לא אחריה.</div>
-      <input type="text" id="q_decider" placeholder="למשל: השותף שלי. או: אף אחד, אני מחליט">
-    </div>
-
-    <div class="qa">
-      <div class="qt"><span class="qn">12</span>עד מתי אתה צריך שזה יעבוד?</div>
+      <input aria-labelledby="qt11" type="text" id="q_decider" placeholder="למשל: השותף שלי. או: אף אחד, אני מחליט">
+    </div><div class="qa">
+      <div class="qt" id="qt12"><span class="qn">12</span>עד מתי אתה צריך שזה יעבוד?</div>
       <div class="why">תאריך, לא "בהקדם". זה נכנס להצעה כלוח זמנים ולתאריך החלטה.</div>
-      <input type="text" id="q_deadline" placeholder="למשל: לפני עונת החגים, אמצע ספטמבר">
+      <input aria-labelledby="qt12" type="text" id="q_deadline" placeholder="למשל: לפני עונת החגים, אמצע ספטמבר">
+    </div><div class="qa">
+      <div class="qt" id="qt13"><span class="qn">13</span>איך נדע בעוד חודש שזה עבד?</div>
+      <div class="why">התשובה שלו הופכת לקריטריון ההצלחה בהצעה. אם אין, הצע: "שעות שחזרו".</div>
+      <input type="text" id="q_success" aria-labelledby="qt13" placeholder="למשל: שאף הזמנה לא תיפול בין הכיסאות">
+    </div>
+    </div>
+  </details>
+
+  <details class="drawer">
+    <summary>תמחור · שיטה, מספרים והצלבה</summary>
+    <div class="box">
+    <!-- The tool decides this. Choosing between four pricing methods is a
+         question only someone who already prices work can answer, and getting
+         it wrong costs them money. The reason is stated in plain words; the
+         chips stay for whoever wants to take over. -->
+    <div class="methodwhy" id="methodWhy"></div>
+    <details class="drawer methodpick">
+      <summary>לשנות את דרך התמחור בעצמי</summary>
+      <div class="box">
+        <label for="methodChips">שיטה ראשית</label>
+        <div class="chips" id="methodChips"></div>
+        <p class="hint-p" id="methodHint"></p>
+
+    <div id="m_comparable_in" class="hidden">
+      <div class="row">
+        <div>
+          <label for="c_last">כמה גבית על העבודה הדומה האחרונה (₪)</label>
+          <input type="number" id="c_last" min="0" step="500" placeholder="6,000">
+        </div>
+        <div>
+          <label for="c_scale">העבודה הזאת, ביחס אליה</label>
+          <select id="c_scale">
+            <option value="0.7">קטנה יותר</option>
+            <option value="1" selected>דומה בהיקף</option>
+            <option value="1.5">גדולה יותר</option>
+            <option value="2.2">גדולה משמעותית</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div class="qa">
-      <div class="qt"><span class="qn">13</span>איך נדע בעוד חודש שזה עבד?</div>
-      <div class="why">התשובה שלו הופכת לקריטריון ההצלחה בהצעה. אם אין, הצע: "שעות שחזרו".</div>
-      <input type="text" id="q_success" placeholder="למשל: שאף הזמנה לא תיפול בין הכיסאות">
+    <div id="m_cost_in" class="hidden">
+      <label for="c_margin">התוספת שלך מעל העלות (%)</label>
+      <input type="number" id="c_margin" value="30" min="0" max="200" step="5">
+    </div>
+      </div>
+    </details>
+
+    <div class="row mt12">
+      <div>
+        <label for="c_deals">כמה עסקאות סגרת בתחום הזה?</label>
+        <select id="c_deals">
+          <option value="0">זו הראשונה</option>
+          <option value="1">אחת או שתיים</option>
+          <option value="2" selected>שלוש עד עשר</option>
+          <option value="3">יותר מעשר</option>
+        </select>
+      </div>
     </div>
   </div>
 
   <div class="box">
-    <label>שם הלקוח או העסק</label>
-    <input type="text" id="q_client" placeholder="לכותרת ההצעה">
+    <label for="q_provenance">מאיפה הגיע המספר בשאלה 6
+      <span class="hint">בשיחות מתועדות בתחומים דומים, הלקוח נותן ספרות רק אחרי שהמוכר מכוון אותו לשם.
+        אם זה מה שקרה, המספר מודד את השאלה שלך ולא את העסק שלו.</span></label>
+    <select id="q_provenance">
+      <option value="unprompted">הוא נקב במספר מעצמו, בלי שכיוונתי</option>
+      <option value="prompted" selected>הוא נקב אחרי ששאלתי ישירות</option>
+      <option value="mine">אני הערכתי בשבילו</option>
+      <option value="none">לא היה מספר</option>
+    </select>
   </div>
-</div>
-
-<!-- ============ המספרים ============ -->
-<div class="sec">
-  <div class="sec-h">הכיול · חינם</div>
-  <h2>מה התהליך הזה עולה לו בשנה</h2>
-  <p class="lead">זה המספר שאתה מציג בשיחה. המחיר נגזר ממנו.</p>
 
   <div class="nums">
     <div class="grid">
       <div class="stat"><div class="k">שעות שנשרפות בשנה</div><div class="v" id="s_hours">—</div><div class="u">שעות עבודה</div></div>
       <div class="stat"><div class="k">עלות התהליך בשנה</div><div class="v" id="s_value">—</div><div class="u">זמן + תקלות</div></div>
-      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u">שעות בנייה</div></div>
+      <div class="stat"><div class="k">אומדן מאמץ</div><div class="v" id="s_effort">—</div><div class="u u-warn">שעות בנייה · לא מכויל</div></div>
       <div class="stat big"><div class="k">מחיר מוצע</div><div class="v" id="s_price">—</div><div class="u" id="s_band">טווח הגנה</div></div>
       <div class="stat"><div class="k">החזר השקעה</div><div class="v" id="s_payback">—</div><div class="u">שבועות</div></div>
     </div>
+    <div id="triangulate"></div>
+    <div id="recommend"></div>
     <div id="verdict"></div>
 
     <details class="assump">
       <summary>הנחות העבודה, ניתנות לשינוי</summary>
-      <div class="row" style="margin-top:10px">
+      <div class="row mt10">
         <div>
-          <label>התעריף שלך לשעת פיתוח (₪)</label>
+          <label for="a_myrate">התעריף שלך לשעת פיתוח (₪)</label>
           <input type="number" id="a_myrate" value="250" min="0" step="25">
         </div>
         <div>
-          <label>אחוז הזמן שבאמת נחסך</label>
+          <label for="a_capture">אחוז הזמן שבאמת נחסך</label>
           <select id="a_capture">
             <option value="0.7">70% · שמרני, נשארת בקרה ידנית</option>
             <option value="0.8" selected>80% · טיפוסי</option>
@@ -294,11 +337,11 @@
           </select>
         </div>
         <div>
-          <label>תחזוקה שנתית, אחוז מהמחיר</label>
+          <label for="a_maint">תחזוקה שנתית, אחוז מהמחיר</label>
           <input type="number" id="a_maint" value="15" min="0" max="100" step="5">
         </div>
       </div>
-      <p style="font-size:12.5px;color:var(--muted);margin-top:10px">
+      <p class="hint-p mt10">
         הנוסחה: (שעות בשנה × עלות שעה מלאה × אחוז שנחסך) + (תקלות × עלות) = ערך שנתי.
         עלות שעה מלאה היא ברוטו × 1.3 בקירוב, כולל מעסיק. טווח המחיר הוא 12% עד 35% מהערך של שנה ראשונה,
         מה שמתאים ל-ROI מקובל של 200% עד 500% בשנה הראשונה, עם רצפה של אומדן המאמץ × התעריף שלך.
@@ -306,296 +349,49 @@
       </p>
     </details>
   </div>
+  </details>
+
+  <div id="privArea" class="priv hidden"></div>
 </div>
 
-<!-- ============ ההצעה ============ -->
+<!-- ============ שלב 4 ============ -->
 <div class="sec">
-  <div class="sec-h">התוצר · בתשלום</div>
-  <h2>ההצעה שאתה שולח</h2>
-  <p class="lead">מסמך מלא: סקופ, מה לא כלול, מחיר עם נימוק שנשען על המספר שלו, לוח זמנים, קריטריון הצלחה ותאריך החלטה.</p>
-
-  <div id="wall" class="wall">
-    <h3>ההצעה מוכנה</h3>
-    <p>המספרים למעלה חינם ותמיד יישארו. המסמך שאתה שולח ללקוח הוא התוצר.</p>
-    <div class="price">₪49</div>
-    <p style="font-size:13px">תשלום חד-פעמי לכל הצעה. בלי מנוי.</p>
-    <button class="act" id="payBtn">קנה וקבל מפתח</button>
-    <div class="keyrow">
-      <input type="text" id="keyIn" placeholder="הדבק כאן את המפתח" autocomplete="off">
-      <button class="ghost" onclick="tryUnlock()">פתח</button>
-    </div>
-    <div class="err" id="keyErr">המפתח לא תקין. בדוק שהעתקת אותו במלואו.</div>
-  </div>
-
-  <div id="proposalWrap" style="display:none">
-    <div class="hideprint" style="margin-bottom:10px">
-      <button class="act" onclick="copyProposal()">העתק כטקסט</button>
-      <button class="ghost" onclick="window.print()">הדפסה או PDF</button>
-      <span class="copied" id="cpFlag">הועתק</span>
-    </div>
-    <div class="out" id="proposal"></div>
-  </div>
+  <div class="sec-h">שלב 4 · אחרי שנשלחה</div>
+  <h2>מה קרה בפועל</h2>
+  <p class="lead">
+    זה מה שהופך את האומדן ממעגלי למדוד. האומדן ננעל ברגע השמירה, ומושווה לשעות שתדווח אחרי המסירה.
+    הכול נשאר בדפדפן הזה — שום פרט לקוח לא עוזב אותו.
+  </p>
+  <div class="box" id="ledgerBox"></div>
 </div>
+</main>
 
 <footer>
   POST-CALL · לפרויקטי אוטומציה וייעול תהליכים · הנתונים נשארים בדפדפן שלך.<br>
-  הכלי לא מבטיח שהלקוח יסכים למחיר. הוא מבטיח שהמחיר יהיה נגזר ממספר שהלקוח עצמו אמר.
+  הכלי לא מבטיח שהלקוח יסכים למחיר. הוא מבטיח שהמחיר יהיה נגזר ממספר שהלקוח עצמו אמר.<br>
+  <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
 </footer>
 
 </div>
 
-<script>
-/* ============================================================
-   POST-CALL — the inverse of PRE-CALL.
-   PRE-CALL asked the operator for their own last deal to anchor a price,
-   which is empty for anyone who hasn't closed one yet. Here every number
-   comes from the client's own process plus published vertical benchmarks,
-   so a first-timer gets a defensible price on their first call.
-   ============================================================ */
-
-const SYSTEMS = ['וואטסאפ','אימייל','גיליונות Google','Excel','CRM','חשבונית ירוקה / מורנינג',
-                 'מערכת סליקה','אתר / טפסים','ERP','Monday / Asana','מערכת ייעודית','אחר'];
-
-const el = id => document.getElementById(id);
-const num = id => { const v = parseFloat(el(id).value); return isFinite(v) && v > 0 ? v : 0; };
-const txt = id => el(id).value.trim();
-const ils = n => '₪' + Math.round(n).toLocaleString('en-US');
-
-/* ---------- system chips ---------- */
-const chosenSystems = new Set();
-SYSTEMS.forEach(s => {
-  const c = document.createElement('div');
-  c.className = 'chip'; c.textContent = s;
-  c.onclick = () => { c.classList.toggle('on');
-    c.classList.contains('on') ? chosenSystems.add(s) : chosenSystems.delete(s);
-    recompute(); };
-  el('sysChips').appendChild(c);
-});
-
-el('q_role').addEventListener('change', () => {
-  el('customRateWrap').style.display = el('q_role').value === 'custom' ? '' : 'none';
-  recompute();
-});
-
-/* ---------- the model ----------
-   Value:  (annual runs × minutes / 60) × loaded hourly cost × capture rate
-           + (error frequency × error cost × 12)
-   Effort: base by system count × integration difficulty × edge-case load,
-           plus handover, plus an error-handling allowance.
-   Price:  value band of 10–25% of year-1 net, floored at effort × your rate.
-   Numbers are editable defaults for calibration, not predictions. */
-function model(){
-  const runs = num('q_freq') * parseFloat(el('q_freq_unit').value);
-  const mins = num('q_minutes');
-  const rate = el('q_role').value === 'custom' ? num('q_rate_custom') : parseFloat(el('q_role').value);
-  const capture = parseFloat(el('a_capture').value);
-  const hours = runs * mins / 60;
-  const timeValue = hours * rate * capture;
-  const errValue = num('q_err_freq') * num('q_err_cost') * 12;
-  const annualValue = timeValue + errValue;
-
-  const n = chosenSystems.size;
-  const base = n <= 1 ? 4 : n === 2 ? 7 : n === 3 ? 11 : 16 + (n - 4) * 3;
-  const effort = Math.round(
-    (base * parseFloat(el('q_integration').value) * parseFloat(el('q_edge').value) + 2) * 1.15);
-
-  const myRate = num('a_myrate') || 250;
-  const floor = effort * myRate;
-  const maint = (num('a_maint') || 0) / 100;
-
-  // Typical first-year ROI in this vertical is 200%–500%, i.e. a price of
-  // roughly 17%–33% of year-one value. 35% is the ceiling: past it the client
-  // earns back less than ~1.9x in year one and the deal stops defending itself.
-  const low = annualValue * 0.12, high = annualValue * 0.35;
-  let price = Math.max(floor * 1.2, annualValue * 0.15);
-  const tooThin = annualValue > 0 && price > high;
-  price = Math.round(price / 100) * 100;
-
-  const netWeekly = annualValue > 0 ? (annualValue * (1 - maint)) / 52 : 0;
-  const payback = netWeekly > 0 ? price / netWeekly : 0;
-
-  return { runs, mins, rate, hours, timeValue, errValue, annualValue,
-           effort, floor, price, low, high, payback, tooThin, capture, maint, myRate };
-}
-
-function recompute(){
-  const m = model();
-  el('s_hours').textContent   = m.hours   ? Math.round(m.hours).toLocaleString('en-US') : '—';
-  el('s_value').textContent   = m.annualValue ? ils(m.annualValue) : '—';
-  el('s_effort').textContent  = chosenSystems.size ? m.effort : '—';
-  el('s_price').textContent   = (m.annualValue || chosenSystems.size) ? ils(m.price) : '—';
-  el('s_payback').textContent = m.payback ? m.payback.toFixed(1) : '—';
-  el('s_band').textContent = m.annualValue
-    ? ils(m.low) + ' – ' + ils(m.high)
-    : 'טווח הגנה';
-
-  const v = el('verdict');
-  if (!m.annualValue) {
-    v.innerHTML = '<div class="ok">מלא את שאלות 2, 3 ו-4 וקבל את המספר. שאלה 6 מוסיפה לו את ערך התקלות.</div>';
-  } else if (m.tooThin) {
-    v.innerHTML = '<div class="flag"><b>הבנייה יקרה מהערך שהיא מייצרת.</b> ' +
-      'עלות הבנייה מחייבת אותך לגבות לפחות ' + ils(m.price) + ', אבל תהליך ששווה ' +
-      ils(m.annualValue) + ' בשנה מצדיק עד ' + ils(m.high) + ' לכל היותר. ' +
-      'בסקופ הזה הלקוח לא מחזיר את ההשקעה בזמן סביר. צמצם לחלק אחד של התהליך שבו רוב הזמן נשרף, ' +
-      'או אמור לו בשיחה שזה לא משתלם. הצעה שלא מחזירה את עצמה חוזרת אליך כתלונה.</div>';
-  } else if (m.payback > 20) {
-    v.innerHTML = '<div class="flag"><b>ההחזר איטי, ' + m.payback.toFixed(0) + ' שבועות.</b> ' +
-      'רוב פרויקטי האוטומציה מחזירים תוך 4 עד 12 שבועות. צמצם סקופ או הורד מחיר, ' +
-      'אחרת הלקוח יגלה את זה בעצמו אחרי החתימה.</div>';
-  } else {
-    v.innerHTML = '<div class="ok"><b>ההחזר תוך ' + m.payback.toFixed(1) + ' שבועות.</b> ' +
-      'המשפט לשיחה: "התהליך הזה עולה לך בערך ' + ils(m.annualValue) +
-      ' בשנה. ההשקעה מחזירה את עצמה תוך פחות מ' +
-      (m.payback < 4 ? '-חודש' : '-' + Math.ceil(m.payback / 4.3) + ' חודשים') + '."</div>';
-  }
-  if (unlocked) renderProposal();
-}
-
-document.querySelectorAll('input,select,textarea').forEach(n =>
-  n.addEventListener('input', recompute));
-
-/* ---------- payment gate ----------
-   Client-side only, and deliberately not pretending otherwise: anyone who
-   opens devtools can bypass it. That is an acceptable trade for a first
-   paid test with a handful of buyers — the point is to find out whether
-   anyone pays at all, not to stop copying. Real enforcement needs the key
-   checked server-side before the document is returned. */
-const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
-let unlocked = false;
-
-el('payBtn').onclick = () => {
-  if (PAYMENT_URL.includes('example.com')) {
-    alert('עוד לא חובר קישור תשלום.\n\nהחלף את PAYMENT_URL בקובץ בקישור מ-Stripe / Lemon Squeezy / Paddle,\nושלח לקונה מפתח בפורמט PC-XXXX-XXXX.');
-    return;
-  }
-  window.open(PAYMENT_URL, '_blank', 'noopener');
-};
-
-function keyValid(k){
-  k = k.trim().toUpperCase();
-  if (!/^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(k)) return false;
-  // light checksum so a random string of the right shape does not open it
-  const body = k.replace(/[^A-Z0-9]/g, '').slice(2);
-  let sum = 0; for (const ch of body.slice(0, 7)) sum += ch.charCodeAt(0);
-  return body[7] === '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'[sum % 36];
-}
-function tryUnlock(){
-  if (keyValid(el('keyIn').value)) {
-    unlocked = true;
-    el('wall').style.display = 'none';
-    el('proposalWrap').style.display = '';
-    try { localStorage.setItem('postcall_key', el('keyIn').value.trim().toUpperCase()); } catch(e){}
-    renderProposal();
-    el('proposalWrap').scrollIntoView({ behavior: 'smooth' });
-  } else {
-    el('keyErr').style.display = 'block';
-  }
-}
-try {
-  const saved = localStorage.getItem('postcall_key');
-  if (saved && keyValid(saved)) { unlocked = true;
-    el('wall').style.display = 'none'; el('proposalWrap').style.display = ''; }
-} catch(e){}
-
-/* ---------- proposal ---------- */
-function esc(s){ return (s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
-
-function renderProposal(){
-  const m = model();
-  const client = txt('q_client') || 'הלקוח';
-  const d = new Date();
-  const dstr = d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear();
-  const valid = new Date(d.getTime() + 14*864e5);
-  const vstr = valid.getDate() + '.' + (valid.getMonth()+1) + '.' + valid.getFullYear();
-  const sys = [...chosenSystems];
-
-  const successLine = txt('q_success') ||
-    (m.hours ? 'החזרת כ-' + Math.round(m.hours/52) + ' שעות עבודה בשבוע' : 'התהליך רץ בלי מגע יד');
-
-  // cut on a word boundary — slicing mid-word left titles ending in "...חשבו"
-  const firstLine = txt('q_process').split('\n')[0].trim();
-  let title = firstLine;
-  if (title.length > 55) title = title.slice(0, 55).replace(/\s+\S*$/, '') + '…';
-
-  el('proposal').innerHTML = `
-<h3>הצעה · אוטומציה של ${esc(title || 'התהליך')}</h3>
-<div class="meta">${esc(client)} · ${dstr} · בתוקף עד ${vstr}</div>
-
-${txt('q_trigger') ? `<h4>למה עכשיו</h4><p>${esc(txt('q_trigger'))}</p>` : ''}
-
-<h4>מה קורה היום</h4>
-<p>${esc(txt('q_process') || 'התהליך מתבצע ידנית.')}</p>
-${m.annualValue ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ כ-' + Math.round(m.runs).toLocaleString('en-US') + ' פעמים בשנה, ' : ''}${m.hours ? Math.round(m.hours).toLocaleString('en-US') + ' שעות עבודה' : ''}${m.errValue ? ', ובנוסף ' + ils(m.errValue) + ' בשנה בתקלות' : ''}. סה"כ כ-<b>${ils(m.annualValue)} בשנה</b>.</p>` : ''}
-
-<h4>מה נכלל</h4>
-<ul>
-  <li>מיפוי התהליך הקיים ותיעוד שלו${sys.length ? ', כולל החיבורים בין ' + esc(sys.join(', ')) : ''}</li>
-  <li>בנייה והטמעה של האוטומציה בסביבה שלך</li>
-  <li>טיפול בשגיאות והתראה כשמשהו נופל, כדי שלא תגלו את זה מהלקוח</li>
-  <li>בדיקה על נתונים אמיתיים לפני מעבר לייצור</li>
-  <li>מסירה מתועדת והדרכה קצרה לצוות</li>
-  <li>שבועיים ליווי אחרי העלייה לאוויר, לתיקוני כוונון</li>
-</ul>
-
-<h4>מה לא נכלל</h4>
-<ul>
-  <li class="no">מקרי קצה שלא עלו במיפוי. הם ייבחנו בנפרד ויתומחרו בנפרד</li>
-  <li class="no">עלויות רישוי של כלים חיצוניים${sys.length ? ' ושל המערכות עצמן' : ''}. הן על הלקוח</li>
-  <li class="no">שינוי בתהליך העסקי עצמו. אני מאוטמט את מה שקיים, לא מעצב אותו מחדש</li>
-  <li class="no">תחזוקה שוטפת אחרי שבועיים הליווי. מוצעת בנפרד</li>
-</ul>
-
-<h4>המחיר</h4>
-<div class="pricebox">
-  <div class="amt">${ils(m.price)}</div>
-  <div style="font-size:13px;color:#6b7280;margin-top:4px">
-    תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.
-  </div>
-</div>
-${m.annualValue ? `<div class="rationale">
-  <b>מאיפה המחיר.</b> התהליך עולה כ-${ils(m.annualValue)} בשנה.
-  המחיר הוא ${Math.round(m.price / m.annualValue * 100)}% מהערך של השנה הראשונה,
-  וההשקעה מחזירה את עצמה תוך כ-${m.payback.toFixed(1)} שבועות.
-  משנה שנייה ואילך זה חיסכון מלא.
-</div>` : ''}
-
-<h4>לוח זמנים</h4>
-<table>
-  <tr><th>שלב</th><th>מה קורה</th><th>משך</th></tr>
-  <tr><td>מיפוי</td><td>ישיבה אחת, ואני חוזר עם תרשים התהליך לאישור</td><td>שבוע</td></tr>
-  <tr><td>בנייה</td><td>פיתוח והטמעה, אומדן ${m.effort} שעות עבודה</td><td>${Math.max(1, Math.ceil(m.effort/12))} עד ${Math.max(2, Math.ceil(m.effort/8))} שבועות</td></tr>
-  <tr><td>בדיקה</td><td>הרצה על נתונים אמיתיים במקביל לתהליך הקיים</td><td>שבוע</td></tr>
-  <tr><td>מסירה</td><td>הדרכה, תיעוד, ואז שבועיים ליווי</td><td>שבועיים</td></tr>
-</table>
-${txt('q_deadline') ? `<p style="margin-top:8px">היעד שהגדרת: <b>${esc(txt('q_deadline'))}</b>.</p>` : ''}
-
-<h4>איך נדע שזה הצליח</h4>
-<p>${esc(successLine)}. נמדוד את זה 30 יום אחרי המסירה. אם לא הגענו לשם, אני ממשיך לכוונן בלי תוספת תשלום.</p>
-
-${txt('q_prev') ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${esc(txt('q_prev'))}. ההצעה הזו נבדלת בכך שהמסירה כוללת תיעוד והדרכה, והאחריות על ההטמעה היא שלי ולא שלכם.</p>` : ''}
-
-<h4>ההחלטה</h4>
-<p>ההצעה בתוקף עד ${vstr}.${txt('q_decider') ? ' מי שצריך לאשר: ' + esc(txt('q_decider')) + '.' : ''}
-כדי להתחיל, אישור בכתב על ההצעה הזו והתשלום הראשון.</p>
-`;
-}
-
-function copyProposal(){
-  const t = el('proposal').innerText;
-  const done = ok => { const f = el('cpFlag');
-    f.textContent = ok ? 'הועתק' : 'ההעתקה נכשלה, סמן והעתק ידנית';
-    f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2200); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(t).then(() => done(true)).catch(() => fallbackCopy(t, done));
-  } else fallbackCopy(t, done);
-}
-function fallbackCopy(t, done){
-  const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
-  let ok = false; try { ok = document.execCommand('copy'); } catch(e){}
-  document.body.removeChild(ta); done(ok);
-}
-
-recompute();
-</script>
+<!-- Classic scripts, not modules: ES modules are blocked from file:// by CORS,
+     and this tool has to open by double-clicking the file. Order matters —
+     the shell at the end assumes everything above it has run. -->
+<script src="assets/model.js"></script>
+<script src="assets/deals.js"></script>
+<script src="assets/pc-dom.js"></script>
+<script src="assets/pc-catalog.js"></script>
+<script src="assets/pc-transcript.js"></script>
+<script src="assets/pc-example.js"></script>
+<script src="assets/pc-draft.js"></script>
+<script src="assets/pc-guide.js"></script>
+<script src="assets/pc-flow.js"></script>
+<script src="assets/pc-viz.js"></script>
+<script src="assets/pc-send.js"></script>
+<script src="assets/pc-client.js"></script>
+<script src="assets/pc-proposal.js"></script>
+<script src="assets/pc-gate.js"></script>
+<script src="assets/pc-ledger.js"></script>
+<script src="assets/post-call.js"></script>
 </body>
 </html>

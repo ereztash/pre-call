@@ -1,0 +1,550 @@
+:root{
+    --charcoal:#16191d; --charcoal-2:#20252b; --line:#2f363e;
+    --copper:#c07d3e; --copper-dim:#8a5a2c; --copper-label:#b08050; --turq:#2f9e8f; --red:#9c3340;
+    --paper:#f6f5f2; --ink:#e8e6e1; --muted:#9aa3ad; --red-text:#d46b78;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
+    background:var(--charcoal);color:var(--ink);line-height:1.65;font-size:16px;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 18px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:25px;font-weight:600;letter-spacing:-.3px}
+  h1 .mark{color:var(--copper)}
+  .sub{color:var(--muted);font-size:15px;margin-top:6px}
+  .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
+        padding:12px 16px;border-radius:4px;font-size:14.5px;color:#c9cdd3;margin-top:16px}
+
+  h2{font-size:19px;font-weight:600;margin:0 0 4px}
+  .sec{margin:30px 0 0}
+  .sec-h{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;
+         color:var(--copper-label);font-weight:700;margin-bottom:5px}
+  .lead{color:var(--muted);font-size:14.5px;margin-bottom:16px}
+
+  .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:6px;
+       padding:16px 18px;margin-bottom:14px}
+
+  .qa{border-bottom:1px solid var(--line);padding:14px 0}
+  .qa:last-child{border-bottom:0}
+  .qa .qt{font-size:16px;color:#eceef1;margin-bottom:3px}
+  .qa .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;
+          padding:1px 7px;border-radius:3px;margin-left:6px;font-weight:600;vertical-align:middle}
+  .qa .why{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+
+  label{display:block;font-size:13.5px;color:#c3c9d0;margin:10px 0 4px;font-weight:500}
+  input[type=text],input[type=number],textarea,select{
+    width:100%;background:#0f1216;border:1px solid var(--line);border-radius:5px;
+    color:var(--ink);padding:11px;font-size:15px;font-family:inherit;
+    min-height:44px;direction:rtl;text-align:right}
+  input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
+  /* the border shift alone was two dark tones apart — invisible to a keyboard user */
+  :focus-visible{outline:3px solid #e8b57a;outline-offset:2px;border-radius:4px}
+  .chip:focus-visible,.sbtn:focus-visible,button:focus-visible{outline:3px solid #e8b57a;outline-offset:2px}
+  textarea{min-height:62px;resize:vertical;line-height:1.55}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1 1 150px;min-width:0}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .chip{background:#0f1216;border:1px solid var(--line);border-radius:22px;
+        padding:8px 15px;font-size:13.5px;cursor:pointer;color:#c3c9d0;user-select:none;
+        min-height:44px;display:inline-flex;align-items:center;justify-content:center;
+        font-family:inherit;text-align:center}
+  .chip.on{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
+  /* one-tap presets. Deliberately not sliders: slider scales measurably raise
+     item non-response and drop-off, cost more time, and are imprecise under
+     touch — and worse here, a handle resting at a value drags the answer toward
+     it, which would contaminate the very numbers the price is computed from.
+     Every chip costs the same one tap, so none of them pulls harder. */
+  .chip-sm{padding:6px 13px;font-size:13px;min-height:44px;min-width:44px;border-radius:22px}
+  .scope-row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;
+             padding:11px 0;border-bottom:1px solid var(--line)}
+  .scope-row:last-child{border-bottom:0}
+  .scope-t{flex:1 1 210px;font-size:14.5px;color:#e2e5e9;line-height:1.5}
+  .scope-why{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+  .scope-btns{display:flex;gap:5px;flex:0 0 auto}
+  .sbtn{background:#0f1216;border:1px solid var(--line);color:var(--muted);
+        border-radius:5px;padding:8px 12px;font-size:12.5px;font-family:inherit;
+        cursor:pointer;min-height:44px}
+  .sbtn.on.s-in{background:var(--turq);border-color:var(--turq);color:#0d1a18;font-weight:600}
+  .sbtn.on.s-out{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+  .sbtn.on.s-extra{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .presets .lbl{font-size:12.5px;color:var(--muted);align-self:center;margin-left:2px}
+
+  /* ---- live numbers ---- */
+  /* Was position:sticky;bottom:0 — sensible when this was a five-stat strip.
+     It has since grown a triangulation table, a recommendation and warnings,
+     and a pinned block that tall covered the method selector above it and
+     swallowed its clicks. Nothing here needs to follow the scroll. */
+  .nums{background:#0f1216;border:1px solid var(--line);border-radius:8px;padding:18px;
+        margin-top:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+  .stat{background:var(--charcoal-2);border-radius:6px;padding:12px 14px;
+        border-right:3px solid var(--turq)}
+  .stat.big{border-right-color:var(--copper)}
+  .stat .k{font-size:12px;color:var(--muted);letter-spacing:.3px}
+  .stat .v{font-size:22px;font-weight:700;color:#f2f0ec;margin-top:2px;
+           font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
+  .stat .u{font-size:12.5px;color:var(--muted);margin-top:1px}
+  .tri-h{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+         font-weight:700;margin:16px 0 7px}
+  .tri-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;
+           padding:8px 11px;border-radius:5px;background:var(--charcoal-2);margin-bottom:5px;
+           border-right:3px solid var(--line)}
+  .tri-row.on{border-right-color:var(--copper);background:#2a2118}
+  .tri-n{font-size:14px;color:#e2e5e9;font-weight:600;flex:0 0 auto}
+  .tri-v{font-size:16px;font-weight:700;color:#f2f0ec;font-variant-numeric:tabular-nums;
+         direction:ltr;margin-right:auto}
+  .tri-b{font-size:12px;color:var(--muted);flex:1 0 100%}
+  .tri-warn{border-right:3px solid var(--red);background:#2a1b1f;color:#f0c6cc;
+            padding:10px 13px;border-radius:5px;font-size:13px;margin-top:8px}
+  .flag{border-right:3px solid var(--red);background:#2a1b1f;color:#f0c6cc;
+        padding:11px 14px;border-radius:5px;font-size:13.5px;margin-top:12px}
+  .ok{border-right:3px solid var(--turq);background:#16262a;color:#bfe3dd;
+      padding:11px 14px;border-radius:5px;font-size:13.5px;margin-top:12px}
+
+  details.assump{margin-top:12px}
+  details.assump summary{cursor:pointer;font-size:13px;color:var(--muted);padding:4px 0}
+  details.assump summary:hover{color:var(--ink)}
+
+  button.act{background:var(--copper);color:#12151a;border:0;padding:12px 22px;border-radius:5px;
+    font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;min-height:46px}
+  button.act:hover{background:#d38b47}
+  button.act:disabled{background:#3a3f46;color:#7d848c;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
+    padding:10px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-family:inherit;min-height:44px}
+  button.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
+
+  /* ---- paywall ---- */
+  .wall{background:var(--charcoal-2);border:1px solid var(--copper-dim);border-radius:8px;
+        padding:22px;text-align:center;margin-top:16px}
+  .wall h3{font-size:18px;margin-bottom:6px}
+  .wall p{font-size:14.5px;color:#c3c9d0;margin-bottom:14px}
+  .wall .price{font-size:30px;font-weight:700;color:var(--copper);margin:8px 0}
+  .keyrow{display:flex;gap:8px;max-width:400px;margin:14px auto 0}
+  .keyrow input{flex:1}
+  .wall .err{color:#f0a8b0;font-size:13.5px;margin-top:8px}
+
+  /* ---- proposal ---- */
+  .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:14px}
+  .out h3{color:#16191d;font-size:21px;margin:0 0 4px;font-weight:700}
+  .out .meta{color:#5f6673;font-size:13px;margin-bottom:20px;
+             border-bottom:1px solid #ddd9d2;padding-bottom:12px}
+  .out h4{font-size:12px;letter-spacing:1.1px;text-transform:uppercase;color:var(--copper-dim);
+          font-weight:700;margin:22px 0 7px}
+  .out p,.out li{font-size:14.5px;color:#33383f;line-height:1.7}
+  .out ul{padding:0 20px 0 0;margin:4px 0}
+  .out li{margin-bottom:5px}
+  .out .pricebox{background:#fff;border:1px solid #e2ded7;border-right:3px solid var(--copper);
+                 border-radius:4px;padding:16px 18px;margin:10px 0}
+  .out .pricebox .amt{font-size:28px;font-weight:700;color:#16191d;
+                      font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
+  .out .rationale{background:#eef4f3;border-right:3px solid var(--turq);padding:12px 15px;
+                  border-radius:4px;font-size:13.5px;color:#1f4e48;margin:10px 0}
+  .out table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+  .out th{background:#16191d;color:#f6f5f2;padding:8px 10px;text-align:right;font-size:12.5px}
+  .out td{border-bottom:1px solid #e2ded7;padding:8px 10px;color:#33383f}
+  .out .no{color:var(--red)}
+
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
+         color:#828b99;font-size:12.5px;line-height:1.8}
+  /* the browser default blue reads at ~1.9:1 on this background — nowhere
+     near AA. --copper already clears 4.5:1 here and is the site's one
+     existing link/accent color, so the footer link uses it instead of
+     inventing a second one. */
+  footer a{color:var(--copper);text-decoration:underline}
+  footer a:hover{color:#d38b47}
+  .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
+  .copied.on{opacity:1}
+
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}}
+  /* ---- print ----
+     An allowlist, not a denylist. The old sheet named the things to hide, so
+     when the restructure wrapped the proposal in its own .sec that wrapper's
+     display:none took the proposal down with it — display:block on a child
+     cannot resurrect a removed ancestor — and the paid PDF came out blank.
+     Now everything is hidden and only the chain down to the document is put
+     back, so a future wrapper cannot silently empty the page again. */
+  @media print{
+    body{background:#fff;color:#000}
+    .wrap{max-width:100%;padding:0}
+    .wrap > *{display:none!important}
+    .wrap > main{display:block!important}
+    main > *{display:none!important}
+    main > .sec.doc{display:block!important}
+    .sec.doc > *{display:none!important}
+    .sec.doc > #proposal{display:block!important}
+    .out{padding:0;margin:0;border:0;border-radius:0;background:#fff}
+
+    /* Browsers print backgrounds off by default, so anything that carries its
+       meaning in a fill loses it on paper: the dark table header printed as
+       white on white, and the two callouts lost the edge that separates them
+       from body text. Each one is restated with a border, which always prints. */
+    .out th{background:transparent;color:#000;border-bottom:1.5px solid #000}
+    .out .pricebox,.out .rationale{background:transparent;border:1px solid #999;
+                                   border-right:3px solid #333}
+    /* the exclusions list keeps its colour and nothing else — #9c3340 is a text
+       colour, so it prints; striking it through would read as "cancelled"
+       rather than "out of scope" on a document going to a client */
+
+    /* keep a section and its heading on the same sheet */
+    .out h4{break-after:avoid;page-break-after:avoid}
+    .out table,.out .pricebox{break-inside:avoid;page-break-inside:avoid}
+  }
+
+  /* ---- document-first shell ----
+     The proposal used to sit 9.6 screens down behind 124 controls. It is the
+     only reason anyone opens this, so it now comes second, right after the
+     four inputs that generate it, and the rest folds away. */
+  .dealbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+           padding:10px 0 0;margin-bottom:4px}
+  .dealbar-n{font-size:13px;color:var(--muted)}
+  .docbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+          background:var(--charcoal-2);border:1px solid var(--line);border-radius:8px 8px 0 0;
+          padding:12px 16px;border-bottom:0}
+  .docprice{display:flex;flex-direction:column}
+  .docprice .k{font-size:12px;color:var(--muted)}
+  .docprice .v{font-size:24px;font-weight:700;color:#f2f0ec;
+               font-variant-numeric:tabular-nums;direction:ltr}
+  .docacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .docacts button{margin:0}
+  .out{border-radius:0 0 8px 8px;margin-top:0}
+
+  /* Sits between .docbar and .out as one continuous card — no radius of its
+     own, no gap — so it reads as part of the price header, not a separate
+     box competing with the flow drawer below. Empty until there is a real
+     annual value; show()/hide() removes it from layout entirely rather than
+     collapsing to zero height, so the docbar-to-out seam looks exactly as
+     it did before this existed whenever there is nothing yet to check. */
+  .guardrails{display:flex;flex-wrap:wrap;gap:6px;background:var(--charcoal-2);
+              border:1px solid var(--line);border-top:0;border-bottom:0;
+              padding:0 16px 10px}
+  .guard-chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;
+              font-weight:600;padding:4px 10px;border-radius:20px;min-height:26px}
+  /* text carries the verdict, not only the fill — the icon and the fill
+     agree with each other, neither is load-bearing alone (WCAG 1.4.1) */
+  .guard-chip.ok{background:var(--turq);color:#0d1a18}
+  .guard-chip.warn{background:var(--red);color:#fff}
+
+  details.drawer{background:var(--charcoal-2);border:1px solid var(--line);
+                 border-radius:6px;margin-bottom:10px}
+  details.drawer>summary{cursor:pointer;padding:14px 16px;font-size:15px;font-weight:600;
+                         color:#e2e5e9;min-height:44px;display:flex;align-items:center}
+  details.drawer>summary:hover{color:#fff}
+  details.drawer[open]>summary{border-bottom:1px solid var(--line)}
+  details.drawer .box{border:0;background:transparent;margin-bottom:0}
+  details.drawer .nums{border:0;border-radius:0}
+
+  /* ---- deal ledger ---- */
+  .ledger-sum{display:flex;flex-wrap:wrap;gap:14px;font-size:13.5px;color:var(--muted);
+              padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .deal{border-bottom:1px solid var(--line);padding:12px 0}
+  .deal:last-child{border-bottom:0}
+  .deal-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+  .deal-h b{font-size:15px;color:#eceef1}
+  .deal-meta{font-size:12.5px;color:var(--muted);margin-right:auto;direction:rtl}
+  .deal-st{font-size:12px;padding:2px 9px;border-radius:12px;background:#0f1216;color:var(--muted)}
+  .deal-st.st-won{background:var(--turq);color:#0d1a18;font-weight:600}
+  .deal-st.st-lost{background:var(--red);color:#fff;font-weight:600}
+  .deal-st.st-sent{background:var(--copper);color:#12151a;font-weight:600}
+  .deal-p{font-size:13px;color:var(--muted);margin:4px 0 8px}
+  .deal-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .deal-out{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:12px;
+            background:#0f1216;border-radius:6px;padding:12px}
+  .deal-out>div{flex:1 1 140px}
+  .deal-out label{margin-top:0}
+
+  /* ---- utility classes replacing inline style attributes ----
+     A CSP that allows inline styles allows an injected style attribute too.
+     Since the policy shipped as script-src/style-src 'self', the markup had to
+     stop relying on either — this is the style half. */
+  .hidden{display:none}
+  .mt10{margin-top:10px}
+  .mt12{margin-top:12px}
+  .hint-p{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .u-warn{color:var(--red-text)}
+
+  /* ---- templates ----
+     Deliberately not chips: a chip reads as a filter you can toggle, and this
+     rewrites four fields and nineteen scope rows. Bigger target, a subtitle
+     saying what it is, and a note afterwards saying what it changed. */
+  .tplbox{border-right:3px solid var(--copper)}
+  .tpl-h{font-size:15px;font-weight:600;color:var(--copper);margin-bottom:4px}
+  .tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:12px}
+  .tpl{display:flex;flex-direction:column;gap:3px;text-align:right;background:#0f1216;
+       border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-height:44px;
+       cursor:pointer;font-family:inherit;color:var(--ink);transition:.15s}
+  .tpl:hover{border-color:var(--copper-dim)}
+  .tpl.on{border-color:var(--copper);background:#1b1f25}
+  .tpl-n{font-size:14.5px;font-weight:600}
+  .tpl-b{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .tpl-note{background:#1b1f25;border-right:3px solid var(--turq);border-radius:4px;
+            padding:12px 15px;margin-top:12px;font-size:13.5px;color:#c9cdd3;line-height:1.65}
+  /* the caveat is part of the note, never a separate thing to dismiss —
+     numbers that arrive prefilled are read as measured unless told otherwise */
+  .tpl-caveat{display:block;margin-top:8px;font-size:12.5px;color:var(--muted)}
+
+  /* ---- the read on this client ----
+     Sits directly above the document, because it is a statement about the
+     document and not about the form. Deliberately quiet: it is a note the
+     operator should be able to skim past when it is right, and notice
+     immediately when it is wrong. */
+  .cread{background:var(--charcoal-2);border:1px solid var(--line);border-top:0;
+         padding:14px 16px;font-size:13.5px;color:#c9cdd3;line-height:1.65}
+  .cread-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:8px}
+  .cread-t{font-weight:600;color:var(--turq)}
+  .cread-c{font-size:12.5px;color:var(--muted)}
+  .cread-o{font-size:12.5px;color:var(--muted);margin:0 auto 0 0}
+  .cread select{width:auto;min-width:150px;min-height:36px;padding:6px 10px;font-size:13px}
+  .cread-e{margin:0;padding:0 18px 0 0;color:var(--muted);font-size:12.5px}
+  .cread-e li{margin-bottom:3px}
+  .cread-ch{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .cread-ch b{color:var(--copper-label);font-size:12.5px;letter-spacing:.4px}
+  .cread-ch ul{margin:5px 0 0;padding:0 18px 0 0}
+  .cread-ch li{margin-bottom:6px}
+  .cread-none{color:var(--muted);font-size:12.5px}
+  .out{border-radius:0}
+  .cread + .out{border-radius:0 0 8px 8px}
+
+  /* a question that moves this particular client's document, marked where it
+     already sits — moving it would cost more orientation than it buys */
+  .qa.focus{border-right:2px solid var(--turq);padding-right:12px;margin-right:-14px}
+  .box.focus{border-color:var(--turq)}
+  .qa.focus .qt::after,.box.focus>label:first-child::after{
+    content:'משנה את המסמך אצל הלקוח הזה';display:inline-block;
+    margin-right:8px;font-size:11px;font-weight:600;letter-spacing:.3px;
+    color:#0f1216;background:var(--turq);border-radius:3px;padding:1px 7px;
+    vertical-align:middle}
+
+  /* ---- the guide ----
+     Pinned to the top of the viewport because its whole job is that there is
+     never a moment where the next action is off screen. Deliberately the
+     loudest thing on the page: everything else competes for attention, this
+     one wins. */
+  .guide{position:sticky;top:0;z-index:20;background:#1b2733;
+         border:1px solid #2f6b62;border-right:4px solid var(--turq);
+         border-radius:8px;padding:14px 16px;margin:14px 0 4px;
+         box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  .guide-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:6px}
+  .guide-step{font-size:12px;letter-spacing:.6px;color:var(--turq);font-weight:700}
+  .guide-t{font-size:17px;font-weight:700;color:#f2f0ec;flex:1 1 100%}
+  .guide-ask{font-size:14px;color:#cfd6dd;line-height:1.6}
+  .guide-why{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:5px}
+  .guide-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:11px}
+  .guide-acts button{margin:0}
+  .guide-skip{background:transparent;border:0;color:var(--muted);font-size:13px;
+              cursor:pointer;font-family:inherit;text-decoration:underline;min-height:44px}
+  .guide-skip:hover{color:var(--ink)}
+  .guide-bar{height:4px;background:#0f1216;border-radius:2px;overflow:hidden;margin-top:11px}
+  .guide-fill{height:100%;background:var(--turq);transition:width .25s}
+  @media(prefers-reduced-motion:reduce){.guide-fill{transition:none}}
+  .guide-dots{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .guide-dot{font-size:11.5px;color:var(--muted);background:#0f1216;border-radius:11px;
+             padding:3px 9px;border:1px solid var(--line)}
+  .guide-dot.done{color:#0d1a18;background:var(--turq);border-color:var(--turq);font-weight:600}
+  .guide-dot.now{border-color:var(--turq);color:#e8f4f2}
+  .guide.ready{border-right-color:var(--copper);border-color:var(--copper-dim)}
+  .guide.ready .guide-step,.guide.ready .guide-fill{color:var(--copper);background:var(--copper)}
+
+  /* a suggestion, under the instruction and never in place of it */
+  .guide-sug{background:#12191f;border:1px solid var(--line);border-radius:5px;
+             padding:10px 13px;margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.6}
+  .guide-sug b{color:#cfd6dd}
+  .guide-sug-a{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+  .guide-sug-a button{margin:0;font-size:12.5px;padding:6px 12px;min-height:38px}
+
+  /* a number that cannot be true, said as an observation with the arithmetic
+     shown — a red border teaches nothing to someone who does not know why */
+  .guide-prob{background:#2a1b1f;border-right:3px solid var(--red-text);border-radius:5px;
+              padding:10px 13px;margin-top:10px;font-size:13px;color:#f0c6cc;line-height:1.6;
+              display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .guide-prob button{margin:0;font-size:12.5px;padding:6px 12px;min-height:38px}
+
+  /* the field the guide just sent you to */
+  @keyframes pointto{0%{box-shadow:0 0 0 0 rgba(47,158,143,.55)}
+                     100%{box-shadow:0 0 0 14px rgba(47,158,143,0)}}
+  .pointed{animation:pointto 1.1s ease-out 2;border-color:var(--turq)!important}
+  @media(prefers-reduced-motion:reduce){.pointed{animation:none;
+    outline:3px solid var(--turq);outline-offset:2px}}
+
+  .scope-confirm{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:4px}
+  .scope-confirm .hint-p{margin:0;flex:1 1 220px}
+  .scope-confirm.done button{background:#2f9e8f;color:#0d1a18}
+
+  .methodwhy{background:#16262a;border-right:3px solid var(--turq);border-radius:5px;
+             padding:12px 15px;font-size:13.5px;color:#bfe3dd;line-height:1.65;margin-bottom:10px}
+  details.methodpick{margin-bottom:10px}
+  details.methodpick>summary{font-size:13.5px;font-weight:500;color:var(--muted)}
+
+  /* ---- the call itself ----
+     Every extracted row shows the sentence it came from, so the quote is
+     styled as evidence rather than as a caption: it is the part the operator
+     is meant to read. */
+  .trbox{border-right:3px solid var(--turq)}
+  .trbox textarea{min-height:110px}
+  .tr-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .tr-acts button{margin:0}
+  .tr-acts .hint-p{margin:0}
+  .tr-step,.tr-review{background:#0f1216;border:1px solid var(--line);border-radius:6px;
+                      padding:14px 16px;margin-top:12px}
+  .tr-h{font-size:13px;font-weight:700;color:var(--turq);letter-spacing:.3px;margin-bottom:8px}
+  .tr-p{background:#0b0e11;border:1px solid var(--line);border-radius:5px;padding:12px;
+        white-space:pre-wrap;word-wrap:break-word;font-size:12.5px;line-height:1.6;
+        font-family:ui-monospace,Consolas,monospace;color:#cfd4da;max-height:210px;overflow:auto;
+        direction:rtl;text-align:right}
+  /* minmax(0,1fr) not 1fr: a grid track sized 1fr will not shrink below its
+     content's minimum, so a long quote pushed the button column wide and the
+     text collapsed to one word per line. max-content keeps the button at its
+     label's width instead of stretching to fill. */
+  .tr-row{display:grid;grid-template-columns:minmax(0,1fr) max-content;
+          gap:4px 12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .tr-row:last-of-type{border-bottom:0}
+  .tr-row.off{opacity:.42}
+  .tr-v{grid-column:1;font-size:14px;color:#e2e5e9;line-height:1.5;min-width:0;
+        overflow-wrap:anywhere}
+  .tr-v b{color:var(--copper-label);font-weight:600}
+  .tr-q{grid-column:1;grid-row:2;font-size:12.5px;color:#c9cdd3;line-height:1.6;
+        border-right:2px solid var(--turq);padding-right:9px;margin-top:2px;
+        min-width:0;overflow-wrap:anywhere}
+  .tr-s{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+  .tr-x{grid-column:2;grid-row:1 / span 2;align-self:start;justify-self:end;
+        margin:0;font-size:12.5px;padding:6px 12px;min-height:38px;white-space:nowrap}
+  @media(max-width:520px){
+    .tr-row{grid-template-columns:minmax(0,1fr)}
+    .tr-x{grid-column:1;grid-row:auto;justify-self:start;margin-top:6px}}
+  .tr-tag{display:inline-block;font-size:11px;font-weight:600;border-radius:3px;
+          padding:1px 7px;margin-right:7px;border:1px solid}
+  .t-guess{color:#e8b57a;border-color:#e8b57a}
+  .t-unver{color:var(--red-text);border-color:var(--red-text);border-style:dashed}
+  .tr-prov{background:#16262a;border-right:3px solid var(--turq);border-radius:5px;
+           padding:11px 14px;margin-top:12px;font-size:13px;color:#bfe3dd;line-height:1.6}
+
+  /* ---- micro-interactions ----
+     Two, both earning their place. The price beat exists because the tool's
+     whole premise is that what the client says moves the number, and a
+     figure that changes silently teaches nothing. The step tick exists
+     because completing something invisible feels like nothing happened.
+     Both are brief, neither blocks, and both stop entirely under
+     prefers-reduced-motion — where the state is still carried by the text. */
+  @keyframes pricebump{
+    0%{transform:scale(1)}
+    35%{transform:scale(1.06);color:var(--copper)}
+    100%{transform:scale(1)}}
+  .docprice .v.bumped{animation:pricebump .42s cubic-bezier(.2,.7,.3,1);
+                      transform-origin:right center}
+
+  @keyframes dotpop{
+    0%{transform:scale(.82);opacity:.5}
+    60%{transform:scale(1.05)}
+    100%{transform:scale(1);opacity:1}}
+  .guide-dot.just{animation:dotpop .34s ease-out}
+
+  @media(prefers-reduced-motion:reduce){
+    .docprice .v.bumped,.guide-dot.just{animation:none}}
+
+  /* ---- the document before there is a document ---- */
+  .doc-empty{padding:34px 30px;text-align:center;color:#5f6673}
+  .doc-empty-t{font-size:19px;font-weight:700;color:#33383f;margin-bottom:8px}
+  .doc-empty p{font-size:14.5px;line-height:1.7;max-width:44ch;margin:0 auto}
+  .doc-empty-n{margin-top:14px;padding-top:14px;border-top:1px solid #e2ded7;
+               color:#33383f}
+
+  /* ---- where the price came from ----
+     Collapsed by default: it is an answer to a question, not something to
+     read before you have one. Numbered because it is a sequence, and the
+     quotes are set as evidence rather than as captions. */
+  .flow{background:var(--charcoal-2);border:1px solid var(--line);border-top:0}
+  .flow>summary{cursor:pointer;padding:13px 16px;font-size:14px;font-weight:600;
+                color:#e2e5e9;min-height:44px;display:flex;flex-wrap:wrap;
+                align-items:center;gap:10px}
+  .flow>summary:hover{color:#fff}
+  .flow[open]>summary{border-bottom:1px solid var(--line)}
+  .flow-tag{font-size:11.5px;font-weight:600;color:#0d1a18;background:var(--turq);
+            border-radius:11px;padding:2px 9px}
+  .flow-body{padding:14px 16px 18px}
+  .flow-head{font-size:13.5px;color:#c9cdd3;line-height:1.7;margin-bottom:14px;
+             padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .flow-step{display:grid;grid-template-columns:max-content minmax(0,1fr);
+             gap:0 12px;padding:10px 0;position:relative}
+  /* the line that makes it a chain rather than a list */
+  .flow-step:not(:last-child)::before{content:'';position:absolute;top:34px;bottom:-4px;
+    right:13px;width:1px;background:var(--line)}
+  .flow-n{width:27px;height:27px;border-radius:50%;background:#0f1216;
+          border:1px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:700;
+          display:flex;align-items:center;justify-content:center;z-index:1}
+  .flow-step.big .flow-n{background:var(--copper);border-color:var(--copper);color:#12151a}
+  .flow-t{font-size:13.5px;color:#cfd6dd;font-weight:600}
+  .flow-f{font-size:12.5px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;
+          margin-top:3px;direction:rtl;overflow-wrap:anywhere}
+  .flow-o{font-size:15px;font-weight:700;color:#f2f0ec;margin-top:4px;
+          font-variant-numeric:tabular-nums}
+  .flow-step.big .flow-o{color:var(--copper);font-size:17px}
+  .flow-note{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.55}
+  .flow-weak{font-size:12.5px;color:#f0c6cc;background:#2a1b1f;border-right:2px solid var(--red-text);
+             border-radius:4px;padding:7px 10px;margin-top:7px;line-height:1.55}
+  .flow-said{font-size:12.5px;color:#c9cdd3;border-right:2px solid var(--turq);
+             padding-right:9px;margin-top:7px;line-height:1.6;overflow-wrap:anywhere}
+  .flow-who{display:block;font-size:11.5px;color:var(--muted)}
+  @media(max-width:520px){.flow-step::before{display:none}}
+
+  /* ---- visuals ----
+     Icon array and part-to-whole only. Every state carries a word as well as
+     a hue (WCAG 1.4.1), and there is nothing here that exists to look nice —
+     see the note at the top of pc-viz.js. */
+  .viz{background:var(--charcoal-2);border:1px solid var(--line);border-top:0;
+       padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .viz-b{background:#0f1216;border:1px solid var(--line);border-radius:6px;padding:13px 15px}
+  .viz-h{font-size:13px;font-weight:600;color:#e2e5e9;margin-bottom:9px;
+         display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+  .viz-tag{font-size:11px;font-weight:700;border-radius:3px;padding:2px 8px;border:1px solid}
+  .v-fast{color:#0d1a18;background:var(--turq);border-color:var(--turq)}
+  .v-ok{color:#e8b57a;background:transparent;border-color:#e8b57a}
+  .v-slow{color:#f0c6cc;background:transparent;border-color:var(--red-text);
+          border-style:dashed}
+  .viz-c{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .viz-s{font-size:12.5px;color:#c9cdd3;margin-top:7px;line-height:1.6}
+
+  /* one square per week of the first year */
+  .wks{display:grid;grid-template-columns:repeat(13,1fr);gap:3px;direction:ltr}
+  .wk{display:block;width:100%;padding-top:100%;background:#242a31;border-radius:2px;
+      border:1px solid #2f363e}
+  /* filled cells differ by fill AND by border, so the array still reads when
+     hue is unavailable */
+  .wk.on{background:var(--turq);border-color:#7fd3c6}
+
+  .shr{position:relative;height:26px;background:#242a31;border:1px solid var(--line);
+       border-radius:4px;overflow:hidden;direction:ltr}
+  .shr-f{position:absolute;inset:0 auto 0 0;background:var(--copper);
+         border-left:2px solid #e8b57a}
+  .shr.over .shr-f{background:var(--red);border-left-color:var(--red-text)}
+  .shr-l{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+         font-size:13px;font-weight:700;color:#f2f0ec;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+
+  /* ---- sending ---- */
+  .sendbox{background:var(--charcoal-2);border:1px solid var(--copper-dim);border-top:0;
+           padding:16px}
+  .send-h{font-size:15px;font-weight:600;color:var(--copper);margin-bottom:10px}
+  .send-rows{display:flex;flex-direction:column;gap:9px}
+  .send-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .send-row button{margin:0;min-width:150px}
+  .send-row.off button{opacity:.5;cursor:not-allowed}
+  .send-n{font-size:12.5px;color:var(--muted);flex:1 1 200px;line-height:1.5}
+  .send-f{font-size:12.5px;color:var(--muted);margin-top:12px;padding-top:10px;
+          border-top:1px solid var(--line)}
+  .sbtn.s-open{border-color:var(--copper-dim);color:#e8c9a8}
+  .sbtn.s-open:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---- restored draft ---- */
+  .draftnote{background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);
+             border-radius:6px;padding:10px 14px;margin:12px 0;font-size:13.5px;color:#bfe3dd;
+             display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .draftnote button{margin:0}
+
+  /* ---- error boundary ---- */
+  .errbound{background:#2a1d20;border:1px solid #7a3b45;border-right:3px solid var(--red-text);
+            border-radius:6px;padding:12px 16px;margin:12px 0;font-size:13.5px;
+            color:#e8c9cd;line-height:1.65}
+  .out .fine{font-size:13px;color:#5f6673}
+  .mt4{margin-top:4px}
+  .mt8{margin-top:8px}
+  .nomargin{margin:0}

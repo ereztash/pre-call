@@ -1,0 +1,150 @@
+:root{
+    --charcoal:#16191d;
+    --charcoal-2:#20252b;
+    --line:#2f363e;
+    --copper:#c07d3e;
+    --copper-dim:#8a5a2c;
+    --turq:#2f9e8f;
+    --red:#9c3340;      /* on the printed paper background */
+    --red-text:#d46b78; /* on the dark UI — #9c3340 reads at 2.3:1 there */
+    --paper:#f6f5f2;
+    --ink:#e8e6e1;
+    --muted:#9aa3ad;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
+    background:var(--charcoal);color:var(--ink);
+    line-height:1.65;font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:28px}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
+  h1 .mark{color:var(--copper)}
+  .sub{color:var(--muted);font-size:15px;margin-top:6px}
+  .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
+        padding:12px 16px;border-radius:4px;font-size:14.5px;color:#c9cdd3;margin-top:18px}
+
+  .steps{display:flex;gap:6px;margin:26px 0 22px;flex-wrap:wrap}
+  .stepbtn{flex:1;min-width:140px;background:var(--charcoal-2);border:1px solid var(--line);
+    color:var(--muted);padding:11px 10px;border-radius:5px;cursor:pointer;font-size:14px;
+    font-family:inherit;text-align:center;transition:.15s}
+  .stepbtn:hover{border-color:var(--copper-dim);color:var(--ink)}
+  .stepbtn.on{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
+  .stepbtn .n{display:block;font-size:11px;opacity:.75;letter-spacing:1px}
+
+  .panel{display:none}
+  .panel.on{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}}
+
+  h2{font-size:19px;font-weight:600;margin:0 0 6px}
+  .lead{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+
+  .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:6px;
+       padding:18px;margin-bottom:16px}
+  .box h3{font-size:15px;font-weight:600;color:var(--copper);margin-bottom:10px}
+
+  pre.prompt{background:#0f1216;border:1px solid var(--line);border-radius:5px;
+    padding:16px;white-space:pre-wrap;word-wrap:break-word;font-size:13.5px;
+    font-family:ui-monospace,"Consolas",monospace;color:#cfd4da;max-height:340px;overflow:auto;
+    direction:rtl;text-align:right;line-height:1.7}
+
+  button.act{background:var(--copper);color:#12151a;border:0;padding:10px 20px;border-radius:5px;
+    font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:12px;min-height:44px}
+  button.act:hover{background:#d38b47}
+  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
+    padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-family:inherit;margin:12px 8px 0 0;
+    min-height:44px}
+  button.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
+
+  label{display:block;font-size:14px;color:#c3c9d0;margin:14px 0 5px;font-weight:500}
+  label .hint{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
+  input[type=text],textarea,select{
+    width:100%;background:#0f1216;border:1px solid var(--line);border-radius:5px;
+    color:var(--ink);padding:11px 12px;font-size:14.5px;font-family:inherit;min-height:44px;
+    direction:rtl;text-align:right}
+  input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
+  :focus-visible{outline:3px solid #e8b57a;outline-offset:2px;border-radius:4px}
+  textarea{min-height:80px;resize:vertical;line-height:1.6}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+
+  .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:8px}
+  .out h3{color:#16191d;font-size:20px;margin:0 0 4px;font-weight:700}
+  /* #5f6673 not #6b7280 — the obvious grey read at 4.43:1 on --paper, just under
+     AA. Same fix already made once in post-call.css; it never made it back here. */
+  .out .meta{color:#5f6673;font-size:13px;margin-bottom:22px;border-bottom:1px solid #ddd9d2;padding-bottom:14px}
+  .blk{margin-bottom:26px}
+  .blk-h{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--copper-dim);
+         font-weight:700;margin-bottom:4px}
+  .blk-t{font-size:16.5px;font-weight:700;color:#16191d;margin-bottom:3px}
+  .blk-d{font-size:13.5px;color:#5f6673;margin-bottom:12px}
+  .q{background:#fff;border-right:3px solid var(--copper);padding:11px 14px;margin-bottom:9px;
+     border-radius:3px;font-size:15.5px;color:#16191d;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .q .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;padding:1px 7px;
+         border-radius:3px;margin-left:4px;font-weight:600;vertical-align:middle}
+  .q .why{display:block;font-size:12.5px;color:#5f6673;margin-top:6px;font-weight:400}
+  .stop{background:#fdf0f1;border-right:3px solid var(--red);padding:10px 14px;border-radius:3px;
+        font-size:13.5px;color:#6b2129;margin:8px 0}
+  .stop b{color:var(--red)}
+  /* the table keeps a sane minimum width for its Hebrew sentences; the wrapper
+     is what scrolls at 320px, so the page itself never gains a horizontal bar */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:8px}
+  table.read{width:100%;min-width:480px;border-collapse:collapse;font-size:13.5px}
+  table.read th{background:#16191d;color:#f6f5f2;padding:8px 10px;text-align:right;font-size:12.5px;font-weight:600}
+  table.read td{border-bottom:1px solid #e2ded7;padding:9px 10px;vertical-align:top;color:#33383f}
+  table.read td.no{color:var(--red)}
+  .rule{background:#eef4f3;border-right:3px solid var(--turq);padding:11px 14px;border-radius:3px;
+        font-size:13.5px;color:#1f4e48;margin:10px 0}
+  ul.prep{margin:6px 0 0;padding:0 18px 0 0;list-style:disc}
+  ul.prep li{font-size:13.5px;color:#33383f;margin-bottom:5px;line-height:1.55}
+  /* Screen-only. Holds your own numbers (last deal, price floor) — the things the
+     script itself tells you not to say out loud. Deliberately outside #outArea so
+     "copy as text" and print can never carry them into the room. */
+  .priv{background:var(--charcoal-2);border:1px solid var(--line);
+        border-right:3px solid var(--turq);border-radius:6px;padding:14px 16px;margin-top:14px}
+  .priv h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--turq);
+           font-weight:700;margin-bottom:8px}
+  .priv ul{margin:0;padding:0 18px 0 0}
+  .priv li{font-size:13.5px;color:#c9cdd3;margin-bottom:6px;line-height:1.6}
+  .priv .seal{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .empty{color:#5f6673;font-size:14.5px;text-align:center;padding:26px 10px;line-height:1.7}
+  .err{background:#fdf0f1;border:1px solid #e8bcc0;color:#8b2635;padding:11px 14px;
+       border-radius:5px;font-size:14px;margin-top:12px}
+  .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
+  .copied.on{opacity:1}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
+         color:#828b99;font-size:12.5px;line-height:1.8}
+  /* the browser default blue reads at ~1.9:1 on this background — nowhere
+     near AA. --copper already clears 4.5:1 here and is the site's one
+     existing link/accent color, so the footer link uses it instead of
+     inventing a second one. */
+  footer a{color:var(--copper);text-decoration:underline}
+  footer a:hover{color:#d38b47}
+  @media print{
+    body{background:#fff;color:#000}
+    .wrap{max-width:100%;padding:0}
+    /* #p1..#p3 explicitly: `.panel:not(.on)` only hides the INACTIVE panels, so printing
+       while standing on step 2 printed the form itself. Only the script ever prints. */
+    header,.steps,.note,button,.panel:not(.on),#p1,#p2,#p3,.priv,footer,
+    #p4 .box:first-of-type{display:none!important}
+    .out{padding:0}
+    .q{box-shadow:none;border-right:3px solid #999}
+  }
+
+  /* utility classes replacing inline style attributes — see the CSP note */
+  .hidden{display:none}
+  .mt14{margin-top:14px}
+  .mb6{margin-bottom:6px}
+  .tiny{font-size:12px}
+  .ta-md{min-height:120px}
+  .ta-lg{min-height:130px}
+  .body-p{font-size:14.5px;color:#b8bec6}
+  .hint-p{font-size:14px;color:#a9b0b8;margin-bottom:8px}
+  .hint-p.tight{font-size:12.5px;color:var(--muted);margin:-4px 0 14px}
+  /* the storage-blocked notice: stays put instead of fading, because it is a
+     standing condition rather than a confirmation */
+  .copied.u-warn{color:var(--red-text);opacity:1}

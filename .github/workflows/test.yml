@@ -1,0 +1,61 @@
+# The two bugs that would have shipped broken — a CSP that killed every button
+# and a print sheet that produced a blank PDF — were both invisible locally and
+# both statically checkable. Running the suite on every push is what turns that
+# from a thing I happened to catch into a thing that cannot recur.
+#
+# No package.json on purpose: this is a static site with serverless functions,
+# and the tests use only the Node standard library, so there is nothing to
+# install and nothing for the deploy step to misread as a build.
+name: tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  # so a run can be started by hand without an empty commit
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: pricing model
+        run: node assets/model.test.js
+      - name: deal ledger
+        run: node assets/deals.test.js
+      - name: catalog, scope rows and templates
+        run: node assets/catalog.test.js
+      - name: reading the specific client
+        run: node assets/client.test.js
+      - name: the unfinished draft
+        run: node assets/draft.test.js
+      - name: the guide — one instruction, plain words
+        run: node assets/guide.test.js
+      - name: the proposal document
+        run: node assets/proposal.test.js
+      - name: the call transcript as input
+        run: node assets/transcript.test.js
+      - name: sending it out
+        run: node assets/send.test.js
+      - name: where the price came from
+        run: node assets/flow.test.js
+      - name: the visuals
+        run: node assets/viz.test.js
+      - name: the payment gate
+        run: node assets/gate.test.js
+      - name: markup, CSP, print and telemetry contracts
+        run: node assets/markup.test.js
+      - name: PRE-CALL — parsing, the anchor sentence, and the private/public split
+        run: node assets/pre-call.test.js
+      - name: api request guards
+        run: node api/guard.test.js
+      - name: the license endpoint
+        run: node api/license.test.js
+      - name: the event endpoint
+        run: node api/event.test.js
+      - name: the health endpoint
+        run: node api/health.test.js
