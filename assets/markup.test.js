@@ -206,6 +206,68 @@ for (const f of PAGES) {
   });
 }
 
+console.log('\nresponsive tables');
+/* PRE-CALL's two comparison tables carry full Hebrew sentences across 3-4
+   columns — there is no narrow layout for that content, only a choice of what
+   scrolls. Found by a UI-team review, not a test: at 320px, an unwrapped
+   table either blows out the page's horizontal extent or gets compressed
+   into an unreadable column. The fix is a wrapper that scrolls in place of
+   the page; this is what stops it from silently losing that wrapper again. */
+test('every table.read in pre-call.js is wrapped for horizontal scroll', () => {
+  const src = read('assets/pre-call.js');
+  const tables = (src.match(/<table class="read">/g) || []).length;
+  const wraps = (src.match(/<div class="tbl-wrap">/g) || []).length;
+  assert.ok(tables > 0, 'the tables this test protects are gone — retune or remove it');
+  assert.strictEqual(wraps, tables,
+    'a table.read with no matching .tbl-wrap has no scroll container at 320px');
+});
+test('pre-call.css gives .tbl-wrap something to actually scroll', () => {
+  const css = read('assets/pre-call.css');
+  const rule = (css.match(/\.tbl-wrap\{[^}]*\}/) || [''])[0];
+  assert.ok(/overflow-x:\s*auto|overflow-x:\s*scroll/.test(rule),
+    '.tbl-wrap must scroll horizontally, or the wrapper does nothing');
+  assert.ok(/min-width/.test(css.match(/table\.read\{[^}]*\}/)?.[0] || ''),
+    'table.read needs a min-width or there is nothing for the wrapper to scroll — ' +
+    'the table just shrinks its columns into unreadable slivers instead');
+});
+
+console.log('\na way out for a stuck user');
+/* Found by a UX review, confirmed by grep, not by a test: zero references to
+   README anywhere in either page, so a user with no prior context and a
+   question the guide's one-line hints don't answer had nowhere in the
+   product to go. This does not replace in-app help — it is the honest
+   minimum, a real door instead of no door. */
+for (const f of PAGES) {
+  test(f + ' links out to the explanation document', () => {
+    assert.ok(/href="https:\/\/github\.com\/[^"]+README\.md"/.test(html[f]),
+      f + ' has no way for a stuck user to reach the docs');
+    assert.ok(/rel="noopener"/.test(html[f].match(/<a [^>]*README\.md[^>]*>/)?.[0] || ''),
+      'target="_blank" without rel="noopener" hands the opened tab a reference back to this one');
+  });
+}
+
+console.log('\ndestructive actions ask first');
+/* "הצעה חדשה" clears the form and the autosaved draft with no way back. It
+   used to fire straight off the toolbar click with nothing in between — found
+   by a UX review, not a test, because nothing broke; a misclick just silently
+   won. Guarded now, but a guard that is easy to route around in a later edit
+   is not a guard, so the wiring itself is asserted here: the toolbar button
+   must reach the checking wrapper, not the raw reset directly. */
+test('the "new deal" button is wired to the confirming wrapper, not the raw reset', () => {
+  const src = read('assets/post-call.js');
+  assert.ok(/newdeal:\s*confirmNewDeal\s*,/.test(src),
+    'data-act="newdeal" must call confirmNewDeal, not newDeal directly — ' +
+    'that is what makes the confirmation unskippable by construction');
+});
+test('the wrapper only interrupts when there is real content to lose, and only then asks', () => {
+  const src = read('assets/post-call.js');
+  const fn = (src.match(/function confirmNewDeal\(\)\{[\s\S]*?\n\}/) || [''])[0];
+  assert.ok(fn, 'confirmNewDeal() not found');
+  assert.ok(/PC\.draft\.isEmpty\(/.test(fn),
+    'without the emptiness check every reset asks, including ones with nothing to lose');
+  assert.ok(/confirm\(/.test(fn), 'no confirm() call — the click goes straight through again');
+});
+
 console.log('\nmodule loading');
 /* Classic scripts share one global scope and run in document order, so the
    shell — which calls into every module at load time — has to come last, and

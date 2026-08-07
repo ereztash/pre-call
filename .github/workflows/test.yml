@@ -49,5 +49,13 @@ jobs:
         run: node assets/gate.test.js
       - name: markup, CSP, print and telemetry contracts
         run: node assets/markup.test.js
+      - name: PRE-CALL — parsing, the anchor sentence, and the private/public split
+        run: node assets/pre-call.test.js
       - name: api request guards
         run: node api/guard.test.js
+      - name: the license endpoint
+        run: node api/license.test.js
+      - name: the event endpoint
+        run: node api/event.test.js
+      - name: the health endpoint
+        run: node api/health.test.js

@@ -976,6 +976,20 @@ function discardDraft(){
   newDeal();
 }
 
+/* "הצעה חדשה" in the toolbar is one click from mid-work to a blank page, with
+   nothing to undo it. That is not true of the identical-looking reset in
+   discardDraft() above: that one only ever fires after the draft-recovered
+   banner has already told the operator a draft exists, which is its own
+   warning. This button gets no such notice first, so it gets its own —
+   but only when there is something real to lose. An empty or pristine form
+   starts over exactly as before, with no interruption. */
+function confirmNewDeal(){
+  if (PC.draft && !PC.draft.isEmpty(collectDraft(), PRISTINE)) {
+    if (!confirm('להתחיל הצעה חדשה? הטופס הנוכחי והטיוטה שנשמרה יימחקו.')) return;
+  }
+  newDeal();
+}
+
 /* ---------- optional telemetry ----------
    The page is fully functional with no network at all — this is additive and
    silent on failure. Buckets only: no client names, no proposal text, no exact
@@ -1007,7 +1021,7 @@ const ACTIONS = {
   save:    saveCurrentDeal,
   sent:    markSent,
   unlock:  tryUnlock,
-  newdeal: newDeal,
+  newdeal: confirmNewDeal,
   discard: discardDraft,
   confirmscope: confirmScope,
   send:    () => requireKey(openSend),

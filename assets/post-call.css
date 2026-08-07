@@ -147,6 +147,12 @@
 
   footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
          color:#828b99;font-size:12.5px;line-height:1.8}
+  /* the browser default blue reads at ~1.9:1 on this background — nowhere
+     near AA. --copper already clears 4.5:1 here and is the site's one
+     existing link/accent color, so the footer link uses it instead of
+     inventing a second one. */
+  footer a{color:var(--copper);text-decoration:underline}
+  footer a:hover{color:#d38b47}
   .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
   .copied.on{opacity:1}
 

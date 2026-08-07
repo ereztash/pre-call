@@ -286,12 +286,18 @@ ${openers.length?`<div class="blk">
   <div class="blk-t">מי מנסח את הבעיה</div>
   <div class="blk-d">${esc(own)}</div>
   ${q(10,'זה נשמע לך מדויק, או שאתה היית מנסח אחרת?','בקשו אישור על אבחנה, לא על כיוון. "הכיוון בסדר?" מקבל "כן" ומעביר נושא.')}
+  <!-- .tbl-wrap: three columns of full sentences at 320px is wider than the
+       screen. The table itself keeps its natural width; the wrapper scrolls
+       instead of the page, and the content stays readable rather than
+       compressed into an unreadable column. -->
+  <div class="tbl-wrap">
   <table class="read">
     <tr><th>מה שהוא עושה</th><th>מה זה אומר</th><th>מה מותר להציע</th></tr>
     <tr><td>מנסח מחדש בשפתו ומוסיף חומר</td><td>הוא הבעלים של הבעיה</td><td>תהליך מלא</td></tr>
     <tr><td>דוחה ומחדד גרסה משלו</td><td>יש בעלות, הניסוח שלכם החטיא</td><td>תהליך שמתחיל מהניסוח שלו</td></tr>
     <tr><td>מהנהן, "כן", "נכון"</td><td>הוא לא אוחז בבעיה</td><td class="no">לא תהליך. מפגש בודד או שיחת המשך.</td></tr>
   </table>
+  </div>
 </div>
 
 <div class="blk">
@@ -307,6 +313,7 @@ ${openers.length?`<div class="blk">
   <div class="blk-h">אחרי השיחה</div>
   <div class="blk-t">כרטיס קריאה · חמש הסיבות</div>
   <div class="blk-d">מצאו את השורה שמתאימה לתשובות בחלק ב. העמודה האחרונה היא מה שלא לכתוב בהצעה, גם אם מתחשק.</div>
+  <div class="tbl-wrap">
   <table class="read">
     <tr><th>אם שמעתם</th><th>מה נעצר</th><th>מה ההצעה מכילה</th><th>מה לא להציע</th></tr>
     <tr>
@@ -340,6 +347,7 @@ ${openers.length?`<div class="blk">
       <td class="no">ליווי חודשי. הרחבת סקופ. הבעיה היא הגבול.</td>
     </tr>
   </table>
+  </div>
 </div>
 
 <div class="blk">
