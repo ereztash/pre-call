@@ -65,7 +65,7 @@ function page() {
       removeItem: k => { delete store[k]; }
     },
     navigator: { clipboard: null }, // absent on purpose: exercises the execCommand fallback path
-    window: { scrollTo() {}, print() {} },
+    window: { scrollTo() {}, print() {}, addEventListener() {} },
     document: {
       getElementById,
       querySelectorAll: () => [],
@@ -153,6 +153,60 @@ test('fields absent from the paste are left untouched, not cleared', () => {
   assert.strictEqual(p.val('f_what'), 'רק זה');
   assert.strictEqual(p.val('f_price'), 'ערך קודם', 'a missing field must not overwrite what was already there');
 });
+console.log('\na blank field must stay blank, not swallow the next label');
+/* Found by simulating a real archetype: a first-timer with several answers
+   genuinely blank — no last deal, no gain to report — pasted the profile
+   exactly as the prompt's own template leaves an unanswered field, label
+   then a bare newline. \s*(.+) closed over that newline looking for a value
+   and found the NEXT field's label instead, so the generated script for a
+   real run of this exact paste told the operator to say to the prospect:
+   "לקוח שעבדתי איתו... — מה רק אני רואה: <the next field's real answer>." —
+   quoting a field label as if it were a client's measurable result. */
+const BLANK_MID = `מה אני מוכר: X
+למי: Y
+יחידה תחומה: Z
+מחיר היחידה:
+עסקה אחרונה:
+מקור הלקוח האחרון:
+מה הלקוח הרוויח:
+מה רק אני רואה: התובנה האמיתית שלי
+מה אני לא מוכר: לא עושה A`;
+test('three single-line fields left blank in a row do not adopt the next label as their value', () => {
+  const p = page();
+  p.set('pasteBiz', BLANK_MID);
+  p.call('parseBiz');
+  assert.strictEqual(p.val('f_price'), '', 'took on the next label instead of staying blank');
+  assert.strictEqual(p.val('f_last'), '');
+  assert.strictEqual(p.val('f_gain'), '',
+    'this is the one that reached the rendered script — a blank gain must not become the edge field\'s answer');
+});
+test('the multi-line field still gets its own real content after the blank run', () => {
+  const p = page();
+  p.set('pasteBiz', BLANK_MID);
+  p.call('parseBiz');
+  assert.strictEqual(p.val('f_edge'), 'התובנה האמיתית שלי');
+});
+test('the field after a blank multi-line field is not swallowed by it either', () => {
+  // the more severe latent version: if the MULTI-line field is the blank
+  // one, [\s\S]+? has nothing stopping it from crossing the first newline
+  // and reading all the way to the end of the paste looking for content
+  const p = page();
+  p.set('pasteBiz', 'מה אני מוכר: X\nמה רק אני רואה:\nמה אני לא מוכר: לא בונה אתרים');
+  p.call('parseBiz');
+  assert.strictEqual(p.val('f_edge'), '', 'a blank edge field must not absorb everything after it');
+  assert.strictEqual(p.val('f_no'), 'לא בונה אתרים',
+    'the field after a blank multi-line field lost its own real answer');
+});
+test('a value that happens to equal another field\'s label verbatim is still discarded', () => {
+  // belt-and-suspenders on the same guard: not just "blank bled into the
+  // next label", but any captured value that IS one of the known labels
+  const p = page();
+  p.set('pasteBiz', 'מה אני מוכר: X\nעסקה אחרונה: מקור הלקוח האחרון:\nמה אני לא מוכר: Y');
+  p.call('parseBiz');
+  assert.strictEqual(p.val('f_last'), '',
+    'the captured "value" was itself just another field\'s label, not an answer');
+});
+
 test('parsing saves the profile immediately, not only on the next keystroke', () => {
   const p = page();
   p.set('pasteBiz', 'מה אני מוכר: נבדק');
@@ -360,6 +414,41 @@ test('the declared boundary only appears when actually set', () => {
   const withoutB = page(); withoutB.set('f_what', 'X');
   withoutB.call('build');
   assert.ok(!withoutB.run("document.getElementById('outArea').innerHTML").includes('הגבול שהגדרתם'));
+});
+
+console.log('\nerror boundary — a throw fails one action, not the page');
+test('a throwing build reports failure through errBoundary instead of dying silently', () => {
+  const p = page();
+  p.set('f_what', 'X');
+  const orig = p.ctx.document.getElementById;
+  // breaks exactly one field build() reads, deep inside the render chain —
+  // everything else in the fake DOM still works, same as a real page where
+  // one bad line does not take the whole document down
+  p.ctx.document.getElementById = id => { if (id === 'f_price') throw new Error('boom'); return orig(id); };
+  p.call('build'); // must not throw out to the caller
+  const box = orig('errBoundary');
+  assert.ok(!box.classList.contains('hidden'), 'the boundary should be visible after a throw');
+  assert.ok(box.innerHTML.includes('בניית התסריט'), 'should name what failed, in plain words');
+});
+test('a later successful call clears the boundary', () => {
+  const p = page();
+  p.set('f_what', 'X');
+  const orig = p.ctx.document.getElementById;
+  p.ctx.document.getElementById = id => { if (id === 'f_price') throw new Error('boom'); return orig(id); };
+  p.call('build');
+  assert.ok(!orig('errBoundary').classList.contains('hidden'));
+  p.ctx.document.getElementById = orig; // the field works again
+  p.call('build');
+  assert.ok(orig('errBoundary').classList.contains('hidden'), 'a later success should clear the notice');
+});
+test('a throwing parseBiz is caught the same way', () => {
+  const p = page();
+  p.set('pasteBiz', FULL_PASTE);
+  const orig = p.ctx.document.getElementById;
+  p.ctx.document.getElementById = id => { if (id === 'f_what') throw new Error('boom'); return orig(id); };
+  p.call('parseBiz');
+  assert.ok(!orig('errBoundary').classList.contains('hidden'));
+  assert.ok(orig('errBoundary').innerHTML.includes('חילוץ השדות'));
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

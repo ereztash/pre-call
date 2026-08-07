@@ -366,10 +366,36 @@
 </div>
 </main>
 
+<!-- ============ גיבוי ושחזור ============
+     Everything above — every deal, every calibration point, this whole
+     ledger — lives only in this browser's localStorage. This is the way
+     out: a JSON file the operator keeps themselves. -->
+<div class="sec">
+<div class="box backupbox">
+  <h3 class="tpl-h">גיבוי ושחזור</h3>
+  <p class="hint-p">פנקס העסקאות, הטיוטה, ופרופיל העסק ב-PRE-CALL — כל זה קיים רק בדפדפן הזה. גיבוי הוא קובץ JSON קטן ששומרים אצלכם, לא נשלח לשום מקום. המפתח בתשלום שלכם לא נכלל בגיבוי בכוונה.</p>
+  <button type="button" class="ghost" data-act="backup-export">הורד גיבוי (JSON)</button>
+  <button type="button" class="ghost" data-act="backup-import">טען גיבוי</button>
+  <input type="file" id="backupFile" accept="application/json" class="hidden" aria-label="בחר קובץ גיבוי">
+  <span class="copied" id="backupMsg"></span>
+</div>
+</div>
+
+<!-- Where the numbers on this page came from, for anyone landing here
+     without having run PRE-CALL first. -->
+<div class="sec">
+<div class="box next-tool">
+  <h3 class="tpl-h">לפני התמחור</h3>
+  <p class="hint-p">אם עוד לא הייתה שיחה — PRE-CALL בונה את תסריט השאלות שמוציא את המספרים שהעמוד הזה צריך.</p>
+  <a class="ghost" href="index.html">לתסריט השיחה · PRE-CALL</a>
+</div>
+</div>
+
 <footer>
   POST-CALL · לפרויקטי אוטומציה וייעול תהליכים · הנתונים נשארים בדפדפן שלך.<br>
   הכלי לא מבטיח שהלקוח יסכים למחיר. הוא מבטיח שהמחיר יהיה נגזר ממספר שהלקוח עצמו אמר.<br>
   <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
+  · <a href="privacy.html">פרטיות</a>
 </footer>
 
 </div>
@@ -379,6 +405,7 @@
      the shell at the end assumes everything above it has run. -->
 <script src="assets/model.js"></script>
 <script src="assets/deals.js"></script>
+<script src="assets/pc-backup.js"></script>
 <script src="assets/pc-dom.js"></script>
 <script src="assets/pc-catalog.js"></script>
 <script src="assets/pc-transcript.js"></script>

@@ -106,13 +106,16 @@
   details.assump summary{cursor:pointer;font-size:13px;color:var(--muted);padding:4px 0}
   details.assump summary:hover{color:var(--ink)}
 
-  button.act{background:var(--copper);color:#12151a;border:0;padding:12px 22px;border-radius:5px;
+  button.act,a.act{background:var(--copper);color:#12151a;border:0;padding:12px 22px;border-radius:5px;
     font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;min-height:46px}
-  button.act:hover{background:#d38b47}
+  button.act:hover,a.act:hover{background:#d38b47}
   button.act:disabled{background:#3a3f46;color:#7d848c;cursor:not-allowed}
-  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
+  /* the PRE-CALL handoff link needs the same box a real button gets,
+     without an underline or the anchor's baseline-aligned text */
+  a.act,a.ghost{display:inline-flex;align-items:center;text-decoration:none}
+  button.ghost,a.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
     padding:10px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-family:inherit;min-height:44px}
-  button.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
+  button.ghost:hover,a.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
 
   /* ---- paywall ---- */
   .wall{background:var(--charcoal-2);border:1px solid var(--copper-dim);border-radius:8px;

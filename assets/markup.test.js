@@ -172,11 +172,17 @@ test('nothing toggles display through the style property', () => {
 });
 test('every element hidden by the class is toggled through show()', () => {
   const js = SCRIPTS.map(read).join('\n');
+  // The file input behind the backup-import button is not a panel that
+  // opens — it is a permanently hidden native control, clicked
+  // programmatically (el('backupFile').click()) and never meant to become
+  // visible. show() has nothing to toggle here, by design, not by omission.
+  const PERMANENTLY_HIDDEN = ['backupFile'];
   const ids = [...html['post-call.html'].matchAll(/<[^>]*\sid="([^"]+)"[^>]*\sclass="[^"]*\bhidden\b/g)]
     .map(m => m[1])
     .concat([...html['post-call.html'].matchAll(/<[^>]*\sclass="[^"]*\bhidden\b[^"]*"[^>]*\sid="([^"]+)"/g)]
     .map(m => m[1]));
   const untouched = [...new Set(ids)].filter(id =>
+    !PERMANENTLY_HIDDEN.includes(id) &&
     js.includes(id) && !new RegExp("show\\(\\s*'" + id + "'").test(js));
   assert.deepStrictEqual(untouched, [],
     'referenced in the script but never shown — it would stay hidden forever');
@@ -244,7 +250,49 @@ for (const f of PAGES) {
     assert.ok(/rel="noopener"/.test(html[f].match(/<a [^>]*README\.md[^>]*>/)?.[0] || ''),
       'target="_blank" without rel="noopener" hands the opened tab a reference back to this one');
   });
+  test(f + ' links out to the privacy page', () => {
+    assert.ok(/href="privacy\.html"/.test(html[f]),
+      f + ' has no way for someone reading it to find out what happens to their data');
+  });
 }
+
+console.log('\nthe route between the two tools');
+/* Found by re-reading the two pages side by side, not by any tool: neither
+   page had ever linked to the other. PRE-CALL builds the call script;
+   POST-CALL prices what came out of it — the whole product is that
+   sequence — and until this test, someone landing on either page had no
+   way to discover the other one exists. */
+test('index.html hands off to post-call.html once a script exists', () => {
+  assert.ok(/href="post-call\.html"/.test(html['index.html']),
+    'PRE-CALL has no link forward to where its output gets priced');
+});
+test('post-call.html links back to index.html for anyone arriving without a call script', () => {
+  assert.ok(/href="index\.html"/.test(html['post-call.html']),
+    'POST-CALL has no link back to where the call gets prepared');
+});
+
+console.log('\nprivacy.html — static, but not exempt from the CSP that killed every button once already');
+const privacy = read('privacy.html');
+test('privacy.html has balanced div tags', () => {
+  const open = (privacy.match(/<div\b/g) || []).length;
+  const close = (privacy.match(/<\/div>/g) || []).length;
+  assert.strictEqual(open, close, 'an orphan </div> reparents everything after it');
+});
+test('privacy.html has no duplicate element id', () => {
+  const ids = [...privacy.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
+  const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
+  assert.deepStrictEqual([...new Set(dupes)], []);
+});
+test('privacy.html carries no inline script or style — the shipped CSP forbids both', () => {
+  assert.ok(!/<script(?!\s+src=)/.test(privacy), 'inline <script> is blocked by script-src \'self\'');
+  assert.ok(!/\sstyle="/.test(privacy), 'inline style= is blocked by style-src \'self\'');
+  assert.ok(!/\son\w+="/.test(privacy), 'inline onclick=/oninput= etc. do not run under this CSP');
+});
+test('privacy.html links out to both tools and the README, not just one', () => {
+  assert.ok(/href="index\.html"/.test(privacy) && /href="post-call\.html"/.test(privacy),
+    'a privacy page reachable from both tools should be able to return to both');
+  assert.ok(/README\.md/.test(privacy));
+});
 
 console.log('\ndestructive actions ask first');
 /* "הצעה חדשה" clears the form and the autosaved draft with no way back. It
