@@ -1012,6 +1012,54 @@ function confirmNewDeal(){
   newDeal();
 }
 
+/* ---------- backup / restore ----------
+   Everything above — the deal ledger, its calibration history, the
+   unfinished draft, and separately the profile in PRE-CALL — lives only in
+   this browser's localStorage. See pc-backup.js for why that stops being
+   acceptable once this holds a paying customer's history. Download writes
+   a file the operator keeps themselves; restore shows exactly what it is
+   about to overwrite before it does, and never touches the license key. */
+function downloadBackup(){
+  const text = PC.backup.serialize(localStorage);
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'precall-postcall-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function pickBackupFile(){
+  const input = el('backupFile');
+  if (input) input.click();
+}
+function backupFlash(msg, warn){
+  const box = el('backupMsg'); if (!box) return;
+  box.textContent = msg;
+  box.classList.toggle('u-warn', !!warn);
+  box.classList.add('on');
+  setTimeout(() => box.classList.remove('on'), warn ? 4000 : 2200);
+}
+function handleBackupFile(e){
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // choosing the same file twice must still fire 'change'
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => restoreBackup(reader.result);
+  reader.onerror = () => backupFlash('לא הצלחתי לקרוא את הקובץ', true);
+  reader.readAsText(file);
+}
+function restoreBackup(text){
+  const p = PC.backup.preview(text, localStorage);
+  if (!p.ok) { backupFlash('הקובץ לא נראה כמו גיבוי תקין מהכלי הזה', true); return; }
+  const overwriting = p.willOverwrite.length ? '\n\nזה ידרוס: ' + p.willOverwrite.join(', ') : '';
+  const at = p.at ? new Date(p.at).toLocaleDateString('he-IL') : 'תאריך לא ידוע';
+  if (!confirm('לשחזר גיבוי מ-' + at + '?' + overwriting)) return;
+  PC.backup.importAll(text, localStorage);
+  backupFlash('שוחזר. טוען מחדש...');
+  setTimeout(() => location.reload(), 600);
+}
+
 /* ---------- optional telemetry ----------
    The page is fully functional with no network at all — this is additive and
    silent on failure. Buckets only: no client names, no proposal text, no exact
@@ -1052,7 +1100,9 @@ const ACTIONS = {
   trparse:  parseExtraction,
   trlocal:  localExtraction,
   trdemo:   loadDemo,
-  trapply:  applyExtraction
+  trapply:  applyExtraction,
+  'backup-export': downloadBackup,
+  'backup-import': pickBackupFile
 };
 document.addEventListener('click', e => {
   // the guide's own buttons carry where to go, so they are handled first
@@ -1086,6 +1136,8 @@ document.querySelectorAll('input,select,textarea').forEach(n => {
   n.addEventListener('input', recompute);
   n.addEventListener('input', saveDraftSoon);
 });
+const backupFileInput = el('backupFile');
+if (backupFileInput) backupFileInput.addEventListener('change', handleBackupFile);
 
 /* ---------- start ----------
    Every module is loaded by now, so first render happens here rather than at

@@ -18,6 +18,10 @@
   </div>
 </header>
 
+<!-- A render that throws says so here instead of leaving a click that
+     silently did nothing — same mechanism as errBoundary in post-call.html. -->
+<div class="errbound hidden" id="errBoundary" role="status" aria-live="polite"></div>
+
 <div class="steps">
   <button class="stepbtn on" data-s="1"><span class="n">שלב 1</span>אפיון העסק שלכם</button>
   <button class="stepbtn" data-s="2"><span class="n">שלב 2</span>הזנת הפרופיל</button>
@@ -183,16 +187,39 @@
   </div>
   <div class="out" id="outArea"></div>
   <div id="privArea" class="priv hidden"></div>
+
+  <!-- The tool this one hands off to. PRE-CALL ends where the call ends;
+       the numbers that came out of it are priced on the other side. -->
+  <div class="box next-tool">
+    <h3>אחרי השיחה</h3>
+    <p class="body-p">כשיש לכם את המספרים מהשיחה — התדירות, זמן הטיפול, התקלות — POST-CALL הופך אותם למחיר ולהצעה כתובה.</p>
+    <a class="act" href="post-call.html">לתמחור ההצעה · POST-CALL</a>
+  </div>
+</div>
+
+<!-- ============ גיבוי ושחזור ============
+     Everything above lives only in this browser's localStorage. Clearing
+     the cache or switching devices throws it all away at once — this is
+     the way out: a JSON file the operator keeps themselves. -->
+<div class="box backupbox">
+  <h3>גיבוי ושחזור</h3>
+  <p class="hint-p">הפרופיל העסקי כאן, וגם פנקס העסקאות ב-POST-CALL, קיימים רק בדפדפן הזה. גיבוי הוא קובץ JSON קטן ששומרים אצלכם — לא נשלח לשום מקום.</p>
+  <button type="button" class="ghost" data-act="backup-export">הורד גיבוי (JSON)</button>
+  <button type="button" class="ghost" data-act="backup-import">טען גיבוי</button>
+  <input type="file" id="backupFile" accept="application/json" class="hidden" aria-label="בחר קובץ גיבוי">
+  <span class="copied" id="backupMsg"></span>
 </div>
 
 <footer>
   PRE-CALL · גרסה 0.1 · כלי הכנה לשיחה. אינו מייצר מחיר ואינו מייצר הצעה.<br>
   כל הנתונים נשארים בדפדפן שלכם. שום דבר לא נשלח לשום שרת.<br>
   <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
+  · <a href="privacy.html">פרטיות</a>
 </footer>
 
 </div>
 
+<script src="assets/pc-backup.js"></script>
 <script src="assets/pre-call-content.js"></script>
 <script src="assets/pre-call.js"></script>
 </body>

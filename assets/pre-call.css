@@ -52,13 +52,17 @@
     font-family:ui-monospace,"Consolas",monospace;color:#cfd4da;max-height:340px;overflow:auto;
     direction:rtl;text-align:right;line-height:1.7}
 
-  button.act{background:var(--copper);color:#12151a;border:0;padding:10px 20px;border-radius:5px;
+  button.act,a.act{background:var(--copper);color:#12151a;border:0;padding:10px 20px;border-radius:5px;
     font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:12px;min-height:44px}
-  button.act:hover{background:#d38b47}
-  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
+  button.act:hover,a.act:hover{background:#d38b47}
+  /* the two link-as-button cases above (post-call handoff, backup import
+     trigger) need the same box the real buttons have, without inheriting
+     an underline or losing the vertical centering a <button> gets for free */
+  a.act,a.ghost{display:inline-flex;align-items:center;text-decoration:none}
+  button.ghost,a.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
     padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-family:inherit;margin:12px 8px 0 0;
     min-height:44px}
-  button.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
+  button.ghost:hover,a.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
 
   label{display:block;font-size:14px;color:#c3c9d0;margin:14px 0 5px;font-weight:500}
   label .hint{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
@@ -130,6 +134,7 @@
     /* #p1..#p3 explicitly: `.panel:not(.on)` only hides the INACTIVE panels, so printing
        while standing on step 2 printed the form itself. Only the script ever prints. */
     header,.steps,.note,button,.panel:not(.on),#p1,#p2,#p3,.priv,footer,
+    #errBoundary,.backupbox,.next-tool,
     #p4 .box:first-of-type{display:none!important}
     .out{padding:0}
     .q{box-shadow:none;border-right:3px solid #999}
@@ -148,3 +153,15 @@
   /* the storage-blocked notice: stays put instead of fading, because it is a
      standing condition rather than a confirmation */
   .copied.u-warn{color:var(--red-text);opacity:1}
+
+  /* ---- error boundary ----
+     Same rule, same colors, as .errbound in post-call.css — one failure
+     appearance across both tools, not two that happen to look similar. */
+  .errbound{background:#2a1d20;border:1px solid #7a3b45;border-right:3px solid var(--red-text);
+            border-radius:6px;padding:12px 16px;margin:12px 0;font-size:13.5px;
+            color:#e8c9cd;line-height:1.65}
+
+  /* ---- backup box and the handoff to the other tool ----
+     .box already gives these the right background/border; this just adds
+     the paragraph spacing .box's own children don't carry by default. */
+  .backupbox p,.next-tool p{margin-bottom:10px}

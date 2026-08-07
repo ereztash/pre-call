@@ -38,6 +38,48 @@ function fallback(t,flag){
    panel was hidden permanently that way, with no error to show for it. */
 const show=(id,on)=>{ const n=document.getElementById(id); if(n) n.classList.toggle('hidden',!on); };
 
+/* ---------- error boundary ----------
+   Every button on this page runs through one delegated click listener (see
+   the bottom of this file). Before this, a throw inside parseBiz() or
+   build() — a malformed paste, a future edge case nobody hit yet — died
+   silently: the click did nothing, nothing appeared on screen, and the
+   only trace was a console line nobody here was looking at. This is the
+   same mechanism as guard() in assets/pc-dom.js on POST-CALL, kept
+   deliberately identical in shape rather than reinvented, so the two tools
+   fail the same way instead of drifting into two different ones. */
+const _failed = new Set();
+
+function guard(name, fn){
+  return function(...args){
+    try{
+      const out = fn.apply(this, args);
+      if(_failed.has(name)){ _failed.delete(name); renderFailures(); }
+      return out;
+    }catch(e){
+      console.error('[pre-call] ' + name + ' failed', e);
+      _failed.add(name);
+      renderFailures();
+    }
+  };
+}
+
+const FAIL_LABEL = { parse: 'חילוץ השדות מההדבקה', build: 'בניית התסריט' };
+
+function renderFailures(){
+  const box = document.getElementById('errBoundary');
+  if(!box) return;
+  if(!_failed.size){ show('errBoundary', false); box.innerHTML=''; return; }
+  const names = [..._failed].map(n => FAIL_LABEL[n] || n);
+  box.innerHTML = '<b>' + names.join(', ') + ' נכשל.</b> שאר הכלי ממשיך לעבוד, והנתונים ששמרת לא נפגעו. ' +
+    'רענון הדף בדרך כלל פותר את זה; אם לא, פתח את הקונסולה — הפירוט שם.';
+  show('errBoundary', true);
+}
+
+window.addEventListener('error', e => {
+  if(!e.filename || !/pre-call/.test(e.filename)) return;
+  _failed.add('כללי'); renderFailures();
+});
+
 function flash(f, ok=true){
   const e=document.getElementById(f);
   if(!e.dataset.orig) e.dataset.orig=e.textContent;
@@ -56,7 +98,7 @@ function flash(f, ok=true){
 const KNOWN_LABELS = ['מה אני מוכר:','למי:','יחידה תחומה:','מחיר היחידה:','עסקה אחרונה:',
   'מקור הלקוח האחרון:','מה הלקוח הרוויח:','מה רק אני רואה:','מה אני לא מוכר:'];
 
-function parseBiz(){
+const parseBiz = guard('parse', function parseBiz(){
   const t=document.getElementById('pasteBiz').value;
   if(!t.trim())return;
   /* A field left blank looks like "מה הלקוח הרוויח:\n" — label, then straight
@@ -97,7 +139,7 @@ function parseBiz(){
     else if(/יזומ/.test(src))s.value='out';
   }
   saveProfile();
-}
+});
 
 /* ---------- profile persistence (localStorage) ----------
    Only the business profile (step 2) persists across page loads — it's
@@ -170,7 +212,7 @@ function newProspect(){
 }
 
 /* ---------- build script ---------- */
-function build(){
+const build = guard('build', function build(){
   const v=id=>document.getElementById(id).value.trim();
   S.what=v('f_what'); S.who=v('f_who'); S.unit=v('f_unit'); S.price=v('f_price');
   S.last=v('f_last'); S.src=v('f_src'); S.gain=v('f_gain'); S.edge=v('f_edge'); S.no=v('f_no');
@@ -190,7 +232,7 @@ function build(){
   document.getElementById('outArea').innerHTML=render();
   renderPrivate();
   go(4);
-}
+});
 
 /* Rendered outside #outArea on purpose — see the .priv CSS note. */
 function renderPrivate(){
@@ -384,6 +426,54 @@ ${openers.length?`<div class="blk">
 `;
 }
 
+/* ---------- backup / restore ----------
+   Everything on this page — the profile, and separately the whole ledger in
+   POST-CALL — lives only in this browser's localStorage. See pc-backup.js
+   for why that stops being acceptable once either tool holds a paying
+   customer's history. Download writes a file the operator keeps themselves;
+   restore shows exactly what it is about to overwrite before it does. */
+function downloadBackup(){
+  const text = PC.backup.serialize(localStorage);
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'precall-postcall-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function pickBackupFile(){
+  const input = document.getElementById('backupFile');
+  if(input) input.click();
+}
+function backupFlash(msg, warn){
+  const box = document.getElementById('backupMsg');
+  if(!box) return;
+  box.textContent = msg;
+  box.classList.toggle('u-warn', !!warn);
+  box.classList.add('on');
+  setTimeout(()=>box.classList.remove('on'), warn ? 4000 : 2200);
+}
+function handleBackupFile(e){
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // choosing the same file twice must still fire 'change'
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => restoreBackup(reader.result);
+  reader.onerror = () => backupFlash('לא הצלחתי לקרוא את הקובץ', true);
+  reader.readAsText(file);
+}
+function restoreBackup(text){
+  const p = PC.backup.preview(text, localStorage);
+  if(!p.ok){ backupFlash('הקובץ לא נראה כמו גיבוי תקין מהכלי הזה', true); return; }
+  const overwriting = p.willOverwrite.length ? '\n\nזה ידרוס: ' + p.willOverwrite.join(', ') : '';
+  const at = p.at ? new Date(p.at).toLocaleDateString('he-IL') : 'תאריך לא ידוע';
+  if(!confirm('לשחזר גיבוי מ-' + at + '?' + overwriting)) return;
+  PC.backup.importAll(text, localStorage);
+  backupFlash('שוחזר. טוען מחדש...');
+  setTimeout(()=>location.reload(), 600);
+}
+
 /* ---------- init ---------- */
 document.getElementById('promptBiz').innerText=P_BIZ;
 buildDR();
@@ -408,7 +498,9 @@ const ACTIONS = {
   go3:            () => go(3),
   newprospect:    newProspect,
   build:          build,
-  print:          () => window.print()
+  print:          () => window.print(),
+  'backup-export': downloadBackup,
+  'backup-import': pickBackupFile
 };
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
@@ -418,3 +510,5 @@ document.addEventListener('click', e => {
 });
 document.querySelectorAll('[data-oninput="builddr"]').forEach(
   el => el.addEventListener('input', buildDR));
+const backupFileInput = document.getElementById('backupFile');
+if(backupFileInput) backupFileInput.addEventListener('change', handleBackupFile);

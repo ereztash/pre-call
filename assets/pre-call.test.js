@@ -65,7 +65,7 @@ function page() {
       removeItem: k => { delete store[k]; }
     },
     navigator: { clipboard: null }, // absent on purpose: exercises the execCommand fallback path
-    window: { scrollTo() {}, print() {} },
+    window: { scrollTo() {}, print() {}, addEventListener() {} },
     document: {
       getElementById,
       querySelectorAll: () => [],
@@ -414,6 +414,41 @@ test('the declared boundary only appears when actually set', () => {
   const withoutB = page(); withoutB.set('f_what', 'X');
   withoutB.call('build');
   assert.ok(!withoutB.run("document.getElementById('outArea').innerHTML").includes('הגבול שהגדרתם'));
+});
+
+console.log('\nerror boundary — a throw fails one action, not the page');
+test('a throwing build reports failure through errBoundary instead of dying silently', () => {
+  const p = page();
+  p.set('f_what', 'X');
+  const orig = p.ctx.document.getElementById;
+  // breaks exactly one field build() reads, deep inside the render chain —
+  // everything else in the fake DOM still works, same as a real page where
+  // one bad line does not take the whole document down
+  p.ctx.document.getElementById = id => { if (id === 'f_price') throw new Error('boom'); return orig(id); };
+  p.call('build'); // must not throw out to the caller
+  const box = orig('errBoundary');
+  assert.ok(!box.classList.contains('hidden'), 'the boundary should be visible after a throw');
+  assert.ok(box.innerHTML.includes('בניית התסריט'), 'should name what failed, in plain words');
+});
+test('a later successful call clears the boundary', () => {
+  const p = page();
+  p.set('f_what', 'X');
+  const orig = p.ctx.document.getElementById;
+  p.ctx.document.getElementById = id => { if (id === 'f_price') throw new Error('boom'); return orig(id); };
+  p.call('build');
+  assert.ok(!orig('errBoundary').classList.contains('hidden'));
+  p.ctx.document.getElementById = orig; // the field works again
+  p.call('build');
+  assert.ok(orig('errBoundary').classList.contains('hidden'), 'a later success should clear the notice');
+});
+test('a throwing parseBiz is caught the same way', () => {
+  const p = page();
+  p.set('pasteBiz', FULL_PASTE);
+  const orig = p.ctx.document.getElementById;
+  p.ctx.document.getElementById = id => { if (id === 'f_what') throw new Error('boom'); return orig(id); };
+  p.call('parseBiz');
+  assert.ok(!orig('errBoundary').classList.contains('hidden'));
+  assert.ok(orig('errBoundary').innerHTML.includes('חילוץ השדות'));
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
