@@ -445,6 +445,19 @@ const recompute = guard('recompute', function (){
     ? ils(m.low) + ' – ' + ils(m.high)
     : 'טווח הגנה';
 
+  /* The three checks the chain and the verdict box already compute, as a row
+     next to the price that reads in the second before the operator opens
+     their mouth — not after they have read a paragraph. See the comment on
+     PC.flow.guardrails() for where this idea came from. */
+  const guardBox = el('guardBox');
+  if (guardBox) {
+    const rails = PC.flow ? PC.flow.guardrails(m) : [];
+    guardBox.innerHTML = rails.map(r =>
+      '<span class="guard-chip ' + (r.ok ? 'ok' : 'warn') + '">' +
+        (r.ok ? '✓' : '⚠') + ' ' + esc(r.label) + '</span>').join('');
+    show('guardBox', rails.length > 0);
+  }
+
   // side-by-side of every method that has data, so an inflated input shows up
   // as an outlier instead of quietly setting the price
   const tri = el('triangulate');

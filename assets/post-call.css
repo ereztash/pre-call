@@ -210,6 +210,22 @@
   .docacts button{margin:0}
   .out{border-radius:0 0 8px 8px;margin-top:0}
 
+  /* Sits between .docbar and .out as one continuous card — no radius of its
+     own, no gap — so it reads as part of the price header, not a separate
+     box competing with the flow drawer below. Empty until there is a real
+     annual value; show()/hide() removes it from layout entirely rather than
+     collapsing to zero height, so the docbar-to-out seam looks exactly as
+     it did before this existed whenever there is nothing yet to check. */
+  .guardrails{display:flex;flex-wrap:wrap;gap:6px;background:var(--charcoal-2);
+              border:1px solid var(--line);border-top:0;border-bottom:0;
+              padding:0 16px 10px}
+  .guard-chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;
+              font-weight:600;padding:4px 10px;border-radius:20px;min-height:26px}
+  /* text carries the verdict, not only the fill — the icon and the fill
+     agree with each other, neither is load-bearing alone (WCAG 1.4.1) */
+  .guard-chip.ok{background:var(--turq);color:#0d1a18}
+  .guard-chip.warn{background:var(--red);color:#fff}
+
   details.drawer{background:var(--charcoal-2);border:1px solid var(--line);
                  border-radius:6px;margin-bottom:10px}
   details.drawer>summary{cursor:pointer;padding:14px 16px;font-size:15px;font-weight:600;

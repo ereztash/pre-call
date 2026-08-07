@@ -150,8 +150,40 @@
     return null;
   }
 
+  /* Three sanity checks, read off state the tool already computes for the
+     chain and the verdict box — nothing here is a new judgment about the
+     price, only a faster way to see the ones that already exist.
+
+     The chain answers "how was this built"; this answers "is it safe to say
+     out loud", and it is meant to be readable in the second before the
+     operator opens their mouth, not after they have read seven rows. A
+     glance-first pass/fail row next to the price, rather than a paragraph
+     the operator has to read to find out whether they should be worried, is
+     the one idea worth taking from how the leaner competitors handle a
+     price they also cannot fully vouch for — none of them keep the caveat
+     in prose either.
+
+     Deliberately absent until there is a real annual value: with no client
+     numbers yet, every check below would trivially read "fine" — payback is
+     zero, nothing is thin, nothing dominates — and a row of green checks
+     over a price built on nothing but the operator's own guess is worse
+     than no row at all. */
+  function guardrails(m) {
+    if (!m || !m.annualValue) return [];
+    const weak = weakest(m);
+    const paysBack = m.payback > 0 && m.payback <= 20;
+    return [
+      { id: 'band', ok: !m.tooThin,
+        label: m.tooThin ? 'מעל הטווח שניתן להגנה' : 'בטווח שניתן להגנה' },
+      { id: 'payback', ok: paysBack,
+        label: paysBack ? 'מחזיר את עצמו בזמן סביר' : 'ההחזר איטי' },
+      { id: 'balance', ok: !weak,
+        label: weak ? 'תלוי במספר בודד (' + weak.share + '%)' : 'לא תלוי במספר בודד' }
+    ];
+  }
+
   root.PC = root.PC || {};
-  root.PC.flow = { build, headline, weakest };
+  root.PC.flow = { build, headline, weakest, guardrails };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.flow;
 })(typeof window !== 'undefined' ? window : globalThis);

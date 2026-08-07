@@ -123,6 +123,13 @@
       <span class="copied" id="cpFlag">הועתק</span>
     </div>
   </div>
+  <!-- The three sanity checks the chain and the verdict box already compute,
+       as a row that reads in one glance instead of a paragraph — see the
+       comment on PC.flow.guardrails() for why this exists and why it is
+       empty until there is a real annual value. Sits outside #proposal, so
+       — like .docbar above it — it never reaches the printed document; the
+       print rule already hides everything in .sec.doc except #proposal. -->
+  <div class="guardrails hidden" id="guardBox"></div>
   <!-- What the tool concluded about this particular client, from what, and
        what it changed in the document. Shown rather than applied silently:
        the operator signs the proposal either way, and only a visible

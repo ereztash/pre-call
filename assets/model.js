@@ -127,7 +127,15 @@
       effort, floor, costFloor, myRate, maint, capture: i.capture,
       M, method, chosen, available, price, best, spread,
       usedFallback: !chosen,
-      belowCost: price > 0 && price < floor,
+      /* No belowCost flag here on purpose — it used to exist, computed as
+         `price > 0 && price < floor`, and it could never once fire. Every
+         method's .value is Math.max(raw, costFloor) a few lines up, and
+         costFloor is floor * 1.1 — so price is structurally >= costFloor,
+         which is itself always greater than floor. A flag nothing can ever
+         read as true is not a lighter check, it is a trap for whoever reads
+         this file next and assumes it means something. Removed rather than
+         wired up, because the thing it claimed to guard against cannot
+         happen given how price is built two lines above it. */
       tooThin: annualValue > 0 && price > high,
       /* bandLow, not low. PRICE has never had a `low` key, so this was NaN
          from the day it was written and the defensible range on screen read

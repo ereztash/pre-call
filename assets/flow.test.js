@@ -158,5 +158,46 @@ test('nothing computed flags nothing', () => {
   assert.strictEqual(F.weakest(null), null);
 });
 
+console.log('\nthe guardrail row — a glance instead of a paragraph');
+test('a balanced, defensible deal passes all three', () => {
+  const g = F.guardrails(M);
+  assert.strictEqual(g.length, 3);
+  assert.ok(g.every(x => x.ok), JSON.stringify(g));
+});
+test('flags the band the moment the price clears the ceiling', () => {
+  // effort-heavy, thin annual value: the build cost pushes price past what
+  // the process is worth defending in year one
+  const thin = Object.assign({}, INPUT, { freq: 2, minutes: 3, errFreq: 0, errCost: 0,
+    systemCount: 8, integration: 2.2, edge: 2 });
+  const m = compute(thin);
+  assert.ok(m.tooThin, 'setup: this deal must actually trip tooThin');
+  const band = F.guardrails(m).find(x => x.id === 'band');
+  assert.strictEqual(band.ok, false);
+  assert.ok(/מעל הטווח/.test(band.label));
+});
+test('flags a slow payback the same way the verdict box already would', () => {
+  const slow = Object.assign({}, INPUT, { freq: 3, minutes: 4, errFreq: 0, errCost: 0 });
+  const m = compute(slow);
+  assert.ok(m.payback > 20, 'setup: this deal must actually pay back slowly');
+  const pb = F.guardrails(m).find(x => x.id === 'payback');
+  assert.strictEqual(pb.ok, false);
+});
+test('flags the same dominant single number weakest() already names', () => {
+  const heavy = Object.assign({}, INPUT, { errCost: 40000 });
+  const m = compute(heavy);
+  const bal = F.guardrails(m).find(x => x.id === 'balance');
+  assert.strictEqual(bal.ok, false);
+  assert.ok(/%\)/.test(bal.label), 'the share is the whole point of the flag — it must be visible');
+});
+test('no client numbers yet means no guardrail row at all, not three green checks over nothing', () => {
+  const only = { systemCount: 3, integration: 1.4, edge: 1, myRate: 250, method: 'market' };
+  assert.deepStrictEqual(F.guardrails(compute(only)), []);
+  assert.deepStrictEqual(F.guardrails(compute({})), []);
+});
+test('a missing model does not throw', () => {
+  assert.deepStrictEqual(F.guardrails(null), []);
+  assert.deepStrictEqual(F.guardrails(undefined), []);
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
