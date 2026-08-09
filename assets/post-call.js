@@ -552,6 +552,9 @@ const recompute = guard('recompute', function (){
    "go fill question 6" is only an instruction to someone who already knows
    where question 6 is. */
 let scopeConfirmed = false, skipped = new Set();
+/* Set when the operator arrived specifically to review proposals they have
+   already sent. See applyEntryRoute() for why the guide has to know. */
+let reviewingLedger = false;
 // which steps were already complete last render, so only a fresh one animates
 let doneSteps = new Set();
 
@@ -596,6 +599,25 @@ function goTo(anchor, fields){
 
 const renderGuide = guard('guide', function (){
   const box = el('guideBar'); if (!box) return;
+
+  /* Someone who arrived to check what happened to proposals they already
+     sent is not building one. Found by simulating that exact arrival: the
+     ledger scrolled into view correctly, and the guide above it said
+     "step 1 of 5 — describe the process" — an instruction to start a new
+     proposal, stuck to the top of the screen the whole time they read the
+     old ones, because the bar is position:sticky. The entry page exists to
+     stop the product from answering a question nobody asked; leaving this
+     in would have reintroduced exactly that one layer down.
+
+     The moment they touch anything the flag clears and the guide returns,
+     so this hides an irrelevant instruction rather than removing a
+     feature. */
+  if (reviewingLedger && PC.draft && PC.draft.isEmpty(collectDraft(), PRISTINE)) {
+    box.innerHTML = ''; box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+
   let g = PC.guide.next(guideState());
 
   // a step the user explicitly skipped is not offered again on every keystroke
@@ -655,6 +677,22 @@ const renderGuide = guard('guide', function (){
   const fill = box.querySelector('.guide-fill');
   if (fill) fill.style.width = g.percent + '%';
 });
+
+/* Watches the zero-height marker sitting at the guide's resting position.
+   While it is visible the guide is at rest; once it leaves the top of the
+   viewport the guide is pinned, and .stuck collapses it to one line — see
+   the note on .guide.stuck in post-call.css for what that is worth on a
+   phone. An observer rather than a scroll handler, so this costs nothing
+   per frame. Browsers without IntersectionObserver simply never collapse
+   it, which is exactly the behaviour they have today. */
+function watchGuidePin(){
+  const sentinel = el('guideSentinel'), bar = el('guideBar');
+  if (!sentinel || !bar || typeof IntersectionObserver === 'undefined') return;
+  new IntersectionObserver(
+    ([e]) => bar.classList.toggle('stuck', !e.isIntersecting),
+    { threshold: 0 }
+  ).observe(sentinel);
+}
 
 function confirmScope(){
   confirmScopeSilently();
@@ -853,7 +891,26 @@ const renderSend = guard('send', function (){
     html: el('proposal').innerHTML,
     client: txt('q_client'), phone: txt('q_phone'), email: txt('q_email')
   });
+  /* An external review asked for this to block copy, print and send
+     outright. The concern is right — the document can go out with nobody's
+     name on it — but blocking is the wrong instrument here twice over.
+     This product warns and never blocks, deliberately and consistently:
+     implausible numbers, a price under the cost floor, a figure the
+     operator invented themselves, all of them say so and let the operator
+     proceed, because they are the one who knows. And there is a real case
+     for exporting without a letterhead — pasting the text into a template
+     that already has one.
+
+     So senderMissing() is used, which it was not before, at the moment it
+     matters: the click before it leaves. Loud, unmissable, one tap away
+     from fixing, and still the operator's decision. */
+  const anonymous = PC.senderMissing(readSender());
+
   box.innerHTML = '<div class="send-h">לשלוח ללקוח</div>' +
+    (anonymous ? '<div class="send-anon"><b>אין שם על ההצעה.</b> ' +
+      'הלקוח יקבל מסמך בלי מי שולח אותו ובלי דרך לחזור אליך. ' +
+      '<button type="button" class="ghost" data-act="goto" data-anchor="s_name" ' +
+      'data-fields="s_name,s_phone">להוסיף את השם שלי</button></div>' : '') +
     '<div class="send-rows">' + rs.map(r =>
       '<div class="send-row' + (r.ok ? '' : ' off') + '">' +
         '<button type="button" class="' + (r.ok ? 'act' : 'ghost') + '" data-act="sendvia" ' +
@@ -880,6 +937,28 @@ function sendVia(id){
   markSent();
 }
 
+/* ---------- who is sending ----------
+   Operator-level and saved once, not per deal — see pc-sender.js. Kept
+   out of the draft on purpose: a draft is one unfinished proposal, this
+   is who you are, and discarding the former must never clear the latter. */
+function readSender(){
+  const s = {};
+  PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f) s[id] = f.value.trim(); });
+  s.attribution = el('s_attr') ? el('s_attr').checked : true;
+  return s;
+}
+let senderTimer = null;
+function saveSenderSoon(){
+  clearTimeout(senderTimer);
+  senderTimer = setTimeout(() => { PC.sender && PC.sender.save(readSender()); }, 500);
+}
+function restoreSender(){
+  const s = PC.sender && PC.sender.load();
+  if (!s) return;
+  PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f && s[id]) f.value = s[id]; });
+  if (el('s_attr')) el('s_attr').checked = s.attribution !== false;
+}
+
 /* ---------- the document ---------- */
 const renderProposal = guard('proposal', function (){
   /* Nothing entered yet means no document — not a document with the blanks
@@ -892,6 +971,7 @@ const renderProposal = guard('proposal', function (){
   el('proposal').innerHTML = PC.proposal.build({
     m: model(),
     ils,
+    sender: readSender(),
     adapt: PC.client.adapt(clientProfile()),
     scope: { in: scopeList('in'), out: scopeList('out'), extra: scopeList('extra') },
     systems: [...chosenSystems],
@@ -938,7 +1018,15 @@ function collectDraft(){
 
 function saveDraft(){
   if (!PC.draft) return;
-  if (PC.draft.save(collectDraft())) { draftWarned = false; return; }
+  /* The emptiness verdict is stamped here rather than recomputed by whoever
+     reads the draft later. The rule lives in pc-draft.js and needs PRISTINE
+     — the untouched form — to tell a real answer from a select's default,
+     and this page is the only place that has it. The entry page was
+     re-deriving it from two fields and disagreeing with this one; an
+     external review caught the divergence. One owner, one answer. */
+  const state = collectDraft();
+  state.hasContent = !PC.draft.isEmpty(state, PRISTINE);
+  if (PC.draft.save(state)) { draftWarned = false; return; }
   if (draftWarned) return;
   draftWarned = true;
   flashDoc('הדפדפן חוסם שמירה — הטיוטה לא תשרוד רענון');
@@ -1122,6 +1210,7 @@ document.addEventListener('click', e => {
     const id = d.dataset.deal, st = d.dataset.status;
     if (st === '__remove') removeDeal(id);
     else if (st === '__outcome') saveOutcome(id);
+    else if (st === '__ics') downloadFollowup(id);
     else if (st === '__open') loadDeal(id);
     else setDealStatus(id, st);
     return;
@@ -1133,8 +1222,18 @@ document.addEventListener('click', e => {
 });
 
 document.querySelectorAll('input,select,textarea').forEach(n => {
+  // typing anything means they are building a proposal after all, so the
+  // guide stops standing down — see reviewingLedger in renderGuide()
+  n.addEventListener('input', () => { reviewingLedger = false; });
   n.addEventListener('input', recompute);
   n.addEventListener('input', saveDraftSoon);
+});
+// the sender's own details persist separately from the draft, and a
+// checkbox fires 'change' rather than 'input'
+[...PC.SENDER_FIELDS, 's_attr'].forEach(id => {
+  const f = el(id); if (!f) return;
+  f.addEventListener('input', saveSenderSoon);
+  f.addEventListener('change', () => { PC.sender && PC.sender.save(readSender()); recompute(); });
 });
 const backupFileInput = el('backupFile');
 if (backupFileInput) backupFileInput.addEventListener('change', handleBackupFile);
@@ -1177,6 +1276,8 @@ function applyEntryRoute(){
      also measurably unreliable: the smooth version landed in Firefox and
      WebKit and silently did not in Chromium, found by running the journey
      in all three rather than in the one that happened to be installed. */
+  reviewingLedger = true;   // renderGuide reads this — see the note there
+  renderGuide();
   const box = el('ledgerBox');
   if (box) box.scrollIntoView({ block: 'start' });
 }
@@ -1186,10 +1287,18 @@ function applyEntryRoute(){
    the bottom of whichever file happened to define the function. */
 mountGate();
 renderTemplates();
+restoreSender();  // before the first render, so the document has a letterhead
 restoreDraft();   // before the first render, so the page comes up as it was left
 renderScope();
 recompute();   // recompute drives the method, the client read and the document
 renderGuide();
 renderLedger();
+watchGuidePin();     // after the guide exists, before any scrolling happens
 applyEntryRoute();   // after the renders above, so there is something to land on
+/* Arriving at #ledger from another page reloads and runs the line above.
+   Arriving at it from this page changes only the fragment, so nothing
+   reloads and nothing re-runs — the route would silently do nothing.
+   Caught by driving the navigation in a browser rather than by reading
+   the code, where it looks like one path. */
+window.addEventListener('hashchange', applyEntryRoute);
 track('opened');

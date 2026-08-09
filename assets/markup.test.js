@@ -106,8 +106,14 @@ test('every event the client sends is on the server allowlist', () => {
   const allowed = (read('api/event.js').match(/const EVENTS = new Set\(\[([\s\S]*?)\]\)/) || [])[1] || '';
   const known = [...allowed.matchAll(/'([a-z_]+)'/g)].map(m => m[1]);
   assert.ok(known.length, 'could not read the allowlist');
-  const sent = [...new Set([...read('assets/post-call.js').matchAll(/track\('([a-z_]+)'/g)]
-    .map(m => m[1]))];
+  /* Every script, not just the shell. This test existed precisely to catch
+     an event the server would reject, and it still missed one — because it
+     read post-call.js alone, and the new event was emitted from
+     pc-ledger.js. A guard that inspects one file is a guard against one
+     file. Found by an external reviewer, which is its own lesson: the
+     blind spot was in the checker, not in the code it checks. */
+  const sent = [...new Set(SCRIPTS.flatMap(f =>
+    [...read(f).matchAll(/track\('([a-z_]+)'/g)].map(m => m[1])))];
   assert.ok(sent.length, 'no events found in the client');
   const rejected = sent.filter(e => !known.includes(e));
   assert.deepStrictEqual(rejected, [], 'the server would answer 400 and nobody would know');
@@ -321,6 +327,57 @@ test('the entry names situations, never the tools as a choice to make', () => {
   // the question the page asks must be about the person, not the product
   assert.ok(/איפה אתם/.test(visibleText),
     'the entry must ask where the visitor is, not which tool they want');
+});
+
+console.log('\nhow a link to this looks when somebody sends it');
+/* Found by an AARRR pass rather than by any checker: acquisition and
+   referral were both literally zero. No description, no og tags, no icon,
+   on any page. The channel this product travels through is a link pasted
+   into WhatsApp, and without these that link renders as a bare URL — no
+   title, no picture, nothing saying what it is. Nothing was broken, which
+   is exactly why nothing here ever caught it. */
+const SHARE_PAGES = [...PAGES, 'privacy.html'];
+for (const f of SHARE_PAGES) {
+  const src = f === 'privacy.html' ? read(f) : html[f];
+  test(f + ' can be shared as a link', () => {
+    const need = ['og:title', 'og:description', 'og:image', 'og:url', 'og:type'];
+    const absent = need.filter(t => !src.includes('property="' + t + '"'));
+    assert.deepStrictEqual(absent, [], f + ' would paste into WhatsApp as a bare URL');
+    assert.ok(/<meta name="description" content="[^"]{60,}"/.test(src),
+      'a description under 60 characters tells a reader nothing');
+    assert.ok(/rel="icon"/.test(src), 'no icon means a blank tab among twenty others');
+  });
+  test(f + ' describes itself differently from the other pages', () => {
+    const desc = (src.match(/<meta name="description" content="([^"]+)"/) || [])[1] || '';
+    const others = SHARE_PAGES.filter(x => x !== f)
+      .map(x => ((x === 'privacy.html' ? read(x) : html[x])
+        .match(/<meta name="description" content="([^"]+)"/) || [])[1] || '');
+    assert.ok(!others.includes(desc),
+      'two pages share one description — a copied boilerplate line, not a description');
+  });
+}
+test('the share image exists and is the size every platform expects', () => {
+  const p = path.join(root, 'assets/og.png');
+  assert.ok(fs.existsSync(p), 'og:image points at a file that is not in the repo');
+  const buf = fs.readFileSync(p);
+  // PNG IHDR: width and height are big-endian uint32 at bytes 16 and 20
+  assert.strictEqual(buf.readUInt32BE(16), 1200, 'og image width must be 1200');
+  assert.strictEqual(buf.readUInt32BE(20), 630, 'og image height must be 630');
+});
+
+console.log('\nthe document says who it is from');
+/* The single most obviously unprofessional thing the product did, and it
+   survived every automated check for the same reason: a missing sender is
+   not a defect in anything. */
+test('post-call.html asks who is sending, outside any drawer', () => {
+  const beforeDrawers = html['post-call.html'].split('<details')[0];
+  ['s_name', 's_phone', 's_email'].forEach(id =>
+    assert.ok(beforeDrawers.includes('id="' + id + '"'),
+      id + ' is missing or hidden behind a disclosure — a document with no sender is not sendable'));
+});
+test('the sender survives a backup', () => {
+  assert.ok(read('assets/pc-backup.js').includes('postcall_sender_v1'),
+    'a cache clear would silently unsign every proposal after it');
 });
 
 console.log('\nprivacy.html — static, but not exempt from the CSP that killed every button once already');

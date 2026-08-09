@@ -22,6 +22,13 @@ function dealSnapshot(){
     estimatedHours: m.effort,      // locked at save time — see deals.js
     priceQuoted: m.price,
     method: m.method,
+    /* The number of days the document itself promised. It is 14 by
+       default and 21 when more than one person has to agree, and until
+       now it was computed, printed for the client, and thrown away — so
+       nothing on this side could tell when a proposal was about to lapse.
+       Stored with the deal because it is a property of the document that
+       was sent, not of the form as it stands today. */
+    validityDays: (PC.client.adapt(clientProfile()) || {}).validityDays || 14,
     systems: [...chosenSystems],
     /* The full form, so a saved deal can be opened again.
        Without this the ledger stored a summary and nothing else, which meant
@@ -61,11 +68,51 @@ function saveCurrentDeal(){
   renderLedger(); flashDoc('נשמר'); track('deal_saved');
 }
 
+/* The emotional peak of the whole product is the moment a proposal worth
+   real money leaves the building, and the entire acknowledgement used to
+   be a two-second grey toast. Worse than thin: it is the one moment the
+   operator is willing to do one more thing, and the one thing worth doing
+   is the thing that makes them come back. */
 function markSent(){
   if (!currentDealId) saveCurrentDeal();
   if (!currentDealId) return;
   PC.deals.setStatus(currentDealId, 'sent');
-  renderLedger(); flashDoc('סומנה כנשלחה'); track('deal_sent');
+  renderLedger(); track('deal_sent');
+  offerFollowup(currentDealId);
+}
+
+/* No server here means the product cannot notify anybody, ever. What it
+   can do is hand over a trigger that lives somewhere which does — the
+   operator's own calendar. One file, no account, no permission prompt,
+   and it still fires on a phone with this tab long closed. */
+function offerFollowup(id){
+  const d = PC.deals.get(id);
+  const due = d && PC.followup.dueState(d);
+  const bar = el('draftNote');
+  if (!d || !due || !bar) { flashDoc('סומנה כנשלחה'); return; }
+  const when = new Date(Math.max(
+    new Date(d.sentAt).getTime() + PC.followup.NUDGE_AFTER_DAYS * 864e5,
+    due.expires.getTime() - PC.followup.CLOSING_WINDOW_DAYS * 864e5));
+  bar.innerHTML = '<b>נשלחה.</b> התוקף שכתוב במסמך הוא ' +
+    due.expires.toLocaleDateString('he-IL') + '. ' +
+    'רוצה תזכורת ל-' + when.toLocaleDateString('he-IL') + ' לבדוק מה קרה? ' +
+    '<button type="button" class="ghost" data-deal="' + esc(id) + '" data-status="__ics">' +
+    'הוסף ליומן</button>';
+  show('draftNote', true);
+}
+
+function downloadFollowup(id){
+  const d = PC.deals.get(id);
+  if (!d) return;
+  const text = PC.followup.icsFor(d, { ils });
+  if (!text) { flashDoc('אין תאריך שליחה להצעה הזאת'); return; }
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = PC.followup.filenameFor(d);
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flashDoc('התזכורת ירדה — פתח את הקובץ כדי להוסיף אותה ליומן');
+  track('followup_added');
 }
 
 function flashDoc(msg){
@@ -74,7 +121,18 @@ function flashDoc(msg){
   f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2000);
 }
 
-function setDealStatus(id, s){ PC.deals.setStatus(id, s); renderLedger(); }
+/* Marking one sent from the ledger is the same event as sending it from
+   the document, and has to behave the same. Found by trying to walk the
+   send path in a browser: markSent() sits behind requireKey, so the
+   follow-up offer was reachable only past the export gate — which would
+   have put the one mechanism that feeds calibration behind the paywall,
+   while calibration is the thing the product argues it is for. */
+function setDealStatus(id, s){
+  const before = PC.deals.get(id);
+  PC.deals.setStatus(id, s);
+  renderLedger();
+  if (s === 'sent' && (!before || before.status !== 'sent')) offerFollowup(id);
+}
 
 function removeDeal(id){
   if (currentDealId === id) currentDealId = null;
@@ -95,7 +153,16 @@ const renderLedger = guard('ledger', function (){
   const cal = PC.deals.calibration();
   const win = PC.deals.winRate();
 
+  /* What is actually waiting, above the counts. The counts describe the
+     past; this is the only line here that asks for something. */
+  const waiting = PC.followup.summary(list);
+
   const summary = list.length ? `
+    ${waiting ? `<div class="ledger-act">
+      <b>${waiting.count === 1 ? 'הצעה אחת מחכה לך' : waiting.count + ' הצעות מחכות לך'}:</b>
+      ${esc(waiting.text)}.
+      <span class="ledger-act-n">תשובה שלא הגיעה היא עדיין מידע — סמנו אותה, כדי שהאומדן יתחיל להימדד.</span>
+    </div>` : ''}
     <div class="ledger-sum">
       <span>${list.length} הצעות</span>
       <span>${win.won} נסגרו · ${win.lost} נדחו · ${win.undecided} פתוחות</span>
@@ -111,10 +178,16 @@ const renderLedger = guard('ledger', function (){
   box.innerHTML = summary + (list.length ? list.map(d => {
     const o = d.outcome || {};
     const done = o.actualHours > 0;
-    return `<div class="deal">
+    /* Where this one stands in time. sentAt has been written on every
+       deal since this file existed and was never once read, so a proposal
+       sent three weeks ago and a proposal sent this morning looked
+       identical in here. */
+    const due = PC.followup.dueState(d);
+    return `<div class="deal${due && due.needsAction ? ' deal-act' : ''}">
       <div class="deal-h">
         <b>${esc(d.client)}</b>
         <span class="deal-st st-${d.status}">${PC.STATUS_LABEL[d.status]}</span>
+        ${due ? `<span class="deal-due due-${due.state}">${esc(due.label)}</span>` : ''}
         <span class="deal-meta">${d.priceQuoted ? ils(d.priceQuoted) : '—'} · אומדן ${d.estimatedHours || '—'} ש׳ · ${d.created.slice(0,10)}</span>
       </div>
       ${d.process ? `<div class="deal-p">${esc(d.process)}</div>` : ''}
@@ -125,6 +198,8 @@ const renderLedger = guard('ledger', function (){
         <button type="button" class="sbtn s-open" data-deal="${d.id}" data-status="__open"${
           d.form ? '' : ' disabled title="נשמרה לפני שהיה אפשר לפתוח מחדש"'}>פתח לעריכה</button>
         <button type="button" class="sbtn" data-deal="${d.id}" data-status="__remove">מחק</button>
+        ${due ? `<button type="button" class="sbtn s-cal" data-deal="${d.id}" data-status="__ics"
+          title="מוריד קובץ יומן עם תזכורת לבדוק מה קרה">תזכורת ליומן</button>` : ''}
       </div>
       ${d.status === 'won' || done ? `
         <div class="deal-out">

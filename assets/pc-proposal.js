@@ -98,7 +98,29 @@
       (m.hours ? 'החזרת כ-' + Math.round(m.hours / 52) + ' שעות עבודה בשבוע' : 'התהליך רץ בלי מגע יד');
     const title = titleFrom(f.process);
 
+    /* The letterhead. Absent for the whole life of the product until
+       somebody finally looked at the document instead of at the tool —
+       every automated check passed on a proposal that did not say who it
+       was from. Printed only when there is a name: a header carrying just
+       a phone number reads worse than none at all. */
+    const sender = (root.PC && root.PC.senderBlock) ? root.PC.senderBlock(ctx.sender) : null;
+    const from = sender ? `
+<div class="from">
+  <div class="from-n">${escape(sender.name)}${sender.business ? ' · <span class="from-b">' + escape(sender.business) + '</span>' : ''}</div>
+  ${sender.contact.length ? `<div class="from-c">${sender.contact.map(escape).join(' · ')}</div>` : ''}
+</div>` : '';
+
+    /* The one place this product travels on its own. The document goes
+       from the operator to their client, and sometimes to two or three
+       people who have to agree — the widest circulation anything here
+       has, and it carried nothing. Discreet by intent, and switchable
+       off, because a line the operator resents is a line they will paste
+       the document somewhere else to remove. */
+    const attribution = (ctx.sender && ctx.sender.attribution === false) ? '' : `
+<div class="madewith">נבנה עם PRE-CALL · מהשיחה להצעה מתומחרת</div>`;
+
     return `
+${from}
 <h3>הצעה · אוטומציה של ${escape(title || 'התהליך')}</h3>
 <div class="meta">${escape(client)} · ${dstr} · בתוקף עד ${vstr}</div>
 
@@ -148,6 +170,8 @@ ${f.prev ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${escape(f.pr
 <h4>ההחלטה</h4>
 <p>ההצעה בתוקף עד ${vstr}.${f.decider ? ' מי שצריך לאשר: ' + escape(f.decider) + '.' : ''}
 כדי להתחיל, אישור בכתב על ההצעה הזו והתשלום הראשון.</p>
+${sender ? `<p class="signoff">${escape(sender.name)}${sender.contact.length ? ' · ' + escape(sender.contact[0]) : ''}</p>` : ''}
+${attribution}
 `;
   }
 

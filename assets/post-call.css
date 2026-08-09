@@ -25,6 +25,19 @@
        padding:16px 18px;margin-bottom:14px}
 
   .qa{border-bottom:1px solid var(--line);padding:14px 0}
+
+  /* ---- who is sending ----
+     Marked as a one-time thing so it does not read as another field to
+     fill in on every proposal, which is what it would look like sitting
+     among the per-deal questions otherwise. */
+  .senderbox .sender-once{display:inline-block;margin-right:8px;font-size:11px;
+    font-weight:600;letter-spacing:.3px;color:var(--turq);
+    border:1px solid #2f6b62;border-radius:3px;padding:1px 7px;vertical-align:middle}
+  .checkline{display:flex;align-items:flex-start;gap:8px;margin-top:12px;
+    font-size:13px;color:var(--muted);cursor:pointer;line-height:1.5}
+  .checkline input{width:18px;height:18px;margin:1px 0 0;flex:0 0 auto;
+    accent-color:var(--turq);cursor:pointer}
+  .checkline span{flex:1 1 auto}
   .qa:last-child{border-bottom:0}
   .qa .qt{font-size:16px;color:#eceef1;margin-bottom:3px}
   .qa .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;
@@ -129,6 +142,25 @@
 
   /* ---- proposal ---- */
   .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:14px}
+  /* ---- the letterhead ----
+     Above the title, because that is where a reader looks to find out who
+     is writing to them, and separated by a rule so the document reads as
+     correspondence rather than as an output. */
+  .out .from{border-bottom:1px solid #ddd6c5;padding-bottom:12px;margin-bottom:18px}
+  .out .from-n{color:#16191d;font-size:16px;font-weight:700;letter-spacing:-.1px}
+  .out .from-b{font-weight:400;color:#5f6673}
+  .out .from-c{color:#5f6673;font-size:13px;margin-top:3px;
+    font-variant-numeric:tabular-nums}
+  .out .signoff{margin-top:22px;padding-top:14px;border-top:1px solid #e2ded7;
+    color:#33383f;font-size:14px;font-weight:600}
+  /* Quiet on purpose. This travels to the operator's client, so it has to
+     be small enough that they never feel it competes with their own name —
+     but the first attempt at "quiet" was #8a8378, which axe caught at
+     3.44:1 on the document's paper. Illegible is not the same as
+     discreet, and a line the client's eye slides off is also a line a
+     screen reader still reads out. 4.93:1 here: subdued and legible. */
+  .out .madewith{margin-top:16px;color:#6f6a60;font-size:11px;letter-spacing:.2px}
+
   .out h3{color:#16191d;font-size:21px;margin:0 0 4px;font-weight:700}
   .out .meta{color:#5f6673;font-size:13px;margin-bottom:20px;
              border-bottom:1px solid #ddd9d2;padding-bottom:12px}
@@ -347,6 +379,60 @@
          min-height:246px;
          box-shadow:0 6px 18px rgba(0,0,0,.35)}
   @media(max-width:640px){ .guide{min-height:298px} }
+
+  /* ---- the guide, once it is pinned ----
+     Measured on a real phone rather than reasoned about: at rest this bar
+     is the spine of the page and earns its size, but pinned it was still
+     298px — 35% of an iPhone 14 screen and 45% of an SE, permanently, with
+     four interactive controls sitting underneath it at all times. Its
+     call-to-action sat 17–23% down the screen, which is the top of the
+     display and the hardest place on a phone for a thumb to reach; the
+     evidence puts primary actions in the lower two thirds.
+
+     Half of that was self-inflicted. min-height above was added to stop a
+     0.195 layout shift, and it turned a height that used to vary into one
+     that never did — a measured metric bought at the cost of an
+     unmeasured experience.
+
+     Pinned, the bar keeps only what is load bearing: which step this is,
+     what to do, and the button that does it. Everything explanatory comes
+     back the moment it returns to its resting place. min-height is
+     dropped here too, so the reservation that fixes the layout shift
+     applies only at rest, where the shift actually happens. */
+  .guide.stuck{
+    min-height:0;
+    padding:10px 14px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+    border-radius:0 0 8px 8px;margin-top:0;
+  }
+  .guide.stuck .guide-ask,
+  .guide.stuck .guide-why,
+  .guide.stuck .guide-sug,
+  .guide.stuck .guide-bar,
+  .guide.stuck .guide-dots{display:none}
+  /* nowrap + ellipsis, or the three surviving pieces stack into three rows
+     and the bar is 125px instead of the 65px this is for. The title is
+     what tells you what you are doing; it gets the room, and truncates
+     rather than wrapping. */
+  .guide.stuck .guide-top{margin:0;flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow:hidden}
+  .guide.stuck .guide-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .guide.stuck .guide-step{flex:0 0 auto}
+  .guide.stuck .guide-acts{margin:0;flex:0 0 auto}
+  .guide.stuck .guide-acts .act{padding:8px 16px;font-size:14px;min-height:44px}
+  /* the skip link is a decision for the resting state, not for a pinned strip */
+  .guide.stuck .guide-skip{display:none}
+  /* a warning about an implausible number is the one thing that must
+     survive the collapse — it is the reason to stop, not a detail */
+  .guide.stuck .guide-prob{flex:1 1 100%;margin:4px 0 0;font-size:12.5px}
+  @media(max-width:640px){
+    .guide.stuck .guide-t{font-size:15px}
+    /* on a phone there is room for the instruction or the step counter,
+       not both. What to do beats how far along you are. */
+    .guide.stuck .guide-step{display:none}
+  }
+  @media(prefers-reduced-motion:no-preference){
+    .guide{transition:padding .15s ease}
+  }
   .guide-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:6px}
   .guide-step{font-size:12px;letter-spacing:.6px;color:var(--turq);font-weight:700}
   .guide-t{font-size:17px;font-weight:700;color:#f2f0ec;flex:1 1 100%}
@@ -555,6 +641,40 @@
           border-top:1px solid var(--line)}
   .sbtn.s-open{border-color:var(--copper-dim);color:#e8c9a8}
   .sbtn.s-open:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---- how long a proposal has been sitting ----
+     Every state carries a word as well as a hue, per WCAG 1.4.1 and for
+     the same reason the rest of this file does: around one man in twelve
+     cannot separate the red from the amber, and glare defeats it for
+     everybody else. The label is the message; the colour only repeats it. */
+  .deal-due{font-size:12px;padding:2px 9px;border-radius:3px;white-space:nowrap;
+    border:1px solid;font-weight:600}
+  .due-fresh{color:var(--muted);border-color:var(--line)}
+  .due-quiet{color:#d4a13c;border-color:#6b5320;background:#26200f}
+  .due-closing{color:#d1723a;border-color:#7a4326;background:#271a10}
+  .due-expired{color:var(--red-text);border-color:#7a3b45;background:#271418}
+  /* a deal that wants something gets a rail, so the list can be skimmed
+     for what to act on rather than read in full */
+  .deal.deal-act{border-right:3px solid #6b5320}
+
+  /* The only line in the ledger that asks for something rather than
+     reporting something, so it sits above the counts and looks unlike
+     them. */
+  .ledger-act{background:#26200f;border:1px solid #6b5320;border-right:3px solid #d4a13c;
+    border-radius:6px;padding:12px 15px;margin-bottom:12px;font-size:14px;color:#e8d9b5}
+  .ledger-act b{color:#f0e3c4}
+  .ledger-act-n{display:block;margin-top:6px;font-size:12.5px;color:#bfae8a}
+  .sbtn.s-cal{border-color:#2f6b62;color:var(--turq)}
+
+  /* The one warning that appears at the click before a document leaves.
+     Sized to be unmissable and still not a wall — this product warns and
+     lets the operator through, and that principle does not bend for the
+     letterhead any more than it bends for an implausible number. */
+  .send-anon{background:#271a10;border:1px solid #7a4326;border-right:3px solid #d1723a;
+    border-radius:6px;padding:11px 14px;margin-bottom:12px;font-size:13.5px;color:#f0d3bd;
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+  .send-anon b{color:#ffd9bd}
+  .send-anon button{margin:0}
 
   /* ---- restored draft ---- */
   .draftnote{background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);

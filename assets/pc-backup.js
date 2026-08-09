@@ -29,7 +29,8 @@
 
   const VERSION = 1;
 
-  const DATA_KEYS = ['precall_profile_v1', 'postcall_deals_v1', 'postcall_draft_v1'];
+  const DATA_KEYS = ['precall_profile_v1', 'postcall_deals_v1', 'postcall_draft_v1',
+                     'postcall_sender_v1'];
   // Documented, not enforced by a check — see the header. Listed so the
   // omission is a decision on record, not something to rediscover later.
   const EXCLUDED_KEYS = ['postcall_key', 'postcall_key_ok_at'];

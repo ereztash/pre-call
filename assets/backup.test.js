@@ -22,12 +22,13 @@ const FULL_SEED = {
   precall_profile_v1: JSON.stringify({ f_what: 'מסדר תהליכי גבייה' }),
   postcall_deals_v1: JSON.stringify([{ id: '1', client: 'לקוח א' }]),
   postcall_draft_v1: JSON.stringify({ fields: { q_process: 'ידני' } }),
+  postcall_sender_v1: JSON.stringify({ s_name: 'דנה לוי', s_phone: '052-1234567' }),
   postcall_key: 'PC-AAAA-BBBB',
   postcall_key_ok_at: '2026-08-01T00:00:00.000Z'
 };
 
 console.log('\nexport');
-test('exports exactly the three data keys, nothing else', () => {
+test('exports exactly the data keys, nothing else', () => {
   const out = PC_BACKUP.exportAll(mem(FULL_SEED));
   assert.deepStrictEqual(Object.keys(out.data).sort(), PC_BACKUP.DATA_KEYS.slice().sort());
 });
@@ -36,6 +37,10 @@ test('never exports the license state, even when it is sitting right there in st
   PC_BACKUP.EXCLUDED_KEYS.forEach(k => {
     assert.ok(!(k in out.data), k + ' must never appear in an exported backup');
   });
+});
+test('every data key the module claims is actually seeded by this test — a stale fixture hides a gap', () => {
+  PC_BACKUP.DATA_KEYS.forEach(k => assert.ok(k in FULL_SEED,
+    k + ' was added to DATA_KEYS but never to this test\'s seed, so nothing here covers it'));
 });
 test('a version and a timestamp are stamped on every export', () => {
   const out = PC_BACKUP.exportAll(mem(FULL_SEED));

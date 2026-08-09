@@ -218,6 +218,237 @@ async function journey(engineName, base) {
     await fresh.close();
   });
 
+  /* Both of these come from simulating ten arrivals at the entry page.
+     Neither was visible from reading the code, and both are the same
+     mistake in different places: the product answering a question this
+     particular person did not ask. */
+  await test(label('arriving to review sent proposals does not get told to start a new one'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => localStorage.setItem('postcall_deals_v1', JSON.stringify([{
+      id: '1', client: 'מסעדת הדר', status: 'sent', created: '2026-08-01T09:00:00.000Z',
+      priceQuoted: 12000, estimatedHours: 20, form: { fields: {}, systems: [], scope: {} }
+    }])));
+    await fresh.goto(base + '/post-call.html#ledger');
+    await fresh.waitForTimeout(700);
+    const guideText = await fresh.evaluate(() =>
+      (document.querySelector('#guideBar .guide-ask')?.textContent || '').trim());
+    assert.strictEqual(guideText, '',
+      'the sticky guide told a ledger visitor to describe a process — an instruction ' +
+      'for work they did not come to do, pinned to the top of the screen the whole time');
+
+    // and it comes back the moment they actually start one
+    await fresh.fill('#q_process', 'תהליך חדש בכל זאת');
+    await fresh.waitForTimeout(400);
+    const backAgain = await fresh.evaluate(() =>
+      (document.querySelector('#guideBar .guide-ask')?.textContent || '').trim());
+    assert.ok(backAgain.length > 0, 'the guide must return once they do start building');
+    await c.close();
+  });
+
+  await test(label('someone who picked the wrong card can see the way across, not only back'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/pre-call.html');
+    await fresh.waitForTimeout(300);
+    const visible = await fresh.evaluate(() =>
+      [...document.querySelectorAll('a[href="post-call.html"]')]
+        .some(a => a.getBoundingClientRect().height > 0));
+    assert.ok(visible,
+      'the only PRE-CALL→POST-CALL link sits in step 4, which is display:none on arrival — ' +
+      'a wrong turn had no visible route across');
+    await c.close();
+  });
+
+  /* The guide is the spine of the page and earns its size at rest. Pinned
+     it was 298px — 35% of an iPhone 14 and 45% of an SE, permanently,
+     with four controls underneath it. Half of that was self-inflicted: a
+     min-height added to stop a layout shift turned a varying height into
+     a fixed one. This holds the collapsed state to something a phone can
+     afford. */
+  await test(label('the pinned guide collapses instead of owning a third of the phone'), async () => {
+    const c = await browser.newContext({ viewport: { width: 375, height: 667 } });
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(500);
+
+    const atRest = await fresh.evaluate(() => {
+      const g = document.getElementById('guideBar');
+      return { stuck: g.classList.contains('stuck'),
+               hasAsk: !!g.querySelector('.guide-ask')?.offsetHeight };
+    });
+    assert.strictEqual(atRest.stuck, false, 'the guide should not be collapsed at rest');
+    assert.ok(atRest.hasAsk, 'the full instruction must be visible at rest');
+
+    await fresh.evaluate(() => window.scrollBy(0, 800));
+    await fresh.waitForTimeout(400);
+
+    const pinned = await fresh.evaluate(() => {
+      const g = document.getElementById('guideBar');
+      const r = g.getBoundingClientRect();
+      const covered = [...document.querySelectorAll('button,input,select,textarea,a')]
+        .filter(el => { const b = el.getBoundingClientRect();
+          return b.height > 0 && b.top < r.bottom && b.bottom > r.top && !g.contains(el); }).length;
+      return { stuck: g.classList.contains('stuck'),
+               pct: Math.round(r.height / window.innerHeight * 100),
+               covered,
+               keepsAction: !!g.querySelector('.guide-acts .act')?.offsetHeight,
+               keepsTitle: !!g.querySelector('.guide-t')?.offsetHeight };
+    });
+    assert.strictEqual(pinned.stuck, true, 'the guide never collapsed on scroll');
+    assert.ok(pinned.pct <= 15,
+      'the pinned guide takes ' + pinned.pct + '% of the smallest common phone screen (limit 15%)');
+    assert.ok(pinned.covered <= 2,
+      'the pinned guide covers ' + pinned.covered + ' controls');
+    assert.ok(pinned.keepsTitle && pinned.keepsAction,
+      'collapsing must keep what to do and the button that does it');
+    await c.close();
+  });
+
+  /* The product computed an expiry for every proposal, printed it in the
+     client's document, and did nothing with it — while the calibration it
+     argues it exists for needs five delivered jobs reported back, and
+     nothing ever asked. This is the asking. */
+  await test(label('a proposal that has gone quiet says so, and offers a way to be reminded'), async () => {
+    const c = await browser.newContext({ acceptDownloads: true });
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => {
+      const ago = n => new Date(Date.now() - n * 864e5).toISOString();
+      const deal = (id, client, days) => ({
+        id, client, status: 'sent', created: ago(days), sentAt: ago(days),
+        priceQuoted: 9000, estimatedHours: 14, form: { fields: {}, systems: [], scope: {} } });
+      localStorage.setItem('postcall_deals_v1', JSON.stringify(
+        [deal('a', 'שותקת', 6), deal('b', 'עומדת לפוג', 12), deal('c', 'פג תוקפה', 20)]));
+    });
+    await fresh.goto(base + '/post-call.html#ledger');
+    await fresh.waitForTimeout(700);
+
+    const seen = await fresh.evaluate(() => ({
+      ask: (document.querySelector('.ledger-act') || {}).textContent || '',
+      states: [...document.querySelectorAll('.deal-due')]
+        .map(n => (n.className.match(/due-(\w+)/) || [])[1]).sort(),
+      flagged: document.querySelectorAll('.deal.deal-act').length,
+      calendarButtons: document.querySelectorAll('[data-status="__ics"]').length
+    }));
+    assert.deepStrictEqual(seen.states, ['closing', 'expired', 'quiet'],
+      'the ledger cannot tell a proposal sent this morning from one sent three weeks ago');
+    assert.strictEqual(seen.flagged, 3);
+    assert.ok(/מחכות לך/.test(seen.ask), 'nothing asks the operator for anything');
+    assert.ok(seen.calendarButtons >= 3, 'no way to be reminded once the tab is closed');
+
+    const [dl] = await Promise.all([
+      fresh.waitForEvent('download'),
+      fresh.click('[data-status="__ics"] >> nth=0')
+    ]);
+    const ics = require('fs').readFileSync(await dl.path(), 'utf8');
+    assert.ok(ics.startsWith('BEGIN:VCALENDAR'), 'the calendar file is not a calendar file');
+    assert.ok(/שעות עבודה/.test(ics), 'the reminder must ask for the hours, or calibration never fills');
+    await c.close();
+  });
+
+  await test(label('#ledger works as an in-page link too, not only across a reload'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(400);
+    await fresh.evaluate(() => { location.hash = '#ledger'; });
+    await fresh.waitForTimeout(400);
+    const onScreen = await fresh.evaluate(() => {
+      const b = document.getElementById('ledgerBox').getBoundingClientRect();
+      return b.top < window.innerHeight && b.bottom > 0;
+    });
+    assert.strictEqual(onScreen, true,
+      'a fragment change does not reload, so the route silently did nothing');
+    await c.close();
+  });
+
+  /* All three found by an external review, and all three the same shape:
+     the entry page re-deriving a rule that already had an owner elsewhere,
+     and quietly disagreeing with it. */
+  await test(label('an unanswered proposal still counts as waiting on the entry page'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => localStorage.setItem('postcall_deals_v1', JSON.stringify([{
+      id: 'n', client: 'לא ענה', status: 'no_answer',
+      created: new Date(Date.now() - 9 * 864e5).toISOString(),
+      sentAt: new Date(Date.now() - 9 * 864e5).toISOString(),
+      priceQuoted: 8000, estimatedHours: 12, form: { fields: {}, systems: [], scope: {} }
+    }])));
+    await fresh.goto(base + '/');
+    await fresh.waitForTimeout(300);
+    const visible = await fresh.locator('#resumeBox').isVisible();
+    assert.ok(visible,
+      'the ledger chases no_answer and the entry page ignored it — three files, three ideas of "waiting"');
+    await c.close();
+  });
+
+  await test(label('a draft of numbers alone is still offered back'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    // no process, no client — only figures and a system, which pc-draft.js
+    // counts as content and the entry page used to miss entirely
+    await fresh.fill('#q_freq', '40');
+    await fresh.fill('#q_minutes', '8');
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(900);
+    await fresh.goto(base + '/');
+    await fresh.waitForTimeout(300);
+    const seen = await fresh.evaluate(() => {
+      const b = document.getElementById('resumeBox');
+      return { visible: !b.classList.contains('hidden'), text: b.textContent };
+    });
+    assert.ok(seen.visible, 'POST-CALL would restore this draft; the entry page pretended it was empty');
+    assert.ok(/לא סיימת/.test(seen.text), seen.text);
+    await c.close();
+  });
+
+  await test(label('a genuinely untouched form still shows nothing to resume'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.click('#sysChips .chip >> nth=0');   // touch, then untouch
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(900);
+    await fresh.goto(base + '/');
+    await fresh.waitForTimeout(300);
+    assert.strictEqual(await fresh.locator('#resumeBox').isVisible(), false,
+      'widening the rule must not make the box cry wolf on an empty form');
+    await c.close();
+  });
+
+  await test(label('sending without a name warns loudly and still lets it through'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'תהליך כלשהו');
+    await fresh.fill('#q_client', 'לקוח');
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(400);
+    await fresh.evaluate(() => { renderSend(); document.getElementById('sendBox').classList.remove('hidden'); });
+    await fresh.waitForTimeout(200);
+    const warned = await fresh.evaluate(() => {
+      const w = document.querySelector('.send-anon');
+      const routes = [...document.querySelectorAll('#sendBox [data-route]')];
+      return { shown: !!w, text: w ? w.textContent : '',
+               routesStillEnabled: routes.some(r => !r.disabled) };
+    });
+    assert.ok(warned.shown, 'no warning before an anonymous document goes out');
+    assert.ok(/אין שם/.test(warned.text), warned.text);
+    assert.ok(warned.routesStillEnabled,
+      'this product warns and never blocks — the same rule that governs implausible numbers');
+
+    await fresh.fill('#s_name', 'דנה לוי');
+    await fresh.waitForTimeout(300);
+    await fresh.evaluate(() => renderSend());
+    assert.strictEqual(await fresh.evaluate(() => !!document.querySelector('.send-anon')), false,
+      'the warning must clear the moment a name exists');
+    await c.close();
+  });
+
   // --- returning mid-flow ---
   await test(label('an unfinished proposal is offered back on the entry page'), async () => {
     const fresh = await ctx.newPage();

@@ -4,6 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PRE-CALL · תסריט שאלות לשיחת אפיון</title>
+<!-- ============ איך הדף הזה נראה כששולחים אותו ============
+     Added after an AARRR pass found acquisition and referral at literally
+     zero: no description, no og tags, no icon, on any page. The channel
+     this product actually travels through is a link pasted into WhatsApp,
+     and without these that link renders as a bare URL — no title, no
+     picture, nothing to say what it is. That is not a defect in anything,
+     which is exactly why every automated check the project runs passed
+     over it for months. -->
+<meta name="description" content="בונה את השאלות שמוציאות מהלקוח את המספרים שצריך כדי לתמחר. 12 שאלות בסדר מחייב, וכרטיס קריאה למה שתשמעו.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://pre-call-swart.vercel.app/pre-call">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PRE-CALL · POST-CALL">
+<meta property="og:locale" content="he_IL">
+<meta property="og:url" content="https://pre-call-swart.vercel.app/pre-call">
+<meta property="og:title" content="PRE-CALL · תסריט שאלות לשיחת אפיון">
+<meta property="og:description" content="בונה את השאלות שמוציאות מהלקוח את המספרים שצריך כדי לתמחר. 12 שאלות בסדר מחייב, וכרטיס קריאה למה שתשמעו.">
+<meta property="og:image" content="https://pre-call-swart.vercel.app/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="מהשיחה להצעה מתומחרת — PRE-CALL ו-POST-CALL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#16191d">
 <link rel="stylesheet" href="assets/pre-call.css">
 </head>
 <body>
@@ -217,9 +240,17 @@
 <footer>
   PRE-CALL · גרסה 0.1 · כלי הכנה לשיחה. אינו מייצר מחיר ואינו מייצר הצעה.<br>
   כל הנתונים נשארים בדפדפן שלכם. שום דבר לא נשלח לשום שרת.<br>
+  <!-- The handoff to POST-CALL also lives in step 4, next to the finished
+       script, which is where it belongs for anyone who came here on
+       purpose. But step 4 is display:none until a script exists, so on
+       arrival that link has zero height — someone who picked the wrong
+       card on the entry page had no visible way across at all, only back.
+       Measured on a simulated wrong turn, not reasoned about. The footer
+       is on screen from the first second, so the escape lives here too. -->
   <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
   · <a href="privacy.html">פרטיות</a>
   · <a href="index.html">דף הפתיחה</a>
+  · <a href="post-call.html">כבר הייתה לי השיחה — לתמחור</a>
 </footer>
 
 </div>

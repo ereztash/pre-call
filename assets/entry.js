@@ -33,16 +33,29 @@
     const profile = read('precall_profile_v1');
 
     const list = Array.isArray(deals) ? deals : [];
-    // 'sent' is the only status that means "waiting on them"; won/lost/no_answer
-    // are all decided, and an undecided deal that was never sent is just a
-    // saved draft by another name.
-    const waiting = list.filter(d => d && d.status === 'sent').length;
+    /* 'no_answer' belongs here too. It means asked and not answered, which
+       is exactly the state this box exists to surface — deals.js counts it
+       as undecided and pc-followup.js keeps chasing it, so leaving it out
+       here meant an operator whose proposals were all marked no_answer got
+       no prompt at all while the ledger was actively flagging them. Three
+       files, three different ideas of "waiting", caught in review. */
+    const waiting = list.filter(d =>
+      d && (d.status === 'sent' || d.status === 'no_answer')).length;
 
-    // A draft counts as unfinished work only if it actually holds something.
-    // pc-draft.js owns the real emptiness rule; this is the cheap read-only
-    // version of it — a process description or a client name is enough.
+    /* Whether a draft holds anything is pc-draft.js's rule, and it needs the
+       untouched form to compare against — which only POST-CALL has. So the
+       verdict is stamped there, at save time, by the module that owns the
+       rule, and simply read here.
+
+       The fallback is for drafts written before that stamp existed, and it
+       is deliberately the narrow version: numbers alone, or a template
+       alone, will not light this box for those older drafts. Being quiet
+       when unsure beats claiming unfinished work that is not there. */
     const f = (draft && draft.fields) || {};
-    const draftAlive = !!((f.q_process || '').trim() || (f.q_client || '').trim());
+    const draftAlive = draft && typeof draft.hasContent === 'boolean'
+      ? draft.hasContent
+      : !!((f.q_process || '').trim() || (f.q_client || '').trim() ||
+           (draft && (draft.systems || []).length) || (draft && draft.template));
 
     return {
       waiting,
