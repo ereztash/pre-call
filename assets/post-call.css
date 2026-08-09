@@ -947,3 +947,11 @@
   .mt4{margin-top:var(--sp-2)}
   .mt8{margin-top:var(--sp-3)}
   .nomargin{margin:0}
+
+  /* The copyright line in the footer — quiet, and never a link.
+     --nt-50 was the first choice and measures 4.29:1 on the page
+     background, just under the 4.5 that 13.5px text needs. --nt-57 is
+     5.48. With a ramp that names each step for its lightness, fixing a
+     contrast failure is picking a different number rather than inventing
+     a colour at the point of failure. */
+  .copy{white-space:nowrap;color:var(--nt-57)}
