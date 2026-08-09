@@ -552,6 +552,9 @@ const recompute = guard('recompute', function (){
    "go fill question 6" is only an instruction to someone who already knows
    where question 6 is. */
 let scopeConfirmed = false, skipped = new Set();
+/* Set when the operator arrived specifically to review proposals they have
+   already sent. See applyEntryRoute() for why the guide has to know. */
+let reviewingLedger = false;
 // which steps were already complete last render, so only a fresh one animates
 let doneSteps = new Set();
 
@@ -596,6 +599,25 @@ function goTo(anchor, fields){
 
 const renderGuide = guard('guide', function (){
   const box = el('guideBar'); if (!box) return;
+
+  /* Someone who arrived to check what happened to proposals they already
+     sent is not building one. Found by simulating that exact arrival: the
+     ledger scrolled into view correctly, and the guide above it said
+     "step 1 of 5 — describe the process" — an instruction to start a new
+     proposal, stuck to the top of the screen the whole time they read the
+     old ones, because the bar is position:sticky. The entry page exists to
+     stop the product from answering a question nobody asked; leaving this
+     in would have reintroduced exactly that one layer down.
+
+     The moment they touch anything the flag clears and the guide returns,
+     so this hides an irrelevant instruction rather than removing a
+     feature. */
+  if (reviewingLedger && PC.draft && PC.draft.isEmpty(collectDraft(), PRISTINE)) {
+    box.innerHTML = ''; box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+
   let g = PC.guide.next(guideState());
 
   // a step the user explicitly skipped is not offered again on every keystroke
@@ -1133,6 +1155,9 @@ document.addEventListener('click', e => {
 });
 
 document.querySelectorAll('input,select,textarea').forEach(n => {
+  // typing anything means they are building a proposal after all, so the
+  // guide stops standing down — see reviewingLedger in renderGuide()
+  n.addEventListener('input', () => { reviewingLedger = false; });
   n.addEventListener('input', recompute);
   n.addEventListener('input', saveDraftSoon);
 });
@@ -1177,6 +1202,8 @@ function applyEntryRoute(){
      also measurably unreliable: the smooth version landed in Firefox and
      WebKit and silently did not in Chromium, found by running the journey
      in all three rather than in the one that happened to be installed. */
+  reviewingLedger = true;   // renderGuide reads this — see the note there
+  renderGuide();
   const box = el('ledgerBox');
   if (box) box.scrollIntoView({ block: 'start' });
 }

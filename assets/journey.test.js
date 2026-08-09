@@ -218,6 +218,49 @@ async function journey(engineName, base) {
     await fresh.close();
   });
 
+  /* Both of these come from simulating ten arrivals at the entry page.
+     Neither was visible from reading the code, and both are the same
+     mistake in different places: the product answering a question this
+     particular person did not ask. */
+  await test(label('arriving to review sent proposals does not get told to start a new one'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => localStorage.setItem('postcall_deals_v1', JSON.stringify([{
+      id: '1', client: 'מסעדת הדר', status: 'sent', created: '2026-08-01T09:00:00.000Z',
+      priceQuoted: 12000, estimatedHours: 20, form: { fields: {}, systems: [], scope: {} }
+    }])));
+    await fresh.goto(base + '/post-call.html#ledger');
+    await fresh.waitForTimeout(700);
+    const guideText = await fresh.evaluate(() =>
+      (document.querySelector('#guideBar .guide-ask')?.textContent || '').trim());
+    assert.strictEqual(guideText, '',
+      'the sticky guide told a ledger visitor to describe a process — an instruction ' +
+      'for work they did not come to do, pinned to the top of the screen the whole time');
+
+    // and it comes back the moment they actually start one
+    await fresh.fill('#q_process', 'תהליך חדש בכל זאת');
+    await fresh.waitForTimeout(400);
+    const backAgain = await fresh.evaluate(() =>
+      (document.querySelector('#guideBar .guide-ask')?.textContent || '').trim());
+    assert.ok(backAgain.length > 0, 'the guide must return once they do start building');
+    await c.close();
+  });
+
+  await test(label('someone who picked the wrong card can see the way across, not only back'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/pre-call.html');
+    await fresh.waitForTimeout(300);
+    const visible = await fresh.evaluate(() =>
+      [...document.querySelectorAll('a[href="post-call.html"]')]
+        .some(a => a.getBoundingClientRect().height > 0));
+    assert.ok(visible,
+      'the only PRE-CALL→POST-CALL link sits in step 4, which is display:none on arrival — ' +
+      'a wrong turn had no visible route across');
+    await c.close();
+  });
+
   // --- returning mid-flow ---
   await test(label('an unfinished proposal is offered back on the entry page'), async () => {
     const fresh = await ctx.newPage();
