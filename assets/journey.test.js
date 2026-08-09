@@ -303,6 +303,27 @@ async function journey(engineName, base) {
       'the pinned guide covers ' + pinned.covered + ' controls');
     assert.ok(pinned.keepsTitle && pinned.keepsAction,
       'collapsing must keep what to do and the button that does it');
+
+    /* And then the operator does the obvious next thing: types. This walk
+       stopped one step short of that, which is exactly how the collapse
+       shipped broken — renderGuide rebuilds the bar's className on every
+       keystroke, the observer had already fired and would not fire again,
+       and the guide sprang back to 349px (52% of this screen) on the first
+       character typed. Scrolling is not the end of the journey; scrolling
+       and then working is. */
+    await fresh.fill('#q_process', 'משהו שהמפעיל מקליד אחרי שגלל');
+    await fresh.fill('#q_client', 'לקוח');
+    await fresh.waitForTimeout(400);
+
+    const working = await fresh.evaluate(() => {
+      const g = document.getElementById('guideBar');
+      return { stuck: g.classList.contains('stuck'),
+               pct: Math.round(g.getBoundingClientRect().height / window.innerHeight * 100) };
+    });
+    assert.strictEqual(working.stuck, true,
+      'the guide un-collapsed as soon as the operator typed — a re-render dropped the state');
+    assert.ok(working.pct <= 15,
+      'after typing, the pinned guide is back to ' + working.pct + '% of the screen (limit 15%)');
     await c.close();
   });
 

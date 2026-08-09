@@ -114,14 +114,21 @@
     .replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,')
     .replace(/\r?\n/g, '\\n');
 
-  const stampDate = d => {
-    const p = n => String(n).padStart(2, '0');
-    return d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate());
-  };
-  const stampUTC = d => stampDate(d) + 'T' +
-    String(d.getUTCHours()).padStart(2, '0') +
-    String(d.getUTCMinutes()).padStart(2, '0') +
-    String(d.getUTCSeconds()).padStart(2, '0') + 'Z';
+  /* An all-day VALUE=DATE carries a calendar date, not an instant, so it
+     has to be the date the operator was actually shown. Serialising it
+     with UTC getters put the reminder a day early for anyone east of
+     Greenwich: a proposal sent just after midnight in Asia/Jerusalem
+     promised 29.8 on screen and wrote 20260828 into the file. A reminder
+     that fires the day before the one you were told is worse than none,
+     because you stop trusting the ones that do fire.
+
+     DTSTAMP below stays UTC — that one genuinely is an instant, and the
+     spec requires the Z form. */
+  const p2 = n => String(n).padStart(2, '0');
+  const stampDate = d => d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+  const stampUTC = d =>
+    d.getUTCFullYear() + p2(d.getUTCMonth() + 1) + p2(d.getUTCDate()) + 'T' +
+    p2(d.getUTCHours()) + p2(d.getUTCMinutes()) + p2(d.getUTCSeconds()) + 'Z';
 
   /* An all-day event rather than a timed one. A reminder pinned to 09:00
      is pinned to 09:00 in whichever timezone the file was written in, and
