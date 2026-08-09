@@ -236,6 +236,10 @@
   <h2>על מה מתחייבים, ומה נשאר בחוץ</h2>
   <p class="lead">כל שורה כבר מסומנת, עם הסיבה לידה. משנים רק מה שלא מתאים — והמסמך למעלה מתעדכן מיד.</p>
   <div class="box" id="scopeBox"></div>
+  <!-- Moving an item between groups is a structural change with nothing
+       to announce it — the old three-button row toggled aria-pressed,
+       which a screen reader speaks. This says it instead. -->
+  <p class="sr-only" id="scopeLive" role="status" aria-live="polite"></p>
   <div class="scope-confirm">
     <button class="act" data-act="confirmscope" id="scopeConfirmBtn">עברתי על הרשימה, ממשיכים</button>
     <span class="hint-p" id="scopeConfirmNote">רוב הפעמים אין מה לשנות. אם הכול נראה בסדר — אישור ומתקדמים.</span>
@@ -485,7 +489,7 @@
   הכלי לא מבטיח שהלקוח יסכים למחיר. הוא מבטיח שהמחיר יהיה נגזר ממספר שהלקוח עצמו אמר.<br>
   <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
   · <a href="privacy.html">פרטיות</a>
-  · <a href="index.html">דף הפתיחה</a>
+  · <a href="index.html">דף הפתיחה</a> · <span class="copy">© 2026 ארז טל-שיר · כל הזכויות שמורות</span>
 </footer>
 
 </div>

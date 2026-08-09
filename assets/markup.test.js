@@ -549,5 +549,81 @@ PAGES.forEach(page => {
   });
 });
 
+console.log('\nthis is a product, and the repository says so');
+/* The repository is public and was, for its whole life, unlicensed —
+   which under copyright means all rights reserved, and which to anyone
+   reading it means "open source that nobody got around to tidying". Those
+   two readings are very far apart, and the second one is the one a public,
+   forkable, licence-free repository invites.
+
+   Worth stating plainly because this project's own comments are the thing
+   most worth protecting: the pricing model, the effort model and the scope
+   catalogue all ship with their reasoning attached. That is deliberate —
+   it is what makes the product maintainable and auditable — and it is not
+   an invitation. */
+test('a licence exists and says the software is not open source', () => {
+  const p = path.join(root, 'LICENSE');
+  assert.ok(fs.existsSync(p), 'no LICENSE file — a public repo without one reads as unfinished open source');
+  const t = fs.readFileSync(p, 'utf8');
+  assert.ok(/all rights reserved/i.test(t), 'the licence does not reserve any rights');
+  assert.ok(/not open source/i.test(t), 'the licence never says what it is not, which is the ambiguity it exists to remove');
+  ['pricing model', 'effort', 'scope'].forEach(k =>
+    assert.ok(new RegExp(k, 'i').test(t),
+      'the licence does not name the ' + k + ' — the reasoning in the comments is the asset, ' +
+      'and a licence that only covers "the code" invites the argument that it does not cover them'));
+});
+
+test('the README leads with the licence rather than burying it', () => {
+  const r = read('README.md');
+  assert.ok(/\[LICENSE\]\(LICENSE\)/.test(r), 'the README never links the licence');
+  const head = r.slice(0, 700);
+  assert.ok(/קנייני|לא קוד פתוח/.test(head),
+    'the licence notice is below the fold of the README, where a reader reaches it ' +
+    'after three screens of architecture — which is three screens too late');
+});
+
+/* PAGES is the three tool pages. privacy.html is deliberately outside it —
+   it has no scripts and its own section of checks further up — and this is
+   the one rule where leaving it out was a real hole: the copyright line
+   went onto all four pages and the test only guarded three, so deleting it
+   from privacy.html left the suite green. Found in review. */
+const SHIPPED = [...PAGES, 'privacy.html'];
+const pageText = p => html[p] || read(p);
+
+SHIPPED.forEach(page => {
+  test(page + ' carries a copyright line', () => {
+    const t = pageText(page);
+    assert.ok(/class="copy"/.test(t),
+      page + ' has no copyright notice — the pages are the product, and they are ' +
+      'what somebody sees before they ever reach the repository');
+    assert.ok(/©\s*\d{4}/.test(t), page + ' has a copyright element with no year in it');
+  });
+});
+
+test('no page tells a visitor the code is open', () => {
+  /* privacy.html said "כל הקוד פתוח כאן" — literally "all the code is
+     open here" — three commits after the licence said the opposite, and
+     on the one page whose whole argument is that you can verify its
+     claims. Anyone landing there instead of the README got the reverse
+     licensing message, which is precisely the ambiguity the licence
+     exists to remove.
+
+     The claim that page needs is verifiability, not openness, and those
+     are different words. This asserts the difference across every shipped
+     page rather than only the one that got it wrong. */
+  /* Comments stripped first, or the note explaining the fix trips the
+     rule the note is about — which is how a comment containing id="ledger"
+     once registered as a duplicate id in this same file. */
+  const noComments = s => s.replace(/<!--[\s\S]*?-->/g, '');
+  const bad = [];
+  SHIPPED.forEach(page => {
+    const t = noComments(pageText(page));
+    if (/קוד\s+פתוח|open\s+source/i.test(t)) bad.push(page);
+  });
+  assert.deepStrictEqual(bad, [],
+    'these pages describe the code as open, which contradicts LICENSE: ' + bad.join(', ') +
+    '. The verifiable claim is that the code can be read, not that it may be used.');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
