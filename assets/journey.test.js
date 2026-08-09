@@ -306,6 +306,64 @@ async function journey(engineName, base) {
     await c.close();
   });
 
+  /* The product computed an expiry for every proposal, printed it in the
+     client's document, and did nothing with it — while the calibration it
+     argues it exists for needs five delivered jobs reported back, and
+     nothing ever asked. This is the asking. */
+  await test(label('a proposal that has gone quiet says so, and offers a way to be reminded'), async () => {
+    const c = await browser.newContext({ acceptDownloads: true });
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => {
+      const ago = n => new Date(Date.now() - n * 864e5).toISOString();
+      const deal = (id, client, days) => ({
+        id, client, status: 'sent', created: ago(days), sentAt: ago(days),
+        priceQuoted: 9000, estimatedHours: 14, form: { fields: {}, systems: [], scope: {} } });
+      localStorage.setItem('postcall_deals_v1', JSON.stringify(
+        [deal('a', 'שותקת', 6), deal('b', 'עומדת לפוג', 12), deal('c', 'פג תוקפה', 20)]));
+    });
+    await fresh.goto(base + '/post-call.html#ledger');
+    await fresh.waitForTimeout(700);
+
+    const seen = await fresh.evaluate(() => ({
+      ask: (document.querySelector('.ledger-act') || {}).textContent || '',
+      states: [...document.querySelectorAll('.deal-due')]
+        .map(n => (n.className.match(/due-(\w+)/) || [])[1]).sort(),
+      flagged: document.querySelectorAll('.deal.deal-act').length,
+      calendarButtons: document.querySelectorAll('[data-status="__ics"]').length
+    }));
+    assert.deepStrictEqual(seen.states, ['closing', 'expired', 'quiet'],
+      'the ledger cannot tell a proposal sent this morning from one sent three weeks ago');
+    assert.strictEqual(seen.flagged, 3);
+    assert.ok(/מחכות לך/.test(seen.ask), 'nothing asks the operator for anything');
+    assert.ok(seen.calendarButtons >= 3, 'no way to be reminded once the tab is closed');
+
+    const [dl] = await Promise.all([
+      fresh.waitForEvent('download'),
+      fresh.click('[data-status="__ics"] >> nth=0')
+    ]);
+    const ics = require('fs').readFileSync(await dl.path(), 'utf8');
+    assert.ok(ics.startsWith('BEGIN:VCALENDAR'), 'the calendar file is not a calendar file');
+    assert.ok(/שעות עבודה/.test(ics), 'the reminder must ask for the hours, or calibration never fills');
+    await c.close();
+  });
+
+  await test(label('#ledger works as an in-page link too, not only across a reload'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(400);
+    await fresh.evaluate(() => { location.hash = '#ledger'; });
+    await fresh.waitForTimeout(400);
+    const onScreen = await fresh.evaluate(() => {
+      const b = document.getElementById('ledgerBox').getBoundingClientRect();
+      return b.top < window.innerHeight && b.bottom > 0;
+    });
+    assert.strictEqual(onScreen, true,
+      'a fragment change does not reload, so the route silently did nothing');
+    await c.close();
+  });
+
   // --- returning mid-flow ---
   await test(label('an unfinished proposal is offered back on the entry page'), async () => {
     const fresh = await ctx.newPage();

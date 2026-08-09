@@ -1183,6 +1183,7 @@ document.addEventListener('click', e => {
     const id = d.dataset.deal, st = d.dataset.status;
     if (st === '__remove') removeDeal(id);
     else if (st === '__outcome') saveOutcome(id);
+    else if (st === '__ics') downloadFollowup(id);
     else if (st === '__open') loadDeal(id);
     else setDealStatus(id, st);
     return;
@@ -1267,4 +1268,10 @@ renderGuide();
 renderLedger();
 watchGuidePin();     // after the guide exists, before any scrolling happens
 applyEntryRoute();   // after the renders above, so there is something to land on
+/* Arriving at #ledger from another page reloads and runs the line above.
+   Arriving at it from this page changes only the fragment, so nothing
+   reloads and nothing re-runs — the route would silently do nothing.
+   Caught by driving the navigation in a browser rather than by reading
+   the code, where it looks like one path. */
+window.addEventListener('hashchange', applyEntryRoute);
 track('opened');

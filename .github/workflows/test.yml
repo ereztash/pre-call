@@ -51,6 +51,8 @@ jobs:
         run: node assets/backup.test.js
       - name: who the proposal is from
         run: node assets/sender.test.js
+      - name: chasing a proposal that went quiet
+        run: node assets/followup.test.js
       - name: markup, CSP, print and telemetry contracts
         run: node assets/markup.test.js
       - name: PRE-CALL — parsing, the anchor sentence, and the private/public split
