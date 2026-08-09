@@ -486,6 +486,31 @@ async function journey(engineName, base) {
     await fresh.close();
   });
 
+  /* The static half of this lives in markup.test.js. This is the half a
+     stylesheet cannot answer: whether anything the page decided to hide
+     at runtime is nevertheless painted. POST-CALL shipped an empty 26px
+     turquoise strip above the guide on every fresh load — .draftnote
+     carried class="hidden" and set display:flex four hundred lines
+     further down, so the utility lost on source order. It was found by
+     taking a screenshot and looking at it, which is not a method that
+     scales; this is. */
+  await test(label('nothing the page marked hidden is painted anyway'), async () => {
+    for (const url of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+      const c = await browser.newContext();
+      const p = await c.newPage();
+      await p.goto(base + url);
+      await p.waitForTimeout(400);
+      const painted = await p.evaluate(() =>
+        [...document.querySelectorAll('.hidden')]
+          .filter(el => el.getBoundingClientRect().height > 0)
+          .map(el => (el.id || el.className) + ' · ' +
+                     Math.round(el.getBoundingClientRect().height) + 'px'));
+      await c.close();
+      assert.deepStrictEqual(painted, [],
+        url + ' paints elements it marked hidden: ' + painted.join(', '));
+    }
+  });
+
   await test(label('nothing threw anywhere in the whole journey'), async () => {
     assert.deepStrictEqual(errors, [], 'uncaught errors during the journey');
   });

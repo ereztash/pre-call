@@ -495,5 +495,59 @@ test('every data-act in the markup has a handler in the script', () => {
   }
 });
 
+console.log('\nthings the markup says are hidden are actually hidden');
+/* Found by screenshotting a page rather than asserting on it, which is
+   the only reason it was found at all. `.hidden` is one class, so any
+   later single-class rule that sets display beats it on source order —
+   and .draftnote and .viz each set display:flex several hundred lines
+   below. POST-CALL painted an empty 26px turquoise strip on every fresh
+   load. Nothing threw, no rule was violated, no assertion existed to
+   fail; the page simply had a box in it that nobody had put there.
+
+   This checks the collision statically, so it holds without a browser
+   and holds for classes that only become visible in states no test has
+   thought to enter yet. */
+const CSS_FOR = { 'index.html': 'assets/entry.css', 'pre-call.html': 'assets/pre-call.css',
+                  'post-call.html': 'assets/post-call.css' };
+
+test('the .hidden utility beats every rule that could contradict it', () => {
+  Object.values(CSS_FOR).forEach(f => {
+    const m = read(f).match(/\.hidden\s*\{([^}]*)\}/);
+    assert.ok(m, f + ' has no .hidden rule at all');
+    assert.ok(/display\s*:\s*none\s*!important/.test(m[1]),
+      f + ': .hidden is a plain single-class rule, so anything below it that sets ' +
+      'display wins on source order — it needs !important to do its one job');
+  });
+});
+
+PAGES.forEach(page => {
+  test(page + ': nothing carrying .hidden is contradicted lower down', () => {
+    /* Belt and braces: even with !important above, name the collisions,
+       because a future edit that drops the !important should fail loudly
+       here rather than quietly repaint a box. */
+    const css = read(CSS_FOR[page]);
+    const withHidden = new Set();
+    for (const m of html[page].matchAll(/class\s*=\s*"([^"]*)"/g)) {
+      const cs = m.group ? [] : m[1].split(/\s+/);
+      if (cs.includes('hidden')) cs.forEach(c => c && c !== 'hidden' && withHidden.add(c));
+    }
+    const hiddenAt = css.indexOf('.hidden{');
+    const clashes = [];
+    withHidden.forEach(c => {
+      const re = new RegExp('(?<![\\w.-])\\.' + c.replace(/[-[\]{}()*+?.,\\^$|#]/g, '\\$&') +
+                            '\\s*\\{([^}]*)\\}', 'g');
+      for (const m of css.matchAll(re))
+        if (/display\s*:/.test(m[1]) && m.index > hiddenAt)
+          clashes.push('.' + c + ' sets display after .hidden');
+    });
+    /* The two known ones are allowed to exist — they are why the
+       !important is there — but a third appearing means someone added a
+       component without knowing the rule, and should read this. */
+    assert.ok(clashes.length <= 2,
+      page + ': ' + clashes.length + ' rules override .hidden — ' + clashes.join(', ') +
+      '. That is fine only because .hidden is !important; keep it that way.');
+  });
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

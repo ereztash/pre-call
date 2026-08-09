@@ -202,7 +202,15 @@
   }
 
   /* utility classes replacing inline style attributes — see the CSP note */
-  .hidden{display:none}
+  /* !important because this is the one declaration in the file whose whole
+     job is to win. It is a single class, so any later single-class rule
+     that sets display beats it on source order alone — which is exactly
+     what happened: .draftnote and .viz each set display:flex hundreds of
+     lines below, and both painted an empty bordered box on every fresh
+     load of POST-CALL while carrying class="hidden". Nothing failed,
+     nothing threw; the page just had a 26px turquoise strip in it that
+     nobody had put there. markup.test.js now fails on the pattern. */
+  .hidden{display:none !important}
   .mt14{margin-top:var(--sp-5)}
   .mb6{margin-bottom:var(--sp-3)}
   .tiny{font-size:var(--fs-xs)}

@@ -158,7 +158,8 @@ footer a{color:var(--copper);text-decoration:underline;
   min-height:32px;display:inline-block;line-height:32px}
 footer a:hover{color:#d38b47}
 
-.hidden{display:none}
+/* see the note in post-call.css — a utility whose job is to win */
+.hidden{display:none !important}
 
 @media(max-width:640px){
   .wrap{padding:var(--sp-8) var(--sp-5) var(--sp-9)}

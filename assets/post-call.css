@@ -367,7 +367,15 @@
      A CSP that allows inline styles allows an injected style attribute too.
      Since the policy shipped as script-src/style-src 'self', the markup had to
      stop relying on either — this is the style half. */
-  .hidden{display:none}
+  /* !important because this is the one declaration in the file whose whole
+     job is to win. It is a single class, so any later single-class rule
+     that sets display beats it on source order alone — which is exactly
+     what happened: .draftnote and .viz each set display:flex hundreds of
+     lines below, and both painted an empty bordered box on every fresh
+     load of POST-CALL while carrying class="hidden". Nothing failed,
+     nothing threw; the page just had a 26px turquoise strip in it that
+     nobody had put there. markup.test.js now fails on the pattern. */
+  .hidden{display:none !important}
   .mt10{margin-top:var(--sp-4)}
   .mt12{margin-top:var(--sp-4)}
   .hint-p{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3)}
