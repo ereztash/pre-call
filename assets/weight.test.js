@@ -39,9 +39,15 @@ const kb = bytes => Math.round(bytes / 1024 * 10) / 10;
 const size = f => fs.statSync(path.join(root, f)).size;
 
 /* Everything a browser actually fetches for one page: the HTML, plus every
-   stylesheet and script it links. Test files are not shipped and are not
-   counted — they live in the same directory only because this project has
-   no build step to separate them. */
+   stylesheet and script it links.
+
+   Test files are not counted here, and the first version of this comment
+   also said they "are not shipped". That half was wrong for the whole life
+   of the project: fetching /assets/model.test.js in production answered
+   200. A file being deployed and a file being loaded are different things,
+   and only the second was ever measured — so the budget was honest and the
+   sentence next to it was not. .vercelignore now makes the sentence true,
+   and markup.test.js asserts the list stays complete. */
 function pageWeight(page) {
   const html = fs.readFileSync(path.join(root, page), 'utf8');
   const assets = [

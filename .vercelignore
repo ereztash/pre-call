@@ -1,0 +1,26 @@
+# What does not belong on the public site.
+#
+# Found by fetching it: https://pre-call-swart.vercel.app/assets/model.test.js
+# answered 200. Every test file in this repository has been served in
+# production since the first deploy — around 200KB nobody loads, plus the
+# fixtures and the reasoning inside them, on a product that is sold.
+#
+# weight.test.js said in prose that test files "are not shipped and are not
+# counted". The second half was true. The first half was not, and nothing
+# checked it, because a file being deployed and a file being loaded are
+# different things and only the second one was ever measured.
+#
+# There is no build step here, so this list is the only thing separating
+# what is written from what is served. markup.test.js asserts it stays
+# complete.
+
+# tests — every suite, wherever it lives
+*.test.js
+
+# the key minter: a dev tool, and dev tooling is not part of the product
+tools/
+
+# repository furniture
+.github/
+LICENSE
+README.md

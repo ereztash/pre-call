@@ -625,5 +625,42 @@ test('no page tells a visitor the code is open', () => {
     '. The verifiable claim is that the code can be read, not that it may be used.');
 });
 
+console.log('\nwhat gets deployed is not simply what is in the repository');
+/* There is no build step, so every file in the repository is a candidate
+   for the public site, and .vercelignore is the only thing between the two.
+   That was learned by fetching one: /assets/model.test.js answered 200 in
+   production, and had done since the first deploy — roughly 200KB of test
+   files and fixtures served to everyone, on a product that is sold. */
+test('.vercelignore exists and keeps the tests off the public site', () => {
+  const p = path.join(root, '.vercelignore');
+  assert.ok(fs.existsSync(p),
+    'no .vercelignore — without one, every test file in this repo is served in production');
+  const lines = fs.readFileSync(p, 'utf8').split('\n')
+    .map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  assert.ok(lines.includes('*.test.js'),
+    'the ignore list does not cover test files, which is the reason it exists');
+  assert.ok(lines.some(l => l.replace(/\/$/, '') === 'tools'),
+    'the ignore list does not cover tools/ — dev tooling is not part of the product');
+});
+
+test('every test file in the repository is covered by the ignore list', () => {
+  /* Named as a rule rather than a list, so a suite added in a new
+     directory tomorrow is covered without anyone remembering to come
+     back here. This asserts the rule is the one in force. */
+  const patterns = fs.readFileSync(path.join(root, '.vercelignore'), 'utf8')
+    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const covers = f => patterns.some(p =>
+    p === '*.test.js' ? f.endsWith('.test.js')
+      : f === p || f.startsWith(p.replace(/\/$/, '') + '/'));
+  const walk = d => fs.readdirSync(path.join(root, d), { withFileTypes: true })
+    .flatMap(e => e.name === '.git' || e.name === 'node_modules' ? []
+      : e.isDirectory() ? walk(path.join(d, e.name))
+      : [path.join(d, e.name)]);
+  const uncovered = walk('.').map(f => f.replace(/^\.\//, ''))
+    .filter(f => f.endsWith('.test.js')).filter(f => !covers(f));
+  assert.deepStrictEqual(uncovered, [],
+    'these test files would be deployed: ' + uncovered.join(', '));
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
