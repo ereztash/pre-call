@@ -918,6 +918,28 @@ function sendVia(id){
   markSent();
 }
 
+/* ---------- who is sending ----------
+   Operator-level and saved once, not per deal — see pc-sender.js. Kept
+   out of the draft on purpose: a draft is one unfinished proposal, this
+   is who you are, and discarding the former must never clear the latter. */
+function readSender(){
+  const s = {};
+  PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f) s[id] = f.value.trim(); });
+  s.attribution = el('s_attr') ? el('s_attr').checked : true;
+  return s;
+}
+let senderTimer = null;
+function saveSenderSoon(){
+  clearTimeout(senderTimer);
+  senderTimer = setTimeout(() => { PC.sender && PC.sender.save(readSender()); }, 500);
+}
+function restoreSender(){
+  const s = PC.sender && PC.sender.load();
+  if (!s) return;
+  PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f && s[id]) f.value = s[id]; });
+  if (el('s_attr')) el('s_attr').checked = s.attribution !== false;
+}
+
 /* ---------- the document ---------- */
 const renderProposal = guard('proposal', function (){
   /* Nothing entered yet means no document — not a document with the blanks
@@ -930,6 +952,7 @@ const renderProposal = guard('proposal', function (){
   el('proposal').innerHTML = PC.proposal.build({
     m: model(),
     ils,
+    sender: readSender(),
     adapt: PC.client.adapt(clientProfile()),
     scope: { in: scopeList('in'), out: scopeList('out'), extra: scopeList('extra') },
     systems: [...chosenSystems],
@@ -1177,6 +1200,13 @@ document.querySelectorAll('input,select,textarea').forEach(n => {
   n.addEventListener('input', recompute);
   n.addEventListener('input', saveDraftSoon);
 });
+// the sender's own details persist separately from the draft, and a
+// checkbox fires 'change' rather than 'input'
+[...PC.SENDER_FIELDS, 's_attr'].forEach(id => {
+  const f = el(id); if (!f) return;
+  f.addEventListener('input', saveSenderSoon);
+  f.addEventListener('change', () => { PC.sender && PC.sender.save(readSender()); recompute(); });
+});
 const backupFileInput = el('backupFile');
 if (backupFileInput) backupFileInput.addEventListener('change', handleBackupFile);
 
@@ -1229,6 +1259,7 @@ function applyEntryRoute(){
    the bottom of whichever file happened to define the function. */
 mountGate();
 renderTemplates();
+restoreSender();  // before the first render, so the document has a letterhead
 restoreDraft();   // before the first render, so the page comes up as it was left
 renderScope();
 recompute();   // recompute drives the method, the client read and the document

@@ -25,6 +25,19 @@
        padding:16px 18px;margin-bottom:14px}
 
   .qa{border-bottom:1px solid var(--line);padding:14px 0}
+
+  /* ---- who is sending ----
+     Marked as a one-time thing so it does not read as another field to
+     fill in on every proposal, which is what it would look like sitting
+     among the per-deal questions otherwise. */
+  .senderbox .sender-once{display:inline-block;margin-right:8px;font-size:11px;
+    font-weight:600;letter-spacing:.3px;color:var(--turq);
+    border:1px solid #2f6b62;border-radius:3px;padding:1px 7px;vertical-align:middle}
+  .checkline{display:flex;align-items:flex-start;gap:8px;margin-top:12px;
+    font-size:13px;color:var(--muted);cursor:pointer;line-height:1.5}
+  .checkline input{width:18px;height:18px;margin:1px 0 0;flex:0 0 auto;
+    accent-color:var(--turq);cursor:pointer}
+  .checkline span{flex:1 1 auto}
   .qa:last-child{border-bottom:0}
   .qa .qt{font-size:16px;color:#eceef1;margin-bottom:3px}
   .qa .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;
@@ -129,6 +142,25 @@
 
   /* ---- proposal ---- */
   .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:14px}
+  /* ---- the letterhead ----
+     Above the title, because that is where a reader looks to find out who
+     is writing to them, and separated by a rule so the document reads as
+     correspondence rather than as an output. */
+  .out .from{border-bottom:1px solid #ddd6c5;padding-bottom:12px;margin-bottom:18px}
+  .out .from-n{color:#16191d;font-size:16px;font-weight:700;letter-spacing:-.1px}
+  .out .from-b{font-weight:400;color:#5f6673}
+  .out .from-c{color:#5f6673;font-size:13px;margin-top:3px;
+    font-variant-numeric:tabular-nums}
+  .out .signoff{margin-top:22px;padding-top:14px;border-top:1px solid #e2ded7;
+    color:#33383f;font-size:14px;font-weight:600}
+  /* Quiet on purpose. This travels to the operator's client, so it has to
+     be small enough that they never feel it competes with their own name —
+     but the first attempt at "quiet" was #8a8378, which axe caught at
+     3.44:1 on the document's paper. Illegible is not the same as
+     discreet, and a line the client's eye slides off is also a line a
+     screen reader still reads out. 4.93:1 here: subdued and legible. */
+  .out .madewith{margin-top:16px;color:#6f6a60;font-size:11px;letter-spacing:.2px}
+
   .out h3{color:#16191d;font-size:21px;margin:0 0 4px;font-weight:700}
   .out .meta{color:#5f6673;font-size:13px;margin-bottom:20px;
              border-bottom:1px solid #ddd9d2;padding-bottom:12px}

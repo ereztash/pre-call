@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PRE-CALL">
+  <rect width="64" height="64" rx="13" fill="#16191d"/>
+  <!-- the call, and the number that comes out of it -->
+  <circle cx="32" cy="23" r="8.5" fill="none" stroke="#2f9e8f" stroke-width="4"/>
+  <path d="M18 47h28" stroke="#c07d3e" stroke-width="5" stroke-linecap="round"/>
+  <path d="M25 38h14" stroke="#c07d3e" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+</svg>

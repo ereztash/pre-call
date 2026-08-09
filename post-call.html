@@ -4,6 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POST-CALL · מהשיחה להצעה מתומחרת · אוטומציות</title>
+<!-- ============ איך הדף הזה נראה כששולחים אותו ============
+     Added after an AARRR pass found acquisition and referral at literally
+     zero: no description, no og tags, no icon, on any page. The channel
+     this product actually travels through is a link pasted into WhatsApp,
+     and without these that link renders as a bare URL — no title, no
+     picture, nothing to say what it is. That is not a defect in anything,
+     which is exactly why every automated check the project runs passed
+     over it for months. -->
+<meta name="description" content="עונים על מה שנאמר בשיחה, והמחיר וההצעה הכתובה נבנים תוך כדי. ארבע שיטות תמחור, וכל מספר עם המשפט שממנו הוא נלקח.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://pre-call-swart.vercel.app/post-call">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PRE-CALL · POST-CALL">
+<meta property="og:locale" content="he_IL">
+<meta property="og:url" content="https://pre-call-swart.vercel.app/post-call">
+<meta property="og:title" content="POST-CALL · מהשיחה להצעה מתומחרת">
+<meta property="og:description" content="עונים על מה שנאמר בשיחה, והמחיר וההצעה הכתובה נבנים תוך כדי. ארבע שיטות תמחור, וכל מספר עם המשפט שממנו הוא נלקח.">
+<meta property="og:image" content="https://pre-call-swart.vercel.app/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="מהשיחה להצעה מתומחרת — PRE-CALL ו-POST-CALL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#16191d">
 <link rel="stylesheet" href="assets/post-call.css">
 </head>
 <body>
@@ -104,6 +127,35 @@
       <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
       <div class="chips" id="sysChips"></div>
     </div>
+    <!-- ============ מי שולח ============
+         Asked once and reused for every proposal after this one, like the
+         business profile in PRE-CALL. It sits here rather than in a
+         drawer because a document with no sender is not sendable, and a
+         required thing hidden behind a disclosure triangle is a thing
+         that does not get filled in. -->
+    <div class="qa senderbox">
+      <div class="qt" id="qtSender">מי שולח את ההצעה
+        <span class="sender-once" id="senderOnce">נשמר פעם אחת ומשמש לכל ההצעות</span>
+      </div>
+      <div class="why">בלי זה ההצעה יוצאת בלי שם — הלקוח מקבל מסמך שלא ברור ממי הוא.</div>
+      <div class="row">
+        <div><label for="s_name">השם שלך</label>
+          <input type="text" id="s_name" placeholder="למשל: דנה לוי" autocomplete="name"></div>
+        <div><label for="s_business">העסק או התחום <span class="hint">לא חובה</span></label>
+          <input type="text" id="s_business" placeholder="למשל: אוטומציות לעסקים קטנים" autocomplete="organization"></div>
+      </div>
+      <div class="row">
+        <div><label for="s_phone">טלפון <span class="hint">איך הלקוח חוזר אליך</span></label>
+          <input type="tel" id="s_phone" placeholder="052-1234567" autocomplete="tel"></div>
+        <div><label for="s_email">אימייל</label>
+          <input type="email" id="s_email" placeholder="dana@example.co.il" autocomplete="email"></div>
+      </div>
+      <label class="checkline" for="s_attr">
+        <input type="checkbox" id="s_attr" checked>
+        <span>להשאיר שורה קטנה בתחתית המסמך שאומרת במה הוא נבנה</span>
+      </label>
+    </div>
+
     <label for="q_client">שם הלקוח או העסק</label>
     <input type="text" id="q_client" placeholder="לכותרת ההצעה">
     <div class="row mt12">
@@ -425,6 +477,7 @@
 <script src="assets/pc-transcript.js"></script>
 <script src="assets/pc-example.js"></script>
 <script src="assets/pc-draft.js"></script>
+<script src="assets/pc-sender.js"></script>
 <script src="assets/pc-guide.js"></script>
 <script src="assets/pc-flow.js"></script>
 <script src="assets/pc-viz.js"></script>
