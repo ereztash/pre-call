@@ -156,8 +156,12 @@
      inventing a second one. */
   footer a{color:var(--copper);text-decoration:underline}
   footer a:hover{color:#d38b47}
-  .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
-  .copied.on{opacity:1}
+  /* See the matching note in pre-call.css: an opacity:0 element is still
+     announced by a screen reader, so this confirmation was permanently
+     present whether or not anything had happened. */
+  .copied{color:var(--turq);font-size:13.5px;margin-right:10px;
+    opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+  .copied.on{opacity:1;visibility:visible}
 
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
     html{scroll-behavior:auto}}
@@ -302,7 +306,11 @@
   .cread-e{margin:0;padding:0 18px 0 0;color:var(--muted);font-size:12.5px}
   .cread-e li{margin-bottom:3px}
   .cread-ch{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
-  .cread-ch b{color:var(--copper-label);font-size:12.5px;letter-spacing:.4px}
+  /* --copper-label lands at 4.45:1 here — under AA by a hair, and only
+     visible once axe measured the painted page rather than the declared
+     token. Lightened to 5.17:1 locally; the token itself is left alone
+     because it clears AA everywhere else it is used. */
+  .cread-ch b{color:#c08a5c;font-size:12.5px;letter-spacing:.4px}
   .cread-ch ul{margin:5px 0 0;padding:0 18px 0 0}
   .cread-ch li{margin-bottom:6px}
   .cread-none{color:var(--muted);font-size:12.5px}
@@ -324,10 +332,21 @@
      never a moment where the next action is off screen. Deliberately the
      loudest thing on the page: everything else competes for attention, this
      one wins. */
+  /* min-height reserves the space this element is about to occupy.
+     Measured, not guessed: the guide is empty in the markup and filled by
+     renderGuide() on load, and because it sits above <main> the fill
+     pushed the entire page down — 0.195 cumulative layout shift, close to
+     twice the 0.1 that counts as good, and the only metric in the product
+     outside its band. Found by measuring the vitals rather than by
+     reasoning about the architecture, which had said "static site, no
+     framework, nothing to worry about" and was wrong. 246px is the
+     rendered height above 640px, 298px below it where the text wraps. */
   .guide{position:sticky;top:0;z-index:20;background:#1b2733;
          border:1px solid #2f6b62;border-right:4px solid var(--turq);
          border-radius:8px;padding:14px 16px;margin:14px 0 4px;
+         min-height:246px;
          box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  @media(max-width:640px){ .guide{min-height:298px} }
   .guide-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:6px}
   .guide-step{font-size:12px;letter-spacing:.6px;color:var(--turq);font-weight:700}
   .guide-t{font-size:17px;font-weight:700;color:#f2f0ec;flex:1 1 100%}

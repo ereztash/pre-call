@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRE-CALL · תסריט שאלות לשיחת אפיון</title>
+<link rel="stylesheet" href="assets/pre-call.css">
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>PRE<span class="mark">·</span>CALL</h1>
+  <div class="sub">בונה תסריט שאלות לשיחת האפיון, לפני שאתם כותבים הצעת מחיר</div>
+  <div class="note">
+    ההצעה לא נתקעת בכתיבה. היא נתקעת בזה שיצאתם מהשיחה בלי המספרים שאתם צריכים כדי לכתוב אותה.
+    הכלי הזה מייצר את השאלות שמוציאות אותם, ואת כרטיס הקריאה למה שתשמעו.
+  </div>
+</header>
+
+<!-- A render that throws says so here instead of leaving a click that
+     silently did nothing — same mechanism as errBoundary in post-call.html. -->
+<div class="errbound hidden" id="errBoundary" role="status" aria-live="polite"></div>
+
+<div class="steps">
+  <button class="stepbtn on" data-s="1"><span class="n">שלב 1</span>אפיון העסק שלכם</button>
+  <button class="stepbtn" data-s="2"><span class="n">שלב 2</span>הזנת הפרופיל</button>
+  <button class="stepbtn" data-s="3"><span class="n">שלב 3</span>הצד השני</button>
+  <button class="stepbtn" data-s="4"><span class="n">שלב 4</span>התסריט</button>
+</div>
+
+<!-- ============ STEP 1 ============ -->
+<div class="panel on" id="p1">
+  <h2>שלב 1 · אפיון העסק שלכם</h2>
+  <p class="lead">העתיקו את הפרומפט, הריצו אותו ב-Claude או ב-ChatGPT, וענו על מה שהוא שואל. הוא יחזיר פרופיל מובנה. את הפרופיל תדביקו בשלב 2.</p>
+
+  <div class="box">
+    <h3>פרומפט לאפיון העסק</h3>
+    <!-- tabindex + role: the prompt overflows its 340px box, and a
+         scrolling region that cannot be reached by keyboard traps its own
+         content away from anyone not using a mouse (WCAG 2.1.1). Flagged
+         by axe against the painted page, not visible in the markup. -->
+    <pre class="prompt" id="promptBiz" tabindex="0" role="region" aria-label="פרומפט לאפיון העסק"></pre>
+    <button class="act" data-act="cp-biz">העתק פרומפט</button>
+    <span class="copied" id="c1">הועתק</span>
+  </div>
+
+  <div class="box">
+    <h3>למה זה נדרש פעם אחת בלבד</h3>
+    <p class="body-p">
+      עוגן המחיר בהצעה לא מגיע מהשוק. הוא מגיע מהעסקה האחרונה שלכם, ומהמספר שהלקוח הקודם הרוויח.
+      בלי שני אלה, השאלות בשיחה יישארו כלליות ותצאו ממנה עם תיאור במקום עם מספר.
+      הפרופיל נשמר בדפדפן הזה (localStorage) גם אחרי שסוגרים את הדף, ונטען אוטומטית בפעם הבאה.
+      הנתונים על הצד השני בשיחה, בשלב 3, לא נשמרים ונמחקים בסגירת הדף — בכוונה, כי אלה פרטים על אדם ספציפי לכל שיחה.
+    </p>
+  </div>
+</div>
+
+<!-- ============ STEP 2 ============ -->
+<div class="panel" id="p2">
+  <h2>שלב 2 · הזנת הפרופיל</h2>
+  <p class="lead">הדביקו את מה שחזר, או מלאו ידנית. שדות ריקים לא שוברים כלום, הם רק מקטינים את הדיוק של התסריט.</p>
+
+  <div class="box">
+    <h3>הדבקה מהירה</h3>
+    <label for="pasteBiz">הדביקו כאן את הפלט מהפרומפט
+      <span class="hint">הכלי ינסה לחלץ את השדות לבד. אפשר גם לדלג ולמלא ידנית למטה.</span>
+    </label>
+    <textarea id="pasteBiz" class="ta-md" placeholder="הדביקו כאן..."></textarea>
+    <button class="ghost" data-act="parse">חלץ שדות מההדבקה</button>
+  </div>
+
+  <div class="box">
+    <h3>הפרופיל <span id="profileSaved" class="copied tiny">✓ נשמר בדפדפן</span></h3>
+    <div class="grid2">
+      <div>
+        <label for="f_what">מה אתם מוכרים, במילים שלכם
+          <span class="hint">משפט אחד. לא סלוגן.</span></label>
+        <input type="text" id="f_what" placeholder="למשל: מסדר תהליכי גבייה לעסקים קטנים">
+      </div>
+      <div>
+        <label for="f_who">למי
+          <span class="hint">הקהל שבפועל שילם, לא הקהל שאתם רוצים.</span></label>
+        <input type="text" id="f_who" placeholder="למשל: משרדי רו״ח עד 10 עובדים">
+      </div>
+      <div>
+        <label for="f_unit">היחידה התחומה שלכם, אם יש
+          <span class="hint">פורמט + תוצר. אם אין, השאירו ריק. זה משנה את התסריט.</span></label>
+        <input type="text" id="f_unit" placeholder="למשל: 3 מפגשים, יוצא מהם נוהל גבייה כתוב">
+      </div>
+      <div>
+        <label for="f_price">מחיר היחידה, אם יש
+          <span class="hint">הרצפה הפנימית שלכם. לא נאמרת בשיחה, רק תזכורת לכם לפני שאלה 11.</span></label>
+        <input type="text" id="f_price" placeholder="למשל: 6,500 ₪">
+      </div>
+      <div>
+        <label for="f_last">העסקה האחרונה, סכום
+          <span class="hint">מה שהוא שילם לכם. לא נכנס לשיחה בקול, רק לכיול הפנימי שלכם מול מה שהרוויח.</span></label>
+        <input type="text" id="f_last" placeholder="למשל: 8,000 ₪">
+      </div>
+      <div>
+        <label for="f_src">איך הלקוח האחרון הגיע אליכם</label>
+        <select id="f_src">
+          <option value="">בחרו</option>
+          <option value="ref">הפניה או היכרות אישית</option>
+          <option value="content">מהתוכן שאני מפרסם</option>
+          <option value="out">מפנייה יזומה שלי</option>
+          <option value="other">אחר</option>
+        </select>
+      </div>
+    </div>
+    <label for="f_gain">מה הלקוח האחרון הרוויח מזה, במספר
+      <span class="hint">התחילו במספר או בטווח, ואז הקשר קצר אם צריך. זה נכנס ישירות למשפט העוגן בשיחה.</span></label>
+    <input type="text" id="f_gain" placeholder="למשל: כ-40,000 ₪ תזרים, אחרי שקיצר את זמן הגבייה מ-60 ל-25 יום">
+    <label for="f_edge">מה רק אתם רואים אצל הלקוחות שלכם, שאחרים לא רואים
+      <span class="hint">זה מה שהופך את שאלת הבעלות בשיחה למדויקת. שתיים או שלוש שורות, שיאוחדו למשפט אחד מצוטט בתסריט.</span></label>
+    <textarea id="f_edge" placeholder="למשל: שהבעיה אף פעם לא בתוכנה, היא בזה שאף אחד לא הוגדר כאחראי על המעקב"></textarea>
+    <label for="f_no">מה אתם לא מוכרים
+      <span class="hint">הגבול. מונע מכם להגיד כן בשיחה למשהו שתתחרטו עליו.</span></label>
+    <input type="text" id="f_no" placeholder="למשל: לא מפעיל את התהליך במקומם, לא ליווי חודשי">
+    <button class="ghost" data-act="clearprofile">מחק פרופיל שמור מהדפדפן הזה</button>
+    <span class="copied" id="c4">נמחק</span>
+  </div>
+
+  <div class="err hidden" id="err2"></div>
+  <button class="act" data-act="go3">המשך לצד השני</button>
+</div>
+
+<!-- ============ STEP 3 ============ -->
+<div class="panel" id="p3">
+  <h2>שלב 3 · הצד השני</h2>
+  <p class="lead">שתי דרכים. מהירה, או מעמיקה. הפרטים כאן משנים את הניסוח של השאלות, לא את המבנה.</p>
+  <button data-act="newprospect" class="ghost mb6">שיחה חדשה · נקה פרטי לקוח קודם</button>
+  <p class="hint-p tight">אם זו הכנה לשיחה עם מישהו אחר, לחצו כאן קודם — אחרת פרטים מהשיחה הקודמת עלולים להישאר בטופס.</p>
+
+  <div class="box">
+    <h3>מסלול מהיר · הדבקת פרופיל</h3>
+    <label for="p_paste">הדביקו את הכותרת, ה-About והתפקידים מהפרופיל שלו בלינקדאין, או כל טקסט ציבורי עליו
+      <span class="hint">אתר, פוסט, דף שירותים. כל דבר שהוא כתב על עצמו.</span></label>
+    <textarea id="p_paste" class="ta-lg" placeholder="הדביקו כאן..."></textarea>
+  </div>
+
+  <div class="box">
+    <h3>מסלול מעמיק · פרומפט ל-Deep Research</h3>
+    <p class="hint-p">מלאו את שני השדות למטה, ואז העתיקו את הפרומפט והריצו אותו במחקר מעמיק. את הפלט הדביקו בתיבה למעלה.</p>
+    <div class="grid2">
+      <div><label for="p_name">שם</label><input type="text" id="p_name" placeholder="שם מלא" data-oninput="builddr"></div>
+      <div><label for="p_co">העסק או התפקיד</label><input type="text" id="p_co" placeholder="שם החברה או התחום" data-oninput="builddr"></div>
+    </div>
+    <pre id="promptDR" class="prompt mt14" tabindex="0" role="region" aria-label="פרומפט למחקר מעמיק על הצד השני"></pre>
+    <button class="act" data-act="cp-dr">העתק פרומפט מחקר</button>
+    <span class="copied" id="c2">הועתק</span>
+  </div>
+
+  <div class="box">
+    <h3>מה שכבר ידוע לכם</h3>
+    <div class="grid2">
+      <div>
+        <label for="p_trig">יש טריגר ידוע
+          <span class="hint">אירוע שקרה לאחרונה ובגללו הוא מחפש עכשיו.</span></label>
+        <input type="text" id="p_trig" placeholder="למשל: איבד לקוח גדול בחודש שעבר">
+      </div>
+      <div>
+        <label for="p_how">איך הגעתם זה לזה</label>
+        <select id="p_how">
+          <option value="">בחרו</option>
+          <option value="in">הוא פנה אליי</option>
+          <option value="out">אני פניתי אליו</option>
+          <option value="ref">הפניה משלישי</option>
+        </select>
+      </div>
+    </div>
+    <label for="p_pair">שניים או שלושה, יחיד או צמד</label>
+    <select id="p_pair">
+      <option value="1">אדם אחד</option>
+      <option value="2">שניים או יותר בשיחה</option>
+    </select>
+  </div>
+
+  <button class="act" data-act="build">בנה את התסריט</button>
+  <div class="err hidden" id="err"></div>
+</div>
+
+<!-- ============ STEP 4 ============ -->
+<div class="panel" id="p4">
+  <div class="box">
+    <button class="act" data-act="cp-out">העתק את התסריט כטקסט</button>
+    <button class="ghost" data-act="print">הדפסה או PDF</button>
+    <button class="ghost" data-act="go3">חזרה לעריכה</button>
+    <span class="copied" id="c3">הועתק</span>
+  </div>
+  <div class="out" id="outArea"></div>
+  <div id="privArea" class="priv hidden"></div>
+
+  <!-- The tool this one hands off to. PRE-CALL ends where the call ends;
+       the numbers that came out of it are priced on the other side. -->
+  <div class="box next-tool">
+    <h3>אחרי השיחה</h3>
+    <p class="body-p">כשיש לכם את המספרים מהשיחה — התדירות, זמן הטיפול, התקלות — POST-CALL הופך אותם למחיר ולהצעה כתובה.</p>
+    <a class="act" href="post-call.html">לתמחור ההצעה · POST-CALL</a>
+  </div>
+</div>
+
+<!-- ============ גיבוי ושחזור ============
+     Everything above lives only in this browser's localStorage. Clearing
+     the cache or switching devices throws it all away at once — this is
+     the way out: a JSON file the operator keeps themselves. -->
+<div class="box backupbox">
+  <h3>גיבוי ושחזור</h3>
+  <p class="hint-p">הפרופיל העסקי כאן, וגם פנקס העסקאות ב-POST-CALL, קיימים רק בדפדפן הזה. גיבוי הוא קובץ JSON קטן ששומרים אצלכם — לא נשלח לשום מקום.</p>
+  <button type="button" class="ghost" data-act="backup-export">הורד גיבוי (JSON)</button>
+  <button type="button" class="ghost" data-act="backup-import">טען גיבוי</button>
+  <input type="file" id="backupFile" accept="application/json" class="hidden" aria-label="בחר קובץ גיבוי">
+  <span class="copied" id="backupMsg"></span>
+</div>
+
+<footer>
+  PRE-CALL · גרסה 0.1 · כלי הכנה לשיחה. אינו מייצר מחיר ואינו מייצר הצעה.<br>
+  כל הנתונים נשארים בדפדפן שלכם. שום דבר לא נשלח לשום שרת.<br>
+  <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
+  · <a href="privacy.html">פרטיות</a>
+  · <a href="index.html">דף הפתיחה</a>
+</footer>
+
+</div>
+
+<script src="assets/pc-backup.js"></script>
+<script src="assets/pre-call-content.js"></script>
+<script src="assets/pre-call.js"></script>
+</body>
+</html>

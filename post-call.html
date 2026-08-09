@@ -354,8 +354,13 @@
   <div id="privArea" class="priv hidden"></div>
 </div>
 
-<!-- ============ שלב 4 ============ -->
-<div class="sec">
+<!-- ============ שלב 4 ============
+     id="ledger" is the anchor the entry page's "what happened to my
+     proposals" route points at. It is on the section rather than on the
+     ledger box itself so the browser's own hash handling lands somewhere
+     sensible even before any script has run — the JS scroll refines that,
+     it is not what makes the link work. -->
+<div class="sec" id="ledger">
   <div class="sec-h">שלב 4 · אחרי שנשלחה</div>
   <h2>מה קרה בפועל</h2>
   <p class="lead">
@@ -387,7 +392,7 @@
 <div class="box next-tool">
   <h3 class="tpl-h">לפני התמחור</h3>
   <p class="hint-p">אם עוד לא הייתה שיחה — PRE-CALL בונה את תסריט השאלות שמוציא את המספרים שהעמוד הזה צריך.</p>
-  <a class="ghost" href="index.html">לתסריט השיחה · PRE-CALL</a>
+  <a class="ghost" href="pre-call.html">לתסריט השיחה · PRE-CALL</a>
 </div>
 </div>
 
@@ -396,6 +401,7 @@
   הכלי לא מבטיח שהלקוח יסכים למחיר. הוא מבטיח שהמחיר יהיה נגזר ממספר שהלקוח עצמו אמר.<br>
   <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
   · <a href="privacy.html">פרטיות</a>
+  · <a href="index.html">דף הפתיחה</a>
 </footer>
 
 </div>
