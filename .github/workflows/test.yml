@@ -61,6 +61,8 @@ jobs:
         run: node api/event.test.js
       - name: the health endpoint
         run: node api/health.test.js
+      - name: transfer weight and the no-dependency rule
+        run: node assets/weight.test.js
 
   # The whole product, in a real browser, in all three engines it will
   # actually be opened in. Separate job because it is the only thing here
@@ -79,3 +81,5 @@ jobs:
         run: node assets/journey.test.js
       - name: accessibility — axe-core on every page, in every state
         run: node assets/a11y.test.js
+      - name: core web vitals on a throttled phone
+        run: node assets/perf.test.js

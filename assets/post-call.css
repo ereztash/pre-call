@@ -332,10 +332,21 @@
      never a moment where the next action is off screen. Deliberately the
      loudest thing on the page: everything else competes for attention, this
      one wins. */
+  /* min-height reserves the space this element is about to occupy.
+     Measured, not guessed: the guide is empty in the markup and filled by
+     renderGuide() on load, and because it sits above <main> the fill
+     pushed the entire page down — 0.195 cumulative layout shift, close to
+     twice the 0.1 that counts as good, and the only metric in the product
+     outside its band. Found by measuring the vitals rather than by
+     reasoning about the architecture, which had said "static site, no
+     framework, nothing to worry about" and was wrong. 246px is the
+     rendered height above 640px, 298px below it where the text wraps. */
   .guide{position:sticky;top:0;z-index:20;background:#1b2733;
          border:1px solid #2f6b62;border-right:4px solid var(--turq);
          border-radius:8px;padding:14px 16px;margin:14px 0 4px;
+         min-height:246px;
          box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  @media(max-width:640px){ .guide{min-height:298px} }
   .guide-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:6px}
   .guide-step{font-size:12px;letter-spacing:.6px;color:var(--turq);font-weight:700}
   .guide-t{font-size:17px;font-weight:700;color:#f2f0ec;flex:1 1 100%}

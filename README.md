@@ -323,9 +323,10 @@ assets/pc-gate.js     שער התשלום
 assets/pc-ledger.js   שלב 4 על המסך
 assets/post-call.js   הקליפה — קריאת DOM, מצב, חיווט
 
-assets/*.test.js      440 בדיקות שרצות ב-Node בלי דפדפן
+assets/*.test.js      447 בדיקות שרצות ב-Node בלי דפדפן
 assets/journey.test.js   המסע המלא, בדפדפן אמיתי, בשלושה מנועים
 assets/a11y.test.js      axe-core · WCAG 2.1 AA על כל דף בכל מצב
+assets/perf.test.js      Core Web Vitals על טלפון מווסת
 api/                  ארבע פונקציות Vercel, אופציונליות
 .github/workflows/    הכל רץ על כל push
 ```
@@ -344,7 +345,7 @@ api/                  ארבע פונקציות Vercel, אופציונליות
 node assets/model.test.js       # וכן הלאה, כל חבילה בנפרד
 ```
 
-**440 בדיקות בתשע-עשרה חבילות, רצות ב-Node בלי דפדפן ובלי תלויות** — ומעליהן שתי חבילות שכן דורשות דפדפן: המסע המלא בשלושה מנועים (Chromium, Firefox, WebKit) ו-axe-core מול WCAG 2.1 AA על כל דף בכל מצב.
+**447 בדיקות בעשרים חבילות, רצות ב-Node בלי דפדפן ובלי תלויות** — ומעליהן שתי חבילות שכן דורשות דפדפן: המסע המלא בשלושה מנועים (Chromium, Firefox, WebKit) ו-axe-core מול WCAG 2.1 AA על כל דף בכל מצב, ומדידת Core Web Vitals על טלפון עם ויסות מעבד פי 4.
 
 הבדיקות שרצות בלי דפדפן הן לא בודקות רק חישוב:
 
