@@ -626,7 +626,7 @@ const renderGuide = guard('guide', function (){
     g = PC.guide.next(Object.assign(guideState(), { errFreq: 1, errCost: 1 }));
   }
 
-  box.className = 'guide' + (g.ready ? ' ready' : '');
+  box.className = 'guide' + (g.ready ? ' ready' : '') + (guidePinned ? ' stuck' : '');
   box.innerHTML =
     '<div class="guide-top">' +
       // an optional step must not claim a number in the sequence — saying
@@ -685,13 +685,26 @@ const renderGuide = guard('guide', function (){
    phone. An observer rather than a scroll handler, so this costs nothing
    per frame. Browsers without IntersectionObserver simply never collapse
    it, which is exactly the behaviour they have today. */
+/* Held in a variable, not only on the element. renderGuide() rebuilds the
+   bar's className from scratch on every keystroke, which wiped the class
+   the observer had set — and because an IntersectionObserver only fires
+   when the intersection *changes*, nothing ever put it back. The result
+   was worse than the problem it was meant to solve: collapsed to 66px on
+   scroll, then 349px again — 52% of an iPhone SE — the moment the
+   operator typed anything, and stuck there for the rest of the session.
+
+   Found by an external reviewer reading the interaction between two
+   functions. The journey test had walked the scroll and checked the
+   collapse, and never typed afterwards; it does now. */
+let guidePinned = false;
+
 function watchGuidePin(){
   const sentinel = el('guideSentinel'), bar = el('guideBar');
   if (!sentinel || !bar || typeof IntersectionObserver === 'undefined') return;
-  new IntersectionObserver(
-    ([e]) => bar.classList.toggle('stuck', !e.isIntersecting),
-    { threshold: 0 }
-  ).observe(sentinel);
+  new IntersectionObserver(([e]) => {
+    guidePinned = !e.isIntersecting;
+    bar.classList.toggle('stuck', guidePinned);
+  }, { threshold: 0 }).observe(sentinel);
 }
 
 function confirmScope(){

@@ -143,5 +143,35 @@ test('the filename is safe for a filesystem and still recognisable', () => {
   assert.ok(n.includes('הדר'), 'the client should still be recognisable: ' + n);
 });
 
+console.log('\nthe calendar date is the date the operator was shown');
+/* Found in review, reproduced exactly: a proposal sent just after midnight
+   in Asia/Jerusalem promised 29.8 on screen and wrote 20260828 into the
+   file. A reminder that fires the day before the one you were told is
+   worse than none, because you stop trusting the ones that do. */
+test('DTSTART is the local calendar date, not the UTC one', () => {
+  const at = new Date('2026-08-18T00:30:00+03:00');
+  const d = { id: 'x', client: 'לקוח', status: 'sent', sentAt: at.toISOString() };
+  const start = (F.icsFor(d).match(/DTSTART;VALUE=DATE:(\d{8})/) || [])[1];
+  // what the UI promises: the same instant, read as a local calendar date
+  const when = new Date(Math.max(at.getTime() + F.NUDGE_AFTER_DAYS * DAY,
+    at.getTime() + (F.DEFAULT_VALIDITY_DAYS - F.CLOSING_WINDOW_DAYS) * DAY));
+  const p = n => String(n).padStart(2, '0');
+  const promised = when.getFullYear() + p(when.getMonth() + 1) + p(when.getDate());
+  assert.strictEqual(start, promised,
+    'the file says a different day from the one the operator was told');
+});
+test('DTEND stays exactly one day after DTSTART, in the same calendar', () => {
+  const ics = F.icsFor(sentDaysAgo(0), { now: NOW });
+  const s = (ics.match(/DTSTART;VALUE=DATE:(\d{8})/) || [])[1];
+  const e = (ics.match(/DTEND;VALUE=DATE:(\d{8})/) || [])[1];
+  const toD = t => new Date(+t.slice(0,4), +t.slice(4,6) - 1, +t.slice(6,8));
+  assert.strictEqual(Math.round((toD(e) - toD(s)) / DAY), 1,
+    'an all-day event must end the day after it starts');
+});
+test('DTSTAMP is still an instant in UTC, as the spec requires', () => {
+  assert.ok(/DTSTAMP:\d{8}T\d{6}Z/.test(F.icsFor(sentDaysAgo(0), { now: NOW })),
+    'DTSTAMP is a timestamp, not a calendar date — it keeps the Z form');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

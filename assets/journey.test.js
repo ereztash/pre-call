@@ -303,6 +303,27 @@ async function journey(engineName, base) {
       'the pinned guide covers ' + pinned.covered + ' controls');
     assert.ok(pinned.keepsTitle && pinned.keepsAction,
       'collapsing must keep what to do and the button that does it');
+
+    /* And then the operator does the obvious next thing: types. This walk
+       stopped one step short of that, which is exactly how the collapse
+       shipped broken — renderGuide rebuilds the bar's className on every
+       keystroke, the observer had already fired and would not fire again,
+       and the guide sprang back to 349px (52% of this screen) on the first
+       character typed. Scrolling is not the end of the journey; scrolling
+       and then working is. */
+    await fresh.fill('#q_process', 'משהו שהמפעיל מקליד אחרי שגלל');
+    await fresh.fill('#q_client', 'לקוח');
+    await fresh.waitForTimeout(400);
+
+    const working = await fresh.evaluate(() => {
+      const g = document.getElementById('guideBar');
+      return { stuck: g.classList.contains('stuck'),
+               pct: Math.round(g.getBoundingClientRect().height / window.innerHeight * 100) };
+    });
+    assert.strictEqual(working.stuck, true,
+      'the guide un-collapsed as soon as the operator typed — a re-render dropped the state');
+    assert.ok(working.pct <= 15,
+      'after typing, the pinned guide is back to ' + working.pct + '% of the screen (limit 15%)');
     await c.close();
   });
 
@@ -463,6 +484,31 @@ async function journey(engineName, base) {
     const text = await fresh.textContent('#resumeBox');
     assert.ok(text.includes('לקוח חוזר'), 'the resume line does not name the client it is about');
     await fresh.close();
+  });
+
+  /* The static half of this lives in markup.test.js. This is the half a
+     stylesheet cannot answer: whether anything the page decided to hide
+     at runtime is nevertheless painted. POST-CALL shipped an empty 26px
+     turquoise strip above the guide on every fresh load — .draftnote
+     carried class="hidden" and set display:flex four hundred lines
+     further down, so the utility lost on source order. It was found by
+     taking a screenshot and looking at it, which is not a method that
+     scales; this is. */
+  await test(label('nothing the page marked hidden is painted anyway'), async () => {
+    for (const url of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+      const c = await browser.newContext();
+      const p = await c.newPage();
+      await p.goto(base + url);
+      await p.waitForTimeout(400);
+      const painted = await p.evaluate(() =>
+        [...document.querySelectorAll('.hidden')]
+          .filter(el => el.getBoundingClientRect().height > 0)
+          .map(el => (el.id || el.className) + ' · ' +
+                     Math.round(el.getBoundingClientRect().height) + 'px'));
+      await c.close();
+      assert.deepStrictEqual(painted, [],
+        url + ' paints elements it marked hidden: ' + painted.join(', '));
+    }
   });
 
   await test(label('nothing threw anywhere in the whole journey'), async () => {
