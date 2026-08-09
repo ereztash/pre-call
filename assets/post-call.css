@@ -169,6 +169,30 @@
   .out p,.out li{font-size:14.5px;color:#33383f;line-height:1.7}
   .out ul{padding:0 20px 0 0;margin:4px 0}
   .out li{margin-bottom:5px}
+
+  /* ---- what is in, and what is out ----
+     The exclusions were red and outnumbered the inclusions nine to six, so
+     the largest and loudest block in the document was the list of what the
+     client is NOT buying. Red is this document's alarm colour and a
+     boundary is not an alarm. Both lists now carry their own marker rather
+     than a hue, so the distinction survives greyscale printing and colour
+     vision deficiency alike, and the weight matches the meaning: what they
+     get reads first and strongest.
+
+     Markers are drawn with ::before rather than list-style so they keep
+     their colour independently of the text. */
+  .out ul.incl,.out ul.excl{list-style:none;padding:0;margin:6px 0}
+  .out ul.incl li,.out ul.excl li{position:relative;padding-right:22px}
+  .out ul.incl li::before{content:"✓";position:absolute;right:0;top:0;
+    color:#256b58;font-weight:700}
+  .out ul.incl li{color:#2b3038}
+  .out ul.excl li::before{content:"—";position:absolute;right:0;top:0;color:#636973}
+  .out ul.excl li{color:#575d68}
+  .out ul.plus{list-style:none;padding:0;margin:6px 0}
+  .out ul.plus li{position:relative;padding-right:22px;color:#4a4034}
+  .out ul.plus li::before{content:"+";position:absolute;right:0;top:0;
+    color:#8a5a2c;font-weight:700}
+
   .out .pricebox{background:#fff;border:1px solid #e2ded7;border-right:3px solid var(--copper);
                  border-radius:4px;padding:16px 18px;margin:10px 0}
   .out .pricebox .amt{font-size:28px;font-weight:700;color:#16191d;

@@ -50,10 +50,34 @@
     return '';
   }
 
-  /* Cut on a word boundary — slicing mid-word left titles ending in "...חשבו". */
+  /* The first line of the client's document, and it used to be the process
+     description guillotined at 55 characters: "אוטומציה של כל הזמנה שנכנסת
+     בוואטסאפ מוקלדת ידנית לגיליון, ואז…". A sentence cut mid-thought is the
+     first thing the reader sees, and it reads as carelessness before they
+     have got to anything that matters.
+
+     A title is not a shortened paragraph, it is the first clause. Process
+     descriptions are written as sequences — this happens, then that, then
+     the other — so the first clause is almost always the thing itself, and
+     it ends where the writer already put a break. Cutting there yields a
+     complete thought with no ellipsis at all.
+
+     The rest of the description is not lost: it is printed in full, three
+     lines below, under "מה קורה היום". */
+  const CLAUSE_BREAK = /[,.;:]|\s(?:ואז|ואחר כך|ולאחר מכן|ובסוף|ואחריו|ואחרי זה)\s/;
+
   function titleFrom(process) {
-    let t = (process || '').split('\n')[0].trim();
-    if (t.length > 55) t = t.slice(0, 55).replace(/\s+\S*$/, '') + '…';
+    const first = (process || '').split('\n')[0].trim();
+    if (!first) return '';
+
+    const cut = first.split(CLAUSE_BREAK)[0].trim();
+    // A clause is only a good title if it is long enough to say something;
+    // "כל הזמנה" alone is worse than the fuller line it came from.
+    let t = cut.length >= 12 ? cut : first;
+
+    // Only now, and only if that clause is itself enormous, fall back to a
+    // hard cut — and keep it on a word boundary.
+    if (t.length > 60) t = t.slice(0, 60).replace(/\s+\S*$/, '') + '…';
     return t;
   }
 
@@ -131,15 +155,28 @@ ${f.trigger ? `<h4>למה עכשיו</h4><p>${escape(f.trigger)}</p>` : ''}
 ${m.annualValue && !a.suppressRoi ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ כ-' + n0(m.runs) + ' פעמים בשנה, ' : ''}${m.hours ? n0(m.hours) + ' שעות עבודה' : ''}${m.errValue ? ', ובנוסף ' + ils(m.errValue) + ' בשנה בתקלות' : ''}. סה"כ כ-<b>${ils(m.annualValue)} בשנה</b>.</p>` : ''}
 
 ${scope.in.length ? `<h4>מה נכלל</h4>
-<ul>${scope.in.map((i, ix) =>
+<!-- This is what the client is buying, so it carries the weight the
+     exclusions used to take. -->
+<ul class="incl">${scope.in.map((i, ix) =>
   `<li>${escape(i.t)}${ix === 0 && systems.length ? ', כולל החיבורים בין ' + escape(systems.join(', ')) : ''}</li>`).join('')}</ul>` : ''}
 
 ${scope.out.length ? `<h4>מה לא נכלל</h4>
-<ul>${scope.out.map(i => `<li class="no">${escape(i.t)}</li>`).join('')}</ul>
+<!-- These used to be red, and there were nine of them against six plain
+     lines of what the client does get — which made the largest, loudest
+     block on the page the list of what they are not buying. Red is the
+     colour this document uses for alarm, and a boundary is not an alarm;
+     it is the sentence underneath, that each of these is available and
+     priced separately. Quieted to a neutral tone with its own marker, so
+     the emphasis matches the meaning and the distinction survives without
+     colour (WCAG 1.4.1). -->
+<ul class="excl">${scope.out.map(i => `<li>${escape(i.t)}</li>`).join('')}</ul>
 <p class="fine">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
 
 ${scope.extra.length ? `<h4>זמין בתוספת תשלום</h4>
-<ul>${scope.extra.map(i => `<li>${escape(i.t)}</li>`).join('')}</ul>` : ''}
+<!-- The third of three lists, and it was the only one left on a default
+     bullet once the other two got markers. Three categories, three
+     marks — a plus, because that is exactly what this one is. -->
+<ul class="plus">${scope.extra.map(i => `<li>${escape(i.t)}</li>`).join('')}</ul>` : ''}
 
 <h4>המחיר</h4>
 <div class="pricebox">
@@ -152,7 +189,15 @@ ${a.suppressRoi ? '' : rationaleFor(m, ils)}
 <table>
   <tr><th>שלב</th><th>מה קורה</th><th>משך</th></tr>
   <tr><td>מיפוי</td><td>ישיבה אחת, ואני חוזר עם תרשים התהליך לאישור</td><td>שבוע</td></tr>
-  <tr><td>בנייה</td><td>פיתוח והטמעה, אומדן ${m.effort} שעות עבודה</td><td>${Math.max(1, Math.ceil(m.effort/12))} עד ${Math.max(2, Math.ceil(m.effort/8))} שבועות</td></tr>
+  <!-- No hour count here. rationaleFor() above states the rule plainly —
+       justifying a price with hours invites a negotiation about hours, and
+       the anchor is meant to be what the work is worth rather than what it
+       costs to produce — and then this row printed the hours anyway, in the
+       client's copy, three sections below. The estimate stays on the
+       operator's screen and in the ledger, where it is theirs. What the
+       client is owed here is how long it takes, which is the column beside
+       it and is unchanged. -->
+  <tr><td>בנייה</td><td>פיתוח והטמעה של התהליך</td><td>${Math.max(1, Math.ceil(m.effort/12))} עד ${Math.max(2, Math.ceil(m.effort/8))} שבועות</td></tr>
   <tr><td>בדיקה</td><td>הרצה על נתונים אמיתיים במקביל לתהליך הקיים</td><td>שבוע</td></tr>
   <tr><td>מסירה</td><td>הדרכה, תיעוד, ואז שבועיים ליווי</td><td>שבועיים</td></tr>
 </table>

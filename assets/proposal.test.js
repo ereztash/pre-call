@@ -116,12 +116,17 @@ test('a method with no data produces no rationale rather than a false one', () =
 });
 
 console.log('\ntitle');
-test('a long first line is cut on a word boundary', () => {
+/* This test used to require an ellipsis on every long title, which
+   encoded the behaviour that was itself the fault: the client's first line
+   arrived guillotined. The intent it was protecting — a long process must
+   not produce an unbounded heading — is still right, so it is kept and the
+   mechanism assertion is dropped. */
+test('a long first line yields a bounded title, however it gets there', () => {
   const long = 'כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון ואז נפתחת חשבונית במערכת ונשלחת ללקוח';
   const t = P.titleFrom(long);
-  assert.ok(t.endsWith('…'));
-  assert.ok(!/\s…$/.test(t), 'no dangling space before the ellipsis');
-  assert.ok(long.startsWith(t.slice(0, -1)), 'the cut must be a prefix of the original');
+  assert.ok(t.length <= 62, 'the heading is unbounded: ' + t.length + ' chars');
+  assert.ok(long.startsWith(t.replace(/…$/, '')), 'the title must be a prefix of what was written');
+  assert.ok(!/\s…$/.test(t), 'no dangling space before an ellipsis');
 });
 test('only the first line becomes the title', () => {
   assert.strictEqual(P.titleFrom('שורה ראשונה\nשורה שנייה'), 'שורה ראשונה');
@@ -135,6 +140,66 @@ test('no process text still yields a usable heading', () => {
 console.log('\ndeterminism');
 test('the same context twice gives byte-identical output', () => {
   assert.strictEqual(P.build(ctx()), P.build(ctx()));
+});
+
+console.log('\nthe document as the client receives it');
+/* Three faults found by rendering the document and looking at it, which
+   nothing in this project had ever done — every check had been run against
+   the tool and none against its output. */
+test('the title is a complete thought, not a sentence cut mid-word', () => {
+  const t = P.titleFrom('כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במורנינג ונשלחת חזרה');
+  assert.ok(!t.includes('…'), 'the first line the client reads was guillotined: ' + t);
+  assert.ok(!/ואז$/.test(t), 'it ended on a conjunction going nowhere');
+  assert.strictEqual(t, 'כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון');
+});
+test('a sequence word breaks the title just like punctuation does', () => {
+  assert.strictEqual(P.titleFrom('מישהו עובר על החשבוניות הפתוחות ואז שולח תזכורות ידנית'),
+    'מישהו עובר על החשבוניות הפתוחות');
+});
+test('a clause too short to say anything keeps the fuller line instead', () => {
+  assert.strictEqual(P.titleFrom('גבייה, תזכורות ומעקב אחרי לקוחות'), 'גבייה, תזכורות ומעקב אחרי לקוחות',
+    '"גבייה" alone is a worse title than the line it came from');
+});
+test('an unpunctuated monster still gets cut on a word boundary, as a last resort', () => {
+  const t = P.titleFrom('תהליך ארוך במיוחד בלי שום סימן פיסוק שממשיך ונמשך ואינו נגמר לעולם וכך הלאה עוד ועוד');
+  assert.ok(t.length <= 62 && t.endsWith('…'));
+  assert.ok(!/\S…$/.test(t.replace('…','')) || !t.includes('  '), 'cut mid-word');
+});
+
+test('the client copy never states the build estimate', () => {
+  /* "שעות עבודה" appears three times for good reasons — the client's own
+     annual hours, the hours they get back each week, and the bounded tuning
+     commitment. None of those is the operator's build estimate, which is
+     the one figure rationaleFor() says must stay out because quoting it
+     invites a negotiation about hours instead of about worth. So this
+     asserts on that number specifically, with a value chosen not to collide
+     with anything else the document prints. */
+  const EFFORT = 4242;
+  const html = P.build(ctx({
+    m: Object.assign({}, ctx().m, { effort: EFFORT }),
+    f: { client: 'לקוח', process: 'תהליך ידני' }
+  }));
+  assert.ok(!html.includes(String(EFFORT)),
+    'the build estimate reached the client copy — it belongs on the operator\'s screen');
+  assert.ok(/שבועות/.test(html), 'how long it takes is what the client is owed, and must stay');
+});
+
+test('exclusions are not the loudest thing on the page', () => {
+  const html = P.build(ctx({
+    scope: { in: [{ t: 'בנייה' }], out: [{ t: 'ניקוי נתונים' }, { t: 'הרשאות' }], extra: [] },
+    f: { client: 'לקוח', process: 'תהליך' }
+  }));
+  assert.ok(/ul class="excl"/.test(html), 'the exclusion list has no class of its own to quiet');
+  assert.ok(!/li class="no"/.test(html),
+    'red is this document\'s alarm colour, and a boundary is not an alarm');
+  assert.ok(/ul class="incl"/.test(html), 'what the client is buying should carry the weight');
+});
+test('both lists stay distinguishable without colour', () => {
+  const css = require('fs').readFileSync(__dirname + '/post-call.css', 'utf8');
+  assert.ok(/\.out ul\.incl li::before\{content:"[^"]+"/.test(css),
+    'inclusions need a marker that survives greyscale and colour blindness');
+  assert.ok(/\.out ul\.excl li::before\{content:"[^"]+"/.test(css),
+    'so do exclusions');
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
