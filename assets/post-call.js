@@ -678,6 +678,22 @@ const renderGuide = guard('guide', function (){
   if (fill) fill.style.width = g.percent + '%';
 });
 
+/* Watches the zero-height marker sitting at the guide's resting position.
+   While it is visible the guide is at rest; once it leaves the top of the
+   viewport the guide is pinned, and .stuck collapses it to one line — see
+   the note on .guide.stuck in post-call.css for what that is worth on a
+   phone. An observer rather than a scroll handler, so this costs nothing
+   per frame. Browsers without IntersectionObserver simply never collapse
+   it, which is exactly the behaviour they have today. */
+function watchGuidePin(){
+  const sentinel = el('guideSentinel'), bar = el('guideBar');
+  if (!sentinel || !bar || typeof IntersectionObserver === 'undefined') return;
+  new IntersectionObserver(
+    ([e]) => bar.classList.toggle('stuck', !e.isIntersecting),
+    { threshold: 0 }
+  ).observe(sentinel);
+}
+
 function confirmScope(){
   confirmScopeSilently();
   saveDraftSoon();
@@ -1218,5 +1234,6 @@ renderScope();
 recompute();   // recompute drives the method, the client read and the document
 renderGuide();
 renderLedger();
+watchGuidePin();     // after the guide exists, before any scrolling happens
 applyEntryRoute();   // after the renders above, so there is something to land on
 track('opened');

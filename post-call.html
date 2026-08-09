@@ -26,7 +26,15 @@
 <!-- ============ המדריך — הוא שמוביל, לא המשתמש ============
      Exactly one instruction, always on screen, always taking you to the
      one place that instruction is about. Everything else on the page is
-     optional detail; this is the spine. -->
+     optional detail; this is the spine.
+
+     The sentinel below is how the bar knows it has become stuck. It is a
+     zero-height marker at the guide's resting position: while it is in
+     view the guide is at rest and shows everything; once it scrolls out
+     of view the guide is pinned to the top of the screen and collapses to
+     a single line. An IntersectionObserver on this element costs nothing,
+     where a scroll handler would run on every frame of every scroll. -->
+<div id="guideSentinel" aria-hidden="true"></div>
 <div class="guide" id="guideBar" role="status" aria-live="polite"></div>
 
 <!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->

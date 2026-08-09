@@ -261,6 +261,51 @@ async function journey(engineName, base) {
     await c.close();
   });
 
+  /* The guide is the spine of the page and earns its size at rest. Pinned
+     it was 298px — 35% of an iPhone 14 and 45% of an SE, permanently,
+     with four controls underneath it. Half of that was self-inflicted: a
+     min-height added to stop a layout shift turned a varying height into
+     a fixed one. This holds the collapsed state to something a phone can
+     afford. */
+  await test(label('the pinned guide collapses instead of owning a third of the phone'), async () => {
+    const c = await browser.newContext({ viewport: { width: 375, height: 667 } });
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(500);
+
+    const atRest = await fresh.evaluate(() => {
+      const g = document.getElementById('guideBar');
+      return { stuck: g.classList.contains('stuck'),
+               hasAsk: !!g.querySelector('.guide-ask')?.offsetHeight };
+    });
+    assert.strictEqual(atRest.stuck, false, 'the guide should not be collapsed at rest');
+    assert.ok(atRest.hasAsk, 'the full instruction must be visible at rest');
+
+    await fresh.evaluate(() => window.scrollBy(0, 800));
+    await fresh.waitForTimeout(400);
+
+    const pinned = await fresh.evaluate(() => {
+      const g = document.getElementById('guideBar');
+      const r = g.getBoundingClientRect();
+      const covered = [...document.querySelectorAll('button,input,select,textarea,a')]
+        .filter(el => { const b = el.getBoundingClientRect();
+          return b.height > 0 && b.top < r.bottom && b.bottom > r.top && !g.contains(el); }).length;
+      return { stuck: g.classList.contains('stuck'),
+               pct: Math.round(r.height / window.innerHeight * 100),
+               covered,
+               keepsAction: !!g.querySelector('.guide-acts .act')?.offsetHeight,
+               keepsTitle: !!g.querySelector('.guide-t')?.offsetHeight };
+    });
+    assert.strictEqual(pinned.stuck, true, 'the guide never collapsed on scroll');
+    assert.ok(pinned.pct <= 15,
+      'the pinned guide takes ' + pinned.pct + '% of the smallest common phone screen (limit 15%)');
+    assert.ok(pinned.covered <= 2,
+      'the pinned guide covers ' + pinned.covered + ' controls');
+    assert.ok(pinned.keepsTitle && pinned.keepsAction,
+      'collapsing must keep what to do and the button that does it');
+    await c.close();
+  });
+
   // --- returning mid-flow ---
   await test(label('an unfinished proposal is offered back on the entry page'), async () => {
     const fresh = await ctx.newPage();

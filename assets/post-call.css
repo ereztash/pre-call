@@ -347,6 +347,60 @@
          min-height:246px;
          box-shadow:0 6px 18px rgba(0,0,0,.35)}
   @media(max-width:640px){ .guide{min-height:298px} }
+
+  /* ---- the guide, once it is pinned ----
+     Measured on a real phone rather than reasoned about: at rest this bar
+     is the spine of the page and earns its size, but pinned it was still
+     298px — 35% of an iPhone 14 screen and 45% of an SE, permanently, with
+     four interactive controls sitting underneath it at all times. Its
+     call-to-action sat 17–23% down the screen, which is the top of the
+     display and the hardest place on a phone for a thumb to reach; the
+     evidence puts primary actions in the lower two thirds.
+
+     Half of that was self-inflicted. min-height above was added to stop a
+     0.195 layout shift, and it turned a height that used to vary into one
+     that never did — a measured metric bought at the cost of an
+     unmeasured experience.
+
+     Pinned, the bar keeps only what is load bearing: which step this is,
+     what to do, and the button that does it. Everything explanatory comes
+     back the moment it returns to its resting place. min-height is
+     dropped here too, so the reservation that fixes the layout shift
+     applies only at rest, where the shift actually happens. */
+  .guide.stuck{
+    min-height:0;
+    padding:10px 14px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+    border-radius:0 0 8px 8px;margin-top:0;
+  }
+  .guide.stuck .guide-ask,
+  .guide.stuck .guide-why,
+  .guide.stuck .guide-sug,
+  .guide.stuck .guide-bar,
+  .guide.stuck .guide-dots{display:none}
+  /* nowrap + ellipsis, or the three surviving pieces stack into three rows
+     and the bar is 125px instead of the 65px this is for. The title is
+     what tells you what you are doing; it gets the room, and truncates
+     rather than wrapping. */
+  .guide.stuck .guide-top{margin:0;flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow:hidden}
+  .guide.stuck .guide-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .guide.stuck .guide-step{flex:0 0 auto}
+  .guide.stuck .guide-acts{margin:0;flex:0 0 auto}
+  .guide.stuck .guide-acts .act{padding:8px 16px;font-size:14px;min-height:44px}
+  /* the skip link is a decision for the resting state, not for a pinned strip */
+  .guide.stuck .guide-skip{display:none}
+  /* a warning about an implausible number is the one thing that must
+     survive the collapse — it is the reason to stop, not a detail */
+  .guide.stuck .guide-prob{flex:1 1 100%;margin:4px 0 0;font-size:12.5px}
+  @media(max-width:640px){
+    .guide.stuck .guide-t{font-size:15px}
+    /* on a phone there is room for the instruction or the step counter,
+       not both. What to do beats how far along you are. */
+    .guide.stuck .guide-step{display:none}
+  }
+  @media(prefers-reduced-motion:no-preference){
+    .guide{transition:padding .15s ease}
+  }
   .guide-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:6px}
   .guide-step{font-size:12px;letter-spacing:.6px;color:var(--turq);font-weight:700}
   .guide-t{font-size:17px;font-weight:700;color:#f2f0ec;flex:1 1 100%}
