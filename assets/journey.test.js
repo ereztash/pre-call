@@ -486,6 +486,64 @@ async function journey(engineName, base) {
     await fresh.close();
   });
 
+  /* POST-CALL carries more controls than every other page put together,
+     and one section used to hold 37% of them: seventeen scope rows of
+     three buttons each, fifty-one in all. The argument against that was
+     never the count — it was that the section's own copy said "כל שורה
+     כבר מסומנת ... משנים רק מה שלא מתאים" and "רוב הפעמים אין מה לשנות",
+     while the layout asked seventeen equally-weighted questions.
+
+     Grouped by state, each row carries only the moves available to it,
+     and the state is legible from which list an item is in rather than
+     from decoding a lit chip seventeen times. This holds the shape: the
+     three groups must exist, and no row may offer a move to where it
+     already is. */
+  await test(label('the scope reads as three lists, not as seventeen questions'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון');
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(400);
+
+    const shape = await fresh.evaluate(() => ({
+      groups: [...document.querySelectorAll('#scopeBox .scope-g')].map(g => ({
+        state: [...g.classList].find(c => c.startsWith('scope-g-')),
+        rows: g.querySelectorAll('.scope-row').length,
+        counted: +g.querySelector('.scope-n').textContent })),
+      controls: document.querySelectorAll('#scopeBox button').length,
+      rows: document.querySelectorAll('#scopeBox .scope-row').length,
+      /* a row must never offer to send an item where it already is */
+      selfMoves: [...document.querySelectorAll('#scopeBox .scope-g')].flatMap(g => {
+        const s = [...g.classList].find(c => c.startsWith('scope-g-')).replace('scope-g-', '');
+        return [...g.querySelectorAll('.smove')].filter(b => b.dataset.s === s)
+          .map(b => s + ' offers ' + b.dataset.s);
+      }),
+      unlabelled: [...document.querySelectorAll('#scopeBox .smove')]
+        .filter(b => !(b.getAttribute('aria-label') || '').includes('העבר')).length
+    }));
+
+    assert.ok(shape.groups.length >= 2,
+      'the scope collapsed back to a single undifferentiated list');
+    shape.groups.forEach(g => assert.strictEqual(g.rows, g.counted,
+      g.state + ' shows ' + g.rows + ' rows and claims ' + g.counted));
+    assert.deepStrictEqual(shape.selfMoves, [],
+      'a row offers a move to the state it is already in');
+    assert.strictEqual(shape.unlabelled, 0,
+      'a move button reads as bare "כלול" out of context — it needs its row in the name');
+    assert.strictEqual(shape.controls, shape.rows * 2,
+      'expected two moves per row, got ' + shape.controls + ' across ' + shape.rows + ' rows');
+
+    /* And the whole page, because this section is where it concentrates. */
+    const total = await fresh.evaluate(() =>
+      [...document.querySelectorAll('button,a,input,select,textarea,[tabindex]')]
+        .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }).length);
+    assert.ok(total <= 125,
+      'POST-CALL paints ' + total + ' controls (ceiling 125, was 137 before the scope regroup). ' +
+      'Raise this deliberately or move something behind a disclosure.');
+    await c.close();
+  });
+
   /* The largest UX number in the product that was out of band, and one
      nothing else could have caught: it breaks no rule, fails no contrast
      check, and at a 920px container the layout looks perfectly sensible.
@@ -520,10 +578,19 @@ async function journey(engineName, base) {
             parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
           return Math.round(box / glyph);
         };
+        /* Only elements that actually hold the text themselves. A flex row
+           whose prose lives in a capped child is as wide as the row, and
+           measuring it reports a line length nobody ever sees — the
+           grouped scope list tripped exactly that and named thirteen
+           false positives at 99ch while the text inside them was capped
+           at 64. Same class of error as measuring an inline element's
+           clientWidth: the box is not the line. */
+        const ownText = e => [...e.childNodes]
+          .filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join(' ').length;
         return [...document.querySelectorAll('p, li, .lead, .hint-p, .sub')]
           .filter(e => { const r = e.getBoundingClientRect();
             return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; })
-          .filter(e => e.textContent.trim().length > 60)
+          .filter(e => ownText(e) > 60)
           .map(e => ({ c: (e.className || e.tagName).toString().slice(0, 24), n: chars(e) }))
           .filter(x => x.n > 90)
           .map(x => x.c + ' at ' + x.n + 'ch');

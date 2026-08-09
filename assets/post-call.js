@@ -304,19 +304,68 @@ Object.entries(EXAMPLES).forEach(([id, text]) => {
 });
 
 /* ---------- scope on screen ---------- */
+/* ---------- what is in, and what is out ----------
+
+   This section used to be seventeen rows of three buttons — fifty-one
+   controls, 37% of every interactive element on the page, more than the
+   entry page and PRE-CALL and the privacy page have between them.
+
+   The argument against that is not the count. It is that the section's
+   own copy already said the opposite of what the layout did: "כל שורה
+   כבר מסומנת ... משנים רק מה שלא מתאים", and under the list, "רוב הפעמים
+   אין מה לשנות". A step the product describes as a review was rendered as
+   seventeen open questions, with every answer given equal weight and the
+   current state legible only by decoding which of three chips was lit.
+
+   Two things follow from taking the copy seriously. The state belongs in
+   the structure rather than in a highlight — group the items and you can
+   see at a glance what you are committing to. And the shape should be the
+   shape of the artefact: the proposal prints exactly these three lists,
+   so editing them in three lists means the operator is looking at the
+   document while they work rather than at a control panel that produces
+   one.
+
+   Each row now carries only the moves that are actually available to it —
+   two rather than three, because the state it is already in is not a
+   move. Fifty-one controls become thirty-four, and the ones that remain
+   read as actions on an item instead of as a choice between three equals. */
+const SCOPE_GROUPS = [
+  { s: 'in',    mark: '✓', h: 'כלול במחיר' },
+  { s: 'out',   mark: '—', h: 'לא כלול' },
+  { s: 'extra', mark: '+', h: 'בתוספת תשלום' }
+];
+
 const renderScope = guard('scope', function (){
   const box = el('scopeBox');
-  box.innerHTML = visibleScope(chosenSystems).map(i => `
-    <div class="scope-row">
-      <div class="scope-t">${esc(i.t)}${i.why ? `<span class="scope-why">${esc(i.why)}</span>` : ''}</div>
-      <div class="scope-btns">
-        ${['in','out','extra'].map(s =>
-          `<button type="button" class="sbtn s-${s}${scopeState[i.id]===s?' on':''}"
-             aria-pressed="${scopeState[i.id]===s}"
-             data-i="${i.id}" data-s="${s}">${SCOPE_LABEL[s]}</button>`).join('')}
-      </div>
-    </div>`).join('');
-  box.querySelectorAll('.sbtn').forEach(b => b.onclick = () => {
+  const items = visibleScope(chosenSystems);
+
+  box.innerHTML = SCOPE_GROUPS.map(g => {
+    const rows = items.filter(i => scopeState[i.id] === g.s);
+    if (!rows.length) return '';
+    return `<section class="scope-g scope-g-${g.s}" aria-labelledby="sg-${g.s}">
+      <h3 class="scope-g-h" id="sg-${g.s}">
+        <span class="scope-mark" aria-hidden="true">${g.mark}</span>${esc(g.h)}
+        <span class="scope-n">${rows.length}</span>
+      </h3>
+      <ul class="scope-l">${rows.map(i => `
+        <li class="scope-row">
+          <div class="scope-t">${esc(i.t)}${
+            i.why ? `<span class="scope-why">${esc(i.why)}</span>` : ''}</div>
+          <div class="scope-btns">${
+            /* only the states this item is not already in — the one it is
+               in is where it lives now, not somewhere it can be sent */
+            SCOPE_GROUPS.filter(o => o.s !== g.s).map(o =>
+              `<button type="button" class="smove smove-${o.s}"
+                 data-i="${esc(i.id)}" data-s="${o.s}"
+                 aria-label="${esc(i.t)} — העבר ל${esc(SCOPE_LABEL[o.s])}"
+               >${esc(SCOPE_LABEL[o.s])}</button>`).join('')
+          }</div>
+        </li>`).join('')}</ul>
+    </section>`;
+  }).join('') ||
+    '<p class="lead nomargin">אין עדיין פריטי סקופ — בחר את המערכות למעלה.</p>';
+
+  box.querySelectorAll('.smove').forEach(b => b.onclick = () => {
     scopeState[b.dataset.i] = b.dataset.s;
     renderScope();
     renderProposal();   // the client read does not depend on scope
