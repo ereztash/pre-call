@@ -61,3 +61,21 @@ jobs:
         run: node api/event.test.js
       - name: the health endpoint
         run: node api/health.test.js
+
+  # The whole product, in a real browser, in all three engines it will
+  # actually be opened in. Separate job because it is the only thing here
+  # that needs an install step — everything above runs on the standard
+  # library alone, and that property is worth keeping visible.
+  journey:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: install playwright and the three engines
+        run: npm install --no-save playwright@1.62.1 && npx playwright install --with-deps chromium firefox webkit
+      - name: the journey — entry page through to a priced proposal
+        run: node assets/journey.test.js
+      - name: accessibility — axe-core on every page, in every state
+        run: node assets/a11y.test.js

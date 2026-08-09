@@ -31,7 +31,7 @@
 <div class="box">
   <h3>מה נשמר, ואיפה בדיוק</h3>
   <p class="body-p">חמישה מפתחות, כולם ב-localStorage של הדפדפן — לא בענן, לא בשרת, לא מסונכרן בין מכשירים:</p>
-  <table class="read">
+  <table class="facts">
     <tr><th>מפתח</th><th>מה יש בו</th><th>איפה</th></tr>
     <tr><td><code>precall_profile_v1</code></td><td>הפרופיל העסקי שלכם (מה מוכרים, למי, עסקה אחרונה)</td><td>PRE-CALL</td></tr>
     <tr><td><code>postcall_deals_v1</code></td><td>פנקס העסקאות שנשמרו, כולל תוצאות ושעות בפועל</td><td>POST-CALL</td></tr>
@@ -48,7 +48,7 @@
 <div class="box">
   <h3>מה נשלח לשרת, בדיוק</h3>
   <p class="body-p">שלוש נקודות קצה, ושום דבר מעבר להן:</p>
-  <table class="read">
+  <table class="facts">
     <tr><th>נקודת קצה</th><th>מתי</th><th>מה נשלח</th></tr>
     <tr><td><code>/api/event</code></td><td>פעולות כמו פתיחת הדף, טעינת תבנית, שמירת עסקה</td>
       <td>שם האירוע, שיטת התמחור, מספר המערכות, סכום המחיר, ומקור המספר (unprompted/prompted/mine).
@@ -88,7 +88,7 @@
 
 <div class="box">
   <h3>אבטחה, בקצרה</h3>
-  <ul class="prep">
+  <ul class="points">
     <li>מדיניות אבטחת תוכן (CSP) קשיחה — הדף לא טוען שום סקריפט, גופן, או תמונה ממקור חיצוני.</li>
     <li><code>form-action 'none'</code> — שום טופס בדף לא יכול לשלוח נתונים לשום מקום אחר מלבד שלוש נקודות הקצה הפנימיות.</li>
     <li><code>frame-ancestors 'none'</code> — הדף לא יכול להיטען בתוך iframe באתר אחר.</li>
@@ -107,7 +107,7 @@
 </div>
 
 <footer>
-  <a href="index.html">PRE-CALL</a> · <a href="post-call.html">POST-CALL</a> ·
+  <a href="index.html">דף הפתיחה</a> · <a href="pre-call.html">PRE-CALL</a> · <a href="post-call.html">POST-CALL</a> ·
   <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
 </footer>
 

@@ -1139,6 +1139,48 @@ document.querySelectorAll('input,select,textarea').forEach(n => {
 const backupFileInput = el('backupFile');
 if (backupFileInput) backupFileInput.addEventListener('change', handleBackupFile);
 
+/* ---------- arriving from the entry page ----------
+   The entry page asks which situation you are in, not which tool you want,
+   so two of its four answers land on THIS page needing it to open in a
+   particular state rather than at the top. Without this the routing is a
+   lie: "see what happened to your proposals" and "show me an example"
+   would both drop you at question 1 of a blank form.
+
+   Runs after the first render, so what it scrolls to or fills is already
+   on the page. */
+function applyEntryRoute(){
+  const wantsDemo = /(?:^|[?&])demo=1(?:&|$)/.test(location.search);
+  const wantsLedger = location.hash === '#ledger';
+  if (!wantsDemo && !wantsLedger) return;
+
+  if (wantsDemo) {
+    /* Never silently over an existing session — but never silently refuse
+       either. Found by walking the journey in a real browser: the first
+       version just declined and flashed a small notice, so somebody who
+       clicked "show me an example" landed on their own half-finished
+       proposal with no example and no explanation of why. Asking is the
+       only version where both answers are what the person meant. */
+    const busy = PC.draft && !PC.draft.isEmpty(collectDraft(), PRISTINE);
+    if (busy && !confirm('יש כאן הצעה שלא סיימת. לטעון את שיחת הדוגמה במקומה?\n\nההצעה הנוכחית תוחלף.')) {
+      flashDoc('הדוגמה לא נטענה. ההצעה שלך נשארה כמו שהיא.');
+      return;
+    }
+    loadDemo();
+    const box = el('trReview');
+    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  /* 'auto', not 'smooth'. Arriving from a deep link is not an in-page
+     navigation — the person asked to be AT the ledger, so animating them
+     there means the page visibly lurches a beat after it settles. It was
+     also measurably unreliable: the smooth version landed in Firefox and
+     WebKit and silently did not in Chromium, found by running the journey
+     in all three rather than in the one that happened to be installed. */
+  const box = el('ledgerBox');
+  if (box) box.scrollIntoView({ block: 'start' });
+}
+
 /* ---------- start ----------
    Every module is loaded by now, so first render happens here rather than at
    the bottom of whichever file happened to define the function. */
@@ -1149,4 +1191,5 @@ renderScope();
 recompute();   // recompute drives the method, the client read and the document
 renderGuide();
 renderLedger();
+applyEntryRoute();   // after the renders above, so there is something to land on
 track('opened');
