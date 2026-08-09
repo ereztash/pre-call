@@ -486,6 +486,55 @@ async function journey(engineName, base) {
     await fresh.close();
   });
 
+  /* The largest UX number in the product that was out of band, and one
+     nothing else could have caught: it breaks no rule, fails no contrast
+     check, and at a 920px container the layout looks perfectly sensible.
+
+     Measured before the cap, on a desktop viewport: POST-CALL's
+     explanatory paragraphs ran a median of 131 characters per line,
+     against a typographic guideline of 45-75 and an outer bound near 90
+     where the eye starts losing its way back to the start of the next
+     line. Every page was over it. That is the specific mechanism behind
+     dense prose reading as a wall of text rather than as writing.
+
+     Measured here rather than in CSS because the number that matters is
+     the painted one — it depends on the font, the container, the padding
+     and the viewport at once, and no static rule about max-width can
+     stand in for it. */
+  await test(label('no line of prose runs past the width an eye can track'), async () => {
+    const c = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    for (const url of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+      const p = await c.newPage();
+      await p.goto(base + url);
+      await p.waitForTimeout(400);
+      const wide = await p.evaluate(() => {
+        /* Characters per line measured with the element's own font rather
+           than estimated from font-size — the `ch` unit is the width of
+           "0", which is not what Hebrew prose is made of. */
+        const cv = document.createElement('canvas').getContext('2d');
+        const chars = e => {
+          const s = getComputedStyle(e);
+          cv.font = s.fontWeight + ' ' + s.fontSize + ' ' + s.fontFamily;
+          const glyph = cv.measureText('אבגדהוזחטיכלמנסעפצקרשת ').width / 23;
+          const box = e.getBoundingClientRect().width -
+            parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+          return Math.round(box / glyph);
+        };
+        return [...document.querySelectorAll('p, li, .lead, .hint-p, .sub')]
+          .filter(e => { const r = e.getBoundingClientRect();
+            return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; })
+          .filter(e => e.textContent.trim().length > 60)
+          .map(e => ({ c: (e.className || e.tagName).toString().slice(0, 24), n: chars(e) }))
+          .filter(x => x.n > 90)
+          .map(x => x.c + ' at ' + x.n + 'ch');
+      });
+      await p.close();
+      assert.deepStrictEqual(wide, [],
+        url + ' has prose past 90 characters per line: ' + wide.join(', '));
+    }
+    await c.close();
+  });
+
   /* Reported as "the demo screen jumps", and it did. Loading ?demo=1
      starts a 1048px smooth scroll; partway through it the guide passed
      its sentinel and collapsed, which removed ~240px from the flow, which

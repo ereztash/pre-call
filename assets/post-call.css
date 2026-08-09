@@ -44,6 +44,21 @@
   /* red — warnings and the one refusal, never decoration */
   --rd-13:#271b1d; --rd-27:#5e2b32; --rd-34:#7d313b; --rd-41:#9d3442; --rd-64:#d07682;
   --rd-78:#dbb3b8; --rd-84:#e3cacd; --rd-95:#f6eeef;
+  /* ---- how long a line of text is allowed to be ----
+     Measured, and it was the largest single UX number out of band in the
+     product: POST-CALL's explanatory paragraphs ran a median of 131
+     characters per line on a desktop, against a typographic guideline of
+     45-75 and an outer bound near 90 where the eye starts losing its way
+     back to the start of the next line. Every page was over; this one by
+     75%.
+
+     It is the specific reason dense prose here read as a wall rather than
+     as writing, and nothing was going to catch it: it breaks no rule, it
+     fails no contrast check, and at 920px the container looks perfectly
+     reasonable. The container is not the problem — text simply must not
+     use all of it. */
+  --measure:64ch;
+
 
 
   /* ============================================================
@@ -103,7 +118,7 @@
   header{border-bottom:1px solid var(--line);padding-bottom:var(--sp-6);margin-bottom:var(--sp-7)}
   h1{font-size:var(--fs-3xl);font-weight:600;letter-spacing:-.3px}
   h1 .mark{color:var(--copper)}
-  .sub{color:var(--muted);font-size:var(--fs-md);margin-top:var(--sp-3)}
+  .sub{color:var(--muted);font-size:var(--fs-md);margin-top:var(--sp-3);max-width:var(--measure);}
   .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
         padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);font-size:var(--fs-md);color:#bfc6cf;margin-top:var(--sp-5)}
 
@@ -111,7 +126,7 @@
   .sec{margin:var(--sp-8) 0 0}
   .sec-h{font-size:var(--fs-xs);letter-spacing:1.2px;text-transform:uppercase;
          color:var(--copper-label);font-weight:700;margin-bottom:var(--sp-2)}
-  .lead{color:var(--muted);font-size:var(--fs-md);margin-bottom:var(--sp-5)}
+  .lead{color:var(--muted);font-size:var(--fs-md);margin-bottom:var(--sp-5);max-width:var(--measure);}
 
   .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-md);
        padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-5)}
@@ -424,7 +439,7 @@
   .hidden{display:none !important}
   .mt10{margin-top:var(--sp-4)}
   .mt12{margin-top:var(--sp-4)}
-  .hint-p{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3)}
+  .hint-p{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3);max-width:var(--measure);}
   .u-warn{color:var(--red-text)}
 
   /* ---- templates ----
@@ -875,7 +890,8 @@
   .hist-gap-h{font-size:var(--fs-xs);font-weight:700;color:var(--copper-label);
               letter-spacing:.4px;margin-bottom:var(--sp-3)}
   .hist-gap-l{margin:0;padding:0 var(--sp-6) 0 0;list-style:disc}
-  .hist-gap-l li{font-size:var(--fs-sm);color:#d0d5dc;line-height:1.6;margin-bottom:var(--sp-2)}
+  .hist-gap-l li{font-size:var(--fs-sm);color:#d0d5dc;line-height:1.6;margin-bottom:var(--sp-2);
+                 max-width:var(--measure)}
   .hist-gap-l li:last-child{margin-bottom:0}
   .hist-gap-l b{color:#e2e5e9}
 

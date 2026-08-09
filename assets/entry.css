@@ -53,6 +53,21 @@
   /* red — warnings and the one refusal, never decoration */
   --rd-13:#271b1d; --rd-27:#5e2b32; --rd-34:#7d313b; --rd-41:#9d3442; --rd-64:#d07682;
   --rd-78:#dbb3b8; --rd-84:#e3cacd; --rd-95:#f6eeef;
+  /* ---- how long a line of text is allowed to be ----
+     Measured, and it was the largest single UX number out of band in the
+     product: POST-CALL's explanatory paragraphs ran a median of 131
+     characters per line on a desktop, against a typographic guideline of
+     45-75 and an outer bound near 90 where the eye starts losing its way
+     back to the start of the next line. Every page was over; this one by
+     75%.
+
+     It is the specific reason dense prose here read as a wall rather than
+     as writing, and nothing was going to catch it: it breaks no rule, it
+     fails no contrast check, and at 920px the container looks perfectly
+     reasonable. The container is not the problem — text simply must not
+     use all of it. */
+  --measure:64ch;
+
 
 
   /* ============================================================
@@ -194,7 +209,7 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 }
 .strip-steps li b{color:var(--ink);font-weight:600}
 .strip-steps li:not(:last-child)::after{content:"←";color:var(--line);margin-right:var(--sp-2)}
-.strip-n{font-size:var(--fs-sm);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--sp-4)}
+.strip-n{font-size:var(--fs-sm);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--sp-4);max-width:var(--measure);}
 
 footer{
   margin-top:var(--sp-8);padding-top:var(--sp-6);border-top:1px solid var(--line);
