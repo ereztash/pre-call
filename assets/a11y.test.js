@@ -18,7 +18,15 @@
 
    Skips with exit 0 if playwright or axe-core cannot be resolved: an
    absent harness is an environment problem, not a product defect. A failing
-   rule, on the other hand, fails the run. */
+   rule, on the other hand, fails the run.
+
+   Except in CI, where that leniency was the whole problem. This file ran
+   on every push for weeks and never once scanned anything — the workflow
+   installed playwright and not axe-core, the resolve failed, and the step
+   exited 0 with a printed reason nobody read. Four pull requests claimed
+   "8 axe scans · 0 violations" on the strength of a local run. A skip that
+   looks identical to a pass is worse than no check at all, so under
+   A11Y_REQUIRED the missing dependency is a failure. */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -37,9 +45,13 @@ function resolveFrom(name) {
 const pwPath = resolveFrom('playwright');
 const axePath = resolveFrom('axe-core/axe.min.js') || resolveFrom('axe-core');
 if (!pwPath || !axePath) {
-  console.log('\n  skipped — need both playwright and axe-core resolvable here.');
-  console.log('  playwright: ' + (pwPath || 'not found') + ', axe-core: ' + (axePath || 'not found') + '\n');
-  process.exit(0);
+  const required = !!process.env.A11Y_REQUIRED;
+  console.log('\n  ' + (required ? 'FAILED' : 'skipped') +
+    ' — need both playwright and axe-core resolvable here.');
+  console.log('  playwright: ' + (pwPath || 'not found') + ', axe-core: ' + (axePath || 'not found'));
+  if (required) console.log('  A11Y_REQUIRED is set, so this is a broken harness, not an absent one.');
+  console.log('');
+  process.exit(required ? 1 : 0);
 }
 const { chromium, firefox, webkit } = require(pwPath);
 const AXE_SRC = fs.readFileSync(
