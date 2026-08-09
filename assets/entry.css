@@ -1,0 +1,235 @@
+/* ============================================================
+   The entry page.
+
+   Same tokens as the two tools, so arriving here and then landing on
+   either one does not feel like crossing between two products. What is
+   deliberately different is the density: the tools are working surfaces
+   and are dense on purpose; this page has one job, asks one question, and
+   should be readable across a room. Nothing here is a form.
+   ============================================================ */
+:root{
+  /* ============================================================
+     The palette.
+
+     Measured before this existed: 94 distinct colour literals across the
+     three stylesheets, 39 of them used exactly once, spread over nine
+     hue families. Two of those families sat 15 degrees apart (a copper at
+     h30 and a second warm at h45), as did two reds (h345 and h360), and
+     two more hues appeared exactly once each. Inside the copper family
+     saturation ranged from 16% to 100% — the same colour reading as
+     nearly grey in one place and neon in another.
+
+     That is the type-scale problem again, on the axis the type-scale
+     sweep did not touch. It is also the mechanism behind "looks fine,
+     but not like a professional app": near-duplicate hues read as
+     inconsistency rather than as variety, and the eye catches it long
+     before it can name it.
+
+     Four hue anchors, one shared lightness ramp, and saturation as a
+     function of lightness — chroma peaks in the midtones and eases off at
+     both ends, because flat saturation across a ramp is what makes dark
+     tints look muddy and light tints look chalky. Every value below was
+     derived by snapping what was already in use onto that grid, so the
+     product kept its character: 94 literals became 44, nine hue families
+     became four, and the widest saturation spread inside a family fell
+     from 84 points to 27.
+
+     The step number is the lightness, so the contrast between any two is
+     readable straight off the names. #fff and #000 stay out of this on
+     purpose — they are paper and ink in the print sheet, not UI colour.
+     ============================================================ */
+  /* neutral — every surface, every border, every piece of body text */
+  --nt-5:#0b0d0f; --nt-9:#14171a; --nt-13:#1d2126; --nt-17:#252b31; --nt-21:#2e353d;
+  --nt-27:#3b444e; --nt-34:#4b5563; --nt-41:#5a6777; --nt-50:#6e7d91; --nt-57:#828fa1;
+  --nt-64:#96a1b0; --nt-71:#abb4bf; --nt-78:#bfc6cf; --nt-84:#d0d5dc; --nt-90:#e2e5e9;
+  --nt-95:#f0f2f4;
+  /* copper — the brand accent, and the colour of every primary action */
+  --cu-9:#1c1712; --cu-13:#28221b; --cu-27:#5f472b; --cu-34:#7f592f; --cu-50:#c88437;
+  --cu-57:#cf9554; --cu-64:#d2a674; --cu-71:#d6b794; --cu-78:#dcc8b2; --cu-84:#e3d7c9;
+  --cu-90:#eee6dd; --cu-95:#f6f3ee;
+  /* turquoise — confirmation, progress, anything that went right */
+  --tq-9:#131b19; --tq-21:#29423d; --tq-27:#2d5c53; --tq-41:#379a86; --tq-50:#3dc2a7;
+  --tq-64:#79cdbd; --tq-84:#cae2dd; --tq-95:#eff6f4;
+  /* red — warnings and the one refusal, never decoration */
+  --rd-13:#271b1d; --rd-27:#5e2b32; --rd-34:#7d313b; --rd-41:#9d3442; --rd-64:#d07682;
+  --rd-78:#dbb3b8; --rd-84:#e3cacd; --rd-95:#f6eeef;
+  /* ---- how long a line of text is allowed to be ----
+     Measured, and it was the largest single UX number out of band in the
+     product: POST-CALL's explanatory paragraphs ran a median of 131
+     characters per line on a desktop, against a typographic guideline of
+     45-75 and an outer bound near 90 where the eye starts losing its way
+     back to the start of the next line. Every page was over; this one by
+     75%.
+
+     It is the specific reason dense prose here read as a wall rather than
+     as writing, and nothing was going to catch it: it breaks no rule, it
+     fails no contrast check, and at 920px the container looks perfectly
+     reasonable. The container is not the problem — text simply must not
+     use all of it. */
+  --measure:64ch;
+
+
+
+  /* ============================================================
+     The scale.
+
+     Measured before this existed: 25 distinct font sizes and 22 distinct
+     spacing values across the stylesheets — six of the sizes inside a
+     single 2px band (12 · 12.5 · 13 · 13.5 · 14 · 14.5). That is not a
+     system, it is three years of individually reasonable decisions, and
+     it is the mechanism behind "looks fine, does not look professional":
+     the eye detects the inconsistency long before the mind can name it.
+
+     The steps below are derived from what was already in use rather than
+     imposed. Measured after the fact: 413 numeric values changed and 400
+     of them moved by 2px or less, so the pages keep their proportions.
+     The six that moved further are named rather than hidden — the space
+     under the last thing on a page (80px on the tools, 60px on the entry
+     page) snapped to the 64px and 48px steps, and two footer gaps came
+     down 8px. What changes is that there are eight sizes instead of
+     twenty-five, and assets/tokens.test.js now fails the build if a
+     future value invents a step instead of picking one.
+     ============================================================ */
+  --fs-xs:12px;    /* captions, badges, the smallest legible label */
+  --fs-sm:13.5px;  /* hints, secondary rows, table cells */
+  --fs-md:15px;    /* body */
+  --fs-lg:16px;    /* emphasised body, list items in the document */
+  --fs-xl:19px;    /* section headings */
+  --fs-2xl:22px;   /* page headings */
+  --fs-3xl:26px;   /* the price, the product name */
+  --fs-4xl:32px;   /* the one display size */
+
+  --sp-1:2px;
+  --sp-2:4px;
+  --sp-3:8px;
+  --sp-4:12px;
+  --sp-5:16px;
+  --sp-6:20px;
+  --sp-7:24px;
+  --sp-8:32px;
+  --sp-9:48px;     /* the gap between major regions of a long page */
+  --sp-10:64px;    /* the space under the last thing on the page */
+
+  --r-sm:4px;      /* chips inside a row, small badges */
+  --r-md:6px;      /* boxes, inputs, buttons */
+  --r-lg:8px;      /* panels */
+  --r-pill:22px;   /* the selectable chips */
+
+  --charcoal:var(--nt-9);
+  --charcoal-2:var(--nt-13);
+  --line:var(--nt-21);
+  --copper:var(--cu-50);
+  --copper-dim:var(--cu-34);
+  --turq:var(--tq-41);
+  --ink:var(--cu-90);
+  --muted:var(--nt-64);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
+  background:var(--charcoal);color:var(--ink);
+  line-height:1.65;font-size:var(--fs-lg);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px;margin:0 auto;padding:var(--sp-8) var(--sp-6) var(--sp-9)}
+
+header{margin-bottom:var(--sp-8)}
+h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:var(--sp-4)}
+.sub{color:var(--muted);font-size:var(--fs-lg);max-width:56ch}
+
+.q{
+  font-size:var(--fs-sm);font-weight:600;color:var(--copper);
+  letter-spacing:.4px;margin-bottom:var(--sp-5);
+}
+
+/* ---- picking up where you left off ---- */
+.resume{
+  background:#1d2126;border:1px solid #2d5c53;border-right:3px solid var(--turq);
+  border-radius:var(--r-md);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-7);
+}
+.resume-h{font-size:var(--fs-xs);font-weight:700;color:var(--turq);letter-spacing:.4px;margin-bottom:var(--sp-3)}
+.resume-row{
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4) var(--sp-5);
+  padding:var(--sp-2) 0;font-size:var(--fs-md);color:#cae2dd;
+}
+.resume-t{flex:1 1 auto}
+.resume-go{
+  flex:0 0 auto;color:var(--turq);text-decoration:underline;font-size:var(--fs-sm);
+  min-height:32px;display:inline-flex;align-items:center;
+}
+.resume-go:hover{color:#3dc2a7}
+
+/* ---- the four situations ---- */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);margin-bottom:var(--sp-8)}
+.card{
+  display:flex;flex-direction:column;gap:var(--sp-3);
+  background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:var(--sp-6) var(--sp-7) var(--sp-6);text-decoration:none;color:var(--ink);
+  transition:border-color .15s,transform .15s;
+}
+.card:hover{border-color:var(--copper-dim);transform:translateY(-2px)}
+.card:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+/* the one most people arrive for — marked by weight, not by shouting */
+.card-hot{border-color:var(--copper-dim);background:#28221b}
+.card-quiet{background:transparent}
+
+.card-when{
+  font-size:var(--fs-xs);font-weight:700;letter-spacing:.7px;
+  color:var(--copper);text-transform:uppercase;
+}
+.card-t{font-size:var(--fs-lg);font-weight:600;line-height:1.45}
+.card-d{font-size:var(--fs-sm);color:var(--muted);line-height:1.6}
+.card-go{
+  font-size:var(--fs-sm);color:var(--turq);margin-top:var(--sp-2);font-weight:600;
+}
+.card:hover .card-go{text-decoration:underline}
+
+/* ---- the shape of the whole thing ---- */
+.strip{
+  background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:var(--sp-6) var(--sp-7);
+}
+.strip-h{font-size:var(--fs-xs);font-weight:700;color:var(--copper);letter-spacing:.4px;margin-bottom:var(--sp-4)}
+/* a real sequence, so it is numbered — the four steps happen in this order
+   and the order is the product */
+.strip-steps{
+  display:flex;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4);
+  list-style:none;counter-reset:s;margin-bottom:var(--sp-4);
+}
+.strip-steps li{
+  counter-increment:s;font-size:var(--fs-sm);color:var(--muted);
+  display:flex;align-items:baseline;gap:var(--sp-3);
+}
+.strip-steps li::before{
+  content:counter(s);
+  font-size:var(--fs-xs);font-weight:700;color:var(--charcoal);
+  background:var(--copper-dim);border-radius:50%;
+  width:16px;height:16px;flex:0 0 16px;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.strip-steps li b{color:var(--ink);font-weight:600}
+.strip-steps li:not(:last-child)::after{content:"←";color:var(--line);margin-right:var(--sp-2)}
+.strip-n{font-size:var(--fs-sm);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--sp-4);max-width:var(--measure);}
+
+footer{
+  margin-top:var(--sp-8);padding-top:var(--sp-6);border-top:1px solid var(--line);
+  font-size:var(--fs-sm);color:var(--muted);
+}
+footer a{color:var(--copper);text-decoration:underline;
+  min-height:32px;display:inline-block;line-height:32px}
+footer a:hover{color:#cf9554}
+
+/* see the note in post-call.css — a utility whose job is to win */
+.hidden{display:none !important}
+
+@media(max-width:640px){
+  .wrap{padding:var(--sp-8) var(--sp-5) var(--sp-9)}
+  h1{font-size:var(--fs-3xl)}
+  .cards{grid-template-columns:1fr}
+  .card{padding:var(--sp-5) var(--sp-6) var(--sp-5)}
+  .card-t{font-size:var(--fs-lg)}
+}
+@media(prefers-reduced-motion:reduce){
+  .card{transition:none}
+  .card:hover{transform:none}
+}

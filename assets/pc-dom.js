@@ -79,3 +79,27 @@ window.addEventListener('error', e => {
   _failed.add('כללי'); renderFailures();
 });
 window.addEventListener('unhandledrejection', () => { /* logged by the browser */ });
+
+/* ---------- moving the viewport ----------
+   Every scroll in this product went through scrollIntoView with a
+   hardcoded behavior:'smooth'. Loading ?demo=1 animates the page 1048px
+   on arrival, which is the single largest piece of unrequested motion in
+   the product and lands on someone who has just clicked "show me an
+   example" — precisely the reduced-motion case. The OS setting is
+   honoured here in one place rather than at eleven call sites, none of
+   which were checking it. */
+function prefersLessMotion() {
+  return typeof matchMedia === 'function' &&
+         matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+function scrollToEl(target, block) {
+  const node = typeof target === 'string' ? el(target) : target;
+  if (!node || !node.scrollIntoView) return;
+  node.scrollIntoView({
+    behavior: prefersLessMotion() ? 'auto' : 'smooth',
+    block: block || 'start'
+  });
+}
+function scrollPageTop() {
+  window.scrollTo({ top: 0, behavior: prefersLessMotion() ? 'auto' : 'smooth' });
+}

@@ -1,38 +1,152 @@
 :root{
-    --charcoal:#16191d;
-    --charcoal-2:#20252b;
-    --line:#2f363e;
-    --copper:#c07d3e;
-    --copper-dim:#8a5a2c;
-    --turq:#2f9e8f;
-    --red:#9c3340;      /* on the printed paper background */
-    --red-text:#d46b78; /* on the dark UI — #9c3340 reads at 2.3:1 there */
-    --paper:#f6f5f2;
-    --ink:#e8e6e1;
-    --muted:#9aa3ad;
+  /* ============================================================
+     The palette.
+
+     Measured before this existed: 94 distinct colour literals across the
+     three stylesheets, 39 of them used exactly once, spread over nine
+     hue families. Two of those families sat 15 degrees apart (a copper at
+     h30 and a second warm at h45), as did two reds (h345 and h360), and
+     two more hues appeared exactly once each. Inside the copper family
+     saturation ranged from 16% to 100% — the same colour reading as
+     nearly grey in one place and neon in another.
+
+     That is the type-scale problem again, on the axis the type-scale
+     sweep did not touch. It is also the mechanism behind "looks fine,
+     but not like a professional app": near-duplicate hues read as
+     inconsistency rather than as variety, and the eye catches it long
+     before it can name it.
+
+     Four hue anchors, one shared lightness ramp, and saturation as a
+     function of lightness — chroma peaks in the midtones and eases off at
+     both ends, because flat saturation across a ramp is what makes dark
+     tints look muddy and light tints look chalky. Every value below was
+     derived by snapping what was already in use onto that grid, so the
+     product kept its character: 94 literals became 44, nine hue families
+     became four, and the widest saturation spread inside a family fell
+     from 84 points to 27.
+
+     The step number is the lightness, so the contrast between any two is
+     readable straight off the names. #fff and #000 stay out of this on
+     purpose — they are paper and ink in the print sheet, not UI colour.
+     ============================================================ */
+  /* neutral — every surface, every border, every piece of body text */
+  --nt-5:#0b0d0f; --nt-9:#14171a; --nt-13:#1d2126; --nt-17:#252b31; --nt-21:#2e353d;
+  --nt-27:#3b444e; --nt-34:#4b5563; --nt-41:#5a6777; --nt-50:#6e7d91; --nt-57:#828fa1;
+  --nt-64:#96a1b0; --nt-71:#abb4bf; --nt-78:#bfc6cf; --nt-84:#d0d5dc; --nt-90:#e2e5e9;
+  --nt-95:#f0f2f4;
+  /* copper — the brand accent, and the colour of every primary action */
+  --cu-9:#1c1712; --cu-13:#28221b; --cu-27:#5f472b; --cu-34:#7f592f; --cu-50:#c88437;
+  --cu-57:#cf9554; --cu-64:#d2a674; --cu-71:#d6b794; --cu-78:#dcc8b2; --cu-84:#e3d7c9;
+  --cu-90:#eee6dd; --cu-95:#f6f3ee;
+  /* turquoise — confirmation, progress, anything that went right */
+  --tq-9:#131b19; --tq-21:#29423d; --tq-27:#2d5c53; --tq-41:#379a86; --tq-50:#3dc2a7;
+  --tq-64:#79cdbd; --tq-84:#cae2dd; --tq-95:#eff6f4;
+  /* red — warnings and the one refusal, never decoration */
+  --rd-13:#271b1d; --rd-27:#5e2b32; --rd-34:#7d313b; --rd-41:#9d3442; --rd-64:#d07682;
+  --rd-78:#dbb3b8; --rd-84:#e3cacd; --rd-95:#f6eeef;
+  /* ---- how long a line of text is allowed to be ----
+     Measured, and it was the largest single UX number out of band in the
+     product: POST-CALL's explanatory paragraphs ran a median of 131
+     characters per line on a desktop, against a typographic guideline of
+     45-75 and an outer bound near 90 where the eye starts losing its way
+     back to the start of the next line. Every page was over; this one by
+     75%.
+
+     It is the specific reason dense prose here read as a wall rather than
+     as writing, and nothing was going to catch it: it breaks no rule, it
+     fails no contrast check, and at 920px the container looks perfectly
+     reasonable. The container is not the problem — text simply must not
+     use all of it. */
+  --measure:64ch;
+
+
+
+  /* ============================================================
+     The scale.
+
+     Measured before this existed: 25 distinct font sizes and 22 distinct
+     spacing values across the stylesheets — six of the sizes inside a
+     single 2px band (12 · 12.5 · 13 · 13.5 · 14 · 14.5). That is not a
+     system, it is three years of individually reasonable decisions, and
+     it is the mechanism behind "looks fine, does not look professional":
+     the eye detects the inconsistency long before the mind can name it.
+
+     The steps below are derived from what was already in use rather than
+     imposed. Measured after the fact: 413 numeric values changed and 400
+     of them moved by 2px or less, so the pages keep their proportions.
+     The six that moved further are named rather than hidden — the space
+     under the last thing on a page (80px on the tools, 60px on the entry
+     page) snapped to the 64px and 48px steps, and two footer gaps came
+     down 8px. What changes is that there are eight sizes instead of
+     twenty-five, and assets/tokens.test.js now fails the build if a
+     future value invents a step instead of picking one.
+     ============================================================ */
+  --fs-xs:12px;    /* captions, badges, the smallest legible label */
+  --fs-sm:13.5px;  /* hints, secondary rows, table cells */
+  --fs-md:15px;    /* body */
+  --fs-lg:16px;    /* emphasised body, list items in the document */
+  --fs-xl:19px;    /* section headings */
+  --fs-2xl:22px;   /* page headings */
+  --fs-3xl:26px;   /* the price, the product name */
+  --fs-4xl:32px;   /* the one display size */
+
+  --sp-1:2px;
+  --sp-2:4px;
+  --sp-3:8px;
+  --sp-4:12px;
+  --sp-5:16px;
+  --sp-6:20px;
+  --sp-7:24px;
+  --sp-8:32px;
+  --sp-9:48px;     /* the gap between major regions of a long page */
+  --sp-10:64px;    /* the space under the last thing on the page */
+
+  --r-sm:4px;      /* chips inside a row, small badges */
+  --r-md:6px;      /* boxes, inputs, buttons */
+  --r-lg:8px;      /* panels */
+  --r-pill:22px;   /* the selectable chips */
+
+    --charcoal:var(--nt-9);
+    --charcoal-2:var(--nt-13);
+    --line:var(--nt-21);
+    --copper:var(--cu-50);
+    --copper-dim:var(--cu-34);
+    --turq:var(--tq-41);
+    --red:var(--rd-41);      /* on the printed paper background */
+    --red-text:var(--rd-64); /* on the dark UI — #9d3442 reads at 2.3:1 there */
+    --paper:var(--cu-95);
+    --ink:var(--cu-90);
+    --muted:var(--nt-64);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
     font-family:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
     background:var(--charcoal);color:var(--ink);
-    line-height:1.65;font-size:16px;
+    line-height:1.65;font-size:var(--fs-lg);
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}
-  header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:28px}
-  h1{font-size:26px;font-weight:600;letter-spacing:-.3px}
+  .wrap{max-width:900px;margin:0 auto;padding:var(--sp-8) var(--sp-6) var(--sp-10)}
+  header{border-bottom:1px solid var(--line);padding-bottom:var(--sp-7);margin-bottom:var(--sp-7)}
+  h1{font-size:var(--fs-3xl);font-weight:600;letter-spacing:-.3px}
   h1 .mark{color:var(--copper)}
-  .sub{color:var(--muted);font-size:15px;margin-top:6px}
+  .sub{color:var(--muted);font-size:var(--fs-md);margin-top:var(--sp-3);max-width:var(--measure);}
   .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
-        padding:12px 16px;border-radius:4px;font-size:14.5px;color:#c9cdd3;margin-top:18px}
+        padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);font-size:var(--fs-md);color:#bfc6cf;margin-top:var(--sp-6)}
 
-  .steps{display:flex;gap:6px;margin:26px 0 22px;flex-wrap:wrap}
+  .steps{display:flex;gap:var(--sp-3);margin:var(--sp-7) 0 var(--sp-7);flex-wrap:wrap}
   .stepbtn{flex:1;min-width:140px;background:var(--charcoal-2);border:1px solid var(--line);
-    color:var(--muted);padding:11px 10px;border-radius:5px;cursor:pointer;font-size:14px;
+    color:var(--muted);padding:var(--sp-4) var(--sp-4);border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-sm);
     font-family:inherit;text-align:center;transition:.15s}
   .stepbtn:hover{border-color:var(--copper-dim);color:var(--ink)}
-  .stepbtn.on{background:var(--copper);border-color:var(--copper);color:#12151a;font-weight:600}
-  .stepbtn .n{display:block;font-size:11px;opacity:.75;letter-spacing:1px}
+  .stepbtn.on{background:var(--copper);border-color:var(--copper);color:#14171a;font-weight:600}
+  /* No opacity here. opacity:.75 over --muted computed to 3.86:1 against the
+     tab background, and over the active tab's near-black to 3.05:1 — both
+     below the 4.5:1 this project claims to meet, and both invisible to the
+     hand-computed contrast pass that only ever checked the declared colors.
+     Found by axe-core against the painted page. The two states now carry
+     their own measured colors instead: 6.04:1 and 5.44:1. */
+  .stepbtn .n{display:block;font-size:var(--fs-xs);letter-spacing:1px;color:var(--muted)}
+  .stepbtn.on .n{color:#14171a}
 
   .panel{display:none}
   .panel.on{display:block;animation:fade .18s ease}
@@ -40,94 +154,102 @@
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
     html{scroll-behavior:auto}}
 
-  h2{font-size:19px;font-weight:600;margin:0 0 6px}
-  .lead{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+  h2{font-size:var(--fs-xl);font-weight:600;margin:0 0 var(--sp-3)}
+  .lead{color:var(--muted);font-size:var(--fs-md);margin-bottom:var(--sp-6);max-width:var(--measure);}
 
-  .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:6px;
-       padding:18px;margin-bottom:16px}
-  .box h3{font-size:15px;font-weight:600;color:var(--copper);margin-bottom:10px}
+  .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-md);
+       padding:var(--sp-6);margin-bottom:var(--sp-5)}
+  .box h3{font-size:var(--fs-md);font-weight:600;color:var(--copper);margin-bottom:var(--sp-4)}
 
-  pre.prompt{background:#0f1216;border:1px solid var(--line);border-radius:5px;
-    padding:16px;white-space:pre-wrap;word-wrap:break-word;font-size:13.5px;
-    font-family:ui-monospace,"Consolas",monospace;color:#cfd4da;max-height:340px;overflow:auto;
+  pre.prompt{background:#14171a;border:1px solid var(--line);border-radius:var(--r-md);
+    padding:var(--sp-5);white-space:pre-wrap;word-wrap:break-word;font-size:var(--fs-sm);
+    font-family:ui-monospace,"Consolas",monospace;color:#d0d5dc;max-height:340px;overflow:auto;
     direction:rtl;text-align:right;line-height:1.7}
 
-  button.act,a.act{background:var(--copper);color:#12151a;border:0;padding:10px 20px;border-radius:5px;
-    font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:12px;min-height:44px}
-  button.act:hover,a.act:hover{background:#d38b47}
+  button.act,a.act{background:var(--copper);color:#14171a;border:0;padding:var(--sp-4) var(--sp-6);border-radius:var(--r-md);
+    font-size:var(--fs-md);font-weight:600;cursor:pointer;font-family:inherit;margin-top:var(--sp-4);min-height:44px}
+  button.act:hover,a.act:hover{background:#cf9554}
   /* the two link-as-button cases above (post-call handoff, backup import
      trigger) need the same box the real buttons have, without inheriting
      an underline or losing the vertical centering a <button> gets for free */
   a.act,a.ghost{display:inline-flex;align-items:center;text-decoration:none}
   button.ghost,a.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
-    padding:9px 16px;border-radius:5px;font-size:14px;cursor:pointer;font-family:inherit;margin:12px 8px 0 0;
+    padding:var(--sp-3) var(--sp-5);border-radius:var(--r-md);font-size:var(--fs-sm);cursor:pointer;font-family:inherit;margin:var(--sp-4) var(--sp-3) 0 0;
     min-height:44px}
   button.ghost:hover,a.ghost:hover{border-color:var(--copper-dim);color:var(--ink)}
 
-  label{display:block;font-size:14px;color:#c3c9d0;margin:14px 0 5px;font-weight:500}
-  label .hint{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
+  label{display:block;font-size:var(--fs-sm);color:#bfc6cf;margin:var(--sp-5) 0 var(--sp-2);font-weight:500}
+  label .hint{display:block;color:var(--muted);font-size:var(--fs-xs);font-weight:400;margin-top:var(--sp-1)}
   input[type=text],textarea,select{
-    width:100%;background:#0f1216;border:1px solid var(--line);border-radius:5px;
-    color:var(--ink);padding:11px 12px;font-size:14.5px;font-family:inherit;min-height:44px;
+    width:100%;background:#14171a;border:1px solid var(--line);border-radius:var(--r-md);
+    color:var(--ink);padding:var(--sp-4) var(--sp-4);font-size:var(--fs-md);font-family:inherit;min-height:44px;
     direction:rtl;text-align:right}
   input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
-  :focus-visible{outline:3px solid #e8b57a;outline-offset:2px;border-radius:4px}
+  :focus-visible{outline:3px solid #d6b794;outline-offset:2px;border-radius:var(--r-sm)}
   textarea{min-height:80px;resize:vertical;line-height:1.6}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--sp-6)}
   @media(max-width:640px){.grid2{grid-template-columns:1fr}}
 
-  .out{background:var(--paper);color:#1a1d21;border-radius:6px;padding:30px 32px;margin-top:8px}
-  .out h3{color:#16191d;font-size:20px;margin:0 0 4px;font-weight:700}
-  /* #5f6673 not #6b7280 — the obvious grey read at 4.43:1 on --paper, just under
+  .out{background:var(--paper);color:#1d2126;border-radius:var(--r-md);padding:var(--sp-8) var(--sp-8);margin-top:var(--sp-3)}
+  .out h3{color:#14171a;font-size:var(--fs-xl);margin:0 0 var(--sp-2);font-weight:700}
+  /* #5a6777 not #6b7280 — the obvious grey read at 4.43:1 on --paper, just under
      AA. Same fix already made once in post-call.css; it never made it back here. */
-  .out .meta{color:#5f6673;font-size:13px;margin-bottom:22px;border-bottom:1px solid #ddd9d2;padding-bottom:14px}
-  .blk{margin-bottom:26px}
-  .blk-h{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--copper-dim);
-         font-weight:700;margin-bottom:4px}
-  .blk-t{font-size:16.5px;font-weight:700;color:#16191d;margin-bottom:3px}
-  .blk-d{font-size:13.5px;color:#5f6673;margin-bottom:12px}
-  .q{background:#fff;border-right:3px solid var(--copper);padding:11px 14px;margin-bottom:9px;
-     border-radius:3px;font-size:15.5px;color:#16191d;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-  .q .qn{display:inline-block;background:#16191d;color:#f6f5f2;font-size:11px;padding:1px 7px;
-         border-radius:3px;margin-left:4px;font-weight:600;vertical-align:middle}
-  .q .why{display:block;font-size:12.5px;color:#5f6673;margin-top:6px;font-weight:400}
-  .stop{background:#fdf0f1;border-right:3px solid var(--red);padding:10px 14px;border-radius:3px;
-        font-size:13.5px;color:#6b2129;margin:8px 0}
+  .out .meta{color:#5a6777;font-size:var(--fs-sm);margin-bottom:var(--sp-7);border-bottom:1px solid #e3d7c9;padding-bottom:var(--sp-5)}
+  .blk{margin-bottom:var(--sp-7)}
+  .blk-h{font-size:var(--fs-xs);letter-spacing:1.2px;text-transform:uppercase;color:var(--copper-dim);
+         font-weight:700;margin-bottom:var(--sp-2)}
+  .blk-t{font-size:var(--fs-lg);font-weight:700;color:#14171a;margin-bottom:var(--sp-2)}
+  .blk-d{font-size:var(--fs-sm);color:#5a6777;margin-bottom:var(--sp-4)}
+  .q{background:#fff;border-right:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);
+     border-radius:var(--r-sm);font-size:var(--fs-md);color:#14171a;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .q .qn{display:inline-block;background:#14171a;color:#f6f3ee;font-size:var(--fs-xs);padding:1px var(--sp-3);
+         border-radius:var(--r-sm);margin-left:var(--sp-2);font-weight:600;vertical-align:middle}
+  .q .why{display:block;font-size:var(--fs-xs);color:#5a6777;margin-top:var(--sp-3);font-weight:400}
+  .stop{background:#f6eeef;border-right:3px solid var(--red);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
+        font-size:var(--fs-sm);color:#5e2b32;margin:var(--sp-3) 0}
   .stop b{color:var(--red)}
   /* the table keeps a sane minimum width for its Hebrew sentences; the wrapper
      is what scrolls at 320px, so the page itself never gains a horizontal bar */
-  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:8px}
-  table.read{width:100%;min-width:480px;border-collapse:collapse;font-size:13.5px}
-  table.read th{background:#16191d;color:#f6f5f2;padding:8px 10px;text-align:right;font-size:12.5px;font-weight:600}
-  table.read td{border-bottom:1px solid #e2ded7;padding:9px 10px;vertical-align:top;color:#33383f}
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:var(--sp-3)}
+  table.read{width:100%;min-width:480px;border-collapse:collapse;font-size:var(--fs-sm)}
+  table.read th{background:#14171a;color:#f6f3ee;padding:var(--sp-3) var(--sp-4);text-align:right;font-size:var(--fs-xs);font-weight:600}
+  table.read td{border-bottom:1px solid #e3d7c9;padding:var(--sp-3) var(--sp-4);vertical-align:top;color:#2e353d}
   table.read td.no{color:var(--red)}
-  .rule{background:#eef4f3;border-right:3px solid var(--turq);padding:11px 14px;border-radius:3px;
-        font-size:13.5px;color:#1f4e48;margin:10px 0}
-  ul.prep{margin:6px 0 0;padding:0 18px 0 0;list-style:disc}
-  ul.prep li{font-size:13.5px;color:#33383f;margin-bottom:5px;line-height:1.55}
+  .rule{background:#eff6f4;border-right:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
+        font-size:var(--fs-sm);color:#29423d;margin:var(--sp-4) 0}
+  ul.prep{margin:var(--sp-3) 0 0;padding:0 var(--sp-6) 0 0;list-style:disc}
+  ul.prep li{font-size:var(--fs-sm);color:#2e353d;margin-bottom:var(--sp-2);line-height:1.55}
   /* Screen-only. Holds your own numbers (last deal, price floor) — the things the
      script itself tells you not to say out loud. Deliberately outside #outArea so
      "copy as text" and print can never carry them into the room. */
   .priv{background:var(--charcoal-2);border:1px solid var(--line);
-        border-right:3px solid var(--turq);border-radius:6px;padding:14px 16px;margin-top:14px}
-  .priv h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--turq);
-           font-weight:700;margin-bottom:8px}
-  .priv ul{margin:0;padding:0 18px 0 0}
-  .priv li{font-size:13.5px;color:#c9cdd3;margin-bottom:6px;line-height:1.6}
-  .priv .seal{font-size:12.5px;color:var(--muted);margin-top:8px}
-  .empty{color:#5f6673;font-size:14.5px;text-align:center;padding:26px 10px;line-height:1.7}
-  .err{background:#fdf0f1;border:1px solid #e8bcc0;color:#8b2635;padding:11px 14px;
-       border-radius:5px;font-size:14px;margin-top:12px}
-  .copied{color:var(--turq);font-size:13.5px;margin-right:10px;opacity:0;transition:.2s}
-  .copied.on{opacity:1}
-  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
-         color:#828b99;font-size:12.5px;line-height:1.8}
+        border-right:3px solid var(--turq);border-radius:var(--r-md);padding:var(--sp-5) var(--sp-5);margin-top:var(--sp-5)}
+  .priv h4{font-size:var(--fs-xs);letter-spacing:1px;text-transform:uppercase;color:var(--turq);
+           font-weight:700;margin-bottom:var(--sp-3)}
+  .priv ul{margin:0;padding:0 var(--sp-6) 0 0}
+  .priv li{font-size:var(--fs-sm);color:#bfc6cf;margin-bottom:var(--sp-3);line-height:1.6}
+  .priv .seal{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3)}
+  .empty{color:#5a6777;font-size:var(--fs-md);text-align:center;padding:var(--sp-7) var(--sp-4);line-height:1.7}
+  .err{background:#f6eeef;border:1px solid #e3cacd;color:#7d313b;padding:var(--sp-4) var(--sp-5);
+       border-radius:var(--r-md);font-size:var(--fs-sm);margin-top:var(--sp-4)}
+  /* visibility, not opacity alone. An element at opacity:0 is still in the
+     accessibility tree, so "הועתק" was permanently present to a screen
+     reader whether or not anything had been copied — and axe, measuring
+     the painted page mid-fade, flagged it as a contrast failure too. Both
+     are the same underlying mistake: invisible-to-the-eye is not the same
+     as not-there. Transitioning visibility alongside opacity keeps the
+     fade and makes the hidden state genuinely hidden. */
+  .copied{color:var(--turq);font-size:var(--fs-sm);margin-right:var(--sp-4);
+    opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+  .copied.on{opacity:1;visibility:visible}
+  footer{margin-top:var(--sp-8);padding-top:var(--sp-6);border-top:1px solid var(--line);
+         color:#828fa1;font-size:var(--fs-xs);line-height:1.8}
   /* the browser default blue reads at ~1.9:1 on this background — nowhere
      near AA. --copper already clears 4.5:1 here and is the site's one
      existing link/accent color, so the footer link uses it instead of
      inventing a second one. */
   footer a{color:var(--copper);text-decoration:underline}
-  footer a:hover{color:#d38b47}
+  footer a:hover{color:#cf9554}
   @media print{
     body{background:#fff;color:#000}
     .wrap{max-width:100%;padding:0}
@@ -137,31 +259,84 @@
     #errBoundary,.backupbox,.next-tool,
     #p4 .box:first-of-type{display:none!important}
     .out{padding:0}
-    .q{box-shadow:none;border-right:3px solid #999}
+    .q{box-shadow:none;border-right:3px solid #828fa1}
   }
 
   /* utility classes replacing inline style attributes — see the CSP note */
-  .hidden{display:none}
-  .mt14{margin-top:14px}
-  .mb6{margin-bottom:6px}
-  .tiny{font-size:12px}
+  /* !important because this is the one declaration in the file whose whole
+     job is to win. It is a single class, so any later single-class rule
+     that sets display beats it on source order alone — which is exactly
+     what happened: .draftnote and .viz each set display:flex hundreds of
+     lines below, and both painted an empty bordered box on every fresh
+     load of POST-CALL while carrying class="hidden". Nothing failed,
+     nothing threw; the page just had a 26px turquoise strip in it that
+     nobody had put there. markup.test.js now fails on the pattern. */
+  .hidden{display:none !important}
+  .mt14{margin-top:var(--sp-5)}
+  .mb6{margin-bottom:var(--sp-3)}
+  .tiny{font-size:var(--fs-xs)}
   .ta-md{min-height:120px}
   .ta-lg{min-height:130px}
-  .body-p{font-size:14.5px;color:#b8bec6}
-  .hint-p{font-size:14px;color:#a9b0b8;margin-bottom:8px}
-  .hint-p.tight{font-size:12.5px;color:var(--muted);margin:-4px 0 14px}
+  .body-p{font-size:var(--fs-md);color:#bfc6cf;max-width:var(--measure);}
+  .hint-p{font-size:var(--fs-sm);color:#abb4bf;margin-bottom:var(--sp-3);max-width:var(--measure);}
+  .hint-p.tight{font-size:var(--fs-xs);color:var(--muted);margin:-4px 0 var(--sp-5)}
   /* the storage-blocked notice: stays put instead of fading, because it is a
      standing condition rather than a confirmation */
   .copied.u-warn{color:var(--red-text);opacity:1}
 
+  /* ---- links inside content, not just in the footer ----
+     Only `footer a` was ever styled, so a link written anywhere else in a
+     page rendered as the browser default #0000ee — 1.64:1 on this
+     background, the single worst contrast figure in the product. It went
+     unnoticed because no page had such a link until privacy.html did.
+     Measured: 5.48:1 on a .box, 6.26:1 on the page ground.
+
+     :not(.act):not(.ghost) is load bearing. Without it this rule and
+     a.act have identical specificity, so source order decided — and this
+     rule, being later in the file, repainted the copper button's own text
+     copper. A link styled as a button is not a link for this purpose. */
+  .note a:not(.act):not(.ghost),
+  .box a:not(.act):not(.ghost),
+  .body-p a:not(.act):not(.ghost),
+  .hint-p a:not(.act):not(.ghost){color:#cf9554;text-decoration:underline}
+  .note a:not(.act):not(.ghost):hover,
+  .box a:not(.act):not(.ghost):hover,
+  .body-p a:not(.act):not(.ghost):hover,
+  .hint-p a:not(.act):not(.ghost):hover{color:#d2a674}
+
+  /* ---- a table on a dark page ----
+     table.read is the reading card inside the generated script, and it is
+     coloured for the white paper that script prints onto — its cell text is
+     #2e353d. Reused on a dark page it computed to 1.3:1, i.e. invisible.
+     That is what privacy.html was doing. This is the same table for the
+     screen: same structure, colours that belong to the ground it sits on. */
+  table.facts{width:100%;min-width:420px;border-collapse:collapse;font-size:var(--fs-sm)}
+  table.facts th{background:#14171a;color:var(--ink);padding:var(--sp-3) var(--sp-4);
+    text-align:right;font-size:var(--fs-xs);font-weight:600;border-bottom:1px solid var(--line)}
+  table.facts td{border-bottom:1px solid var(--line);padding:var(--sp-3) var(--sp-4);
+    vertical-align:top;color:#d0d5dc}
+  table.facts code{color:#79cdbd;font-size:var(--fs-xs);
+    font-family:ui-monospace,"Cascadia Code",Consolas,monospace}
+  table.facts b{color:var(--ink)}
+
+  /* ul.prep is the "before we start" list inside the generated script, and
+     like table.read it is coloured for the white paper that script prints
+     onto. Same reuse mistake, same fix: the on-screen list gets its own
+     colours instead of borrowing the print ones. */
+  ul.points{margin:var(--sp-3) 0 0;padding:0 var(--sp-6) 0 0;list-style:disc}
+  ul.points li{font-size:var(--fs-sm);color:#d0d5dc;margin-bottom:var(--sp-3);line-height:1.6;
+               max-width:var(--measure)}
+  ul.points code{color:#79cdbd;font-size:var(--fs-xs);
+    font-family:ui-monospace,"Cascadia Code",Consolas,monospace}
+
   /* ---- error boundary ----
      Same rule, same colors, as .errbound in post-call.css — one failure
      appearance across both tools, not two that happen to look similar. */
-  .errbound{background:#2a1d20;border:1px solid #7a3b45;border-right:3px solid var(--red-text);
-            border-radius:6px;padding:12px 16px;margin:12px 0;font-size:13.5px;
-            color:#e8c9cd;line-height:1.65}
+  .errbound{background:#271b1d;border:1px solid #7d313b;border-right:3px solid var(--red-text);
+            border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin:var(--sp-4) 0;font-size:var(--fs-sm);
+            color:#e3cacd;line-height:1.65}
 
   /* ---- backup box and the handoff to the other tool ----
      .box already gives these the right background/border; this just adds
      the paragraph spacing .box's own children don't carry by default. */
-  .backupbox p,.next-tool p{margin-bottom:10px}
+  .backupbox p,.next-tool p{margin-bottom:var(--sp-4)}

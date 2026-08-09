@@ -66,6 +66,16 @@ function page({ store = {}, remote = null, typed = '' } = {}) {
     },
     el: id => env.els[id] || (env.els[id] = { textContent: '', classList: { add(){}, remove(){} } }),
     show: (id, on) => { env.shown[id] = on; },
+    /* Provided by pc-dom.js in the page. The harness has to stand in for
+       it, and the reason it now must is worth recording: every scroll in
+       the product used to call scrollIntoView directly with a hardcoded
+       behavior:'smooth', so this file could get away with one stub method
+       on one fake element. Routing them through a helper that honours
+       prefers-reduced-motion made that dependency real, and this file
+       failed loudly rather than silently — which is the behaviour worth
+       having. */
+    scrollToEl: (target, block) => { env.scrolled = { target, block }; },
+    scrollPageTop: () => { env.scrolled = { target: 'top' }; },
     track: name => env.tracked.push(name),
     alert: () => {},
     window: { open: () => {} },

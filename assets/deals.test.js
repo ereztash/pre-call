@@ -126,7 +126,13 @@ test('win rate counts only decided deals', () => {
   assert.strictEqual(w.undecided, 2);
   assert.strictEqual(w.rate, 0.67, 'silence is not a loss');
 });
-test('price hold measures discount on closed deals', () => {
+test('price hold measures the discount that was actually given', () => {
+  /* The average is over the deals that were discounted, not over every
+     win. This assertion used to read `avgDiscount === 10` for exactly
+     this fixture — one deal 20% off and one at full price — and 10% is a
+     discount nobody in it received. Averaging the zeros in makes real
+     concessions look small, which is the opposite of what an operator
+     checking whether their price holds needs to see. */
   const d = make(mem());
   const a = d.save({ client: 'a', priceQuoted: 10000 });
   d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 8000 });
@@ -135,7 +141,16 @@ test('price hold measures discount on closed deals', () => {
   const p = d.priceHold();
   assert.strictEqual(p.n, 2);
   assert.strictEqual(p.held, 1);
-  assert.strictEqual(p.avgDiscount, 10);
+  assert.strictEqual(p.discounted, 1);
+  assert.strictEqual(p.avgDiscount, 20, 'the one client who got a discount got 20%');
+});
+test('when every deal held, there is no discount to average', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 10000 });
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 0);
+  assert.strictEqual(p.avgDiscount, null, '0% would imply a discount was given and measured');
 });
 test('zero and junk numbers are stored as null, not as values', () => {
   const d = make(mem());

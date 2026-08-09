@@ -22,6 +22,20 @@ function dealSnapshot(){
     estimatedHours: m.effort,      // locked at save time — see deals.js
     priceQuoted: m.price,
     method: m.method,
+    /* Which method actually produced this price, which is not always the
+       one the operator clicked — ask for "comparable" with no previous
+       deal and the number quietly comes out of cost. Stored separately
+       and never conflated, because the track record below reads it to
+       say which method holds up, and a claim assembled from mislabelled
+       rows would be worse than no claim. */
+    pricedBy: m.pricedBy,
+    /* The number of days the document itself promised. It is 14 by
+       default and 21 when more than one person has to agree, and until
+       now it was computed, printed for the client, and thrown away — so
+       nothing on this side could tell when a proposal was about to lapse.
+       Stored with the deal because it is a property of the document that
+       was sent, not of the form as it stands today. */
+    validityDays: (PC.client.adapt(clientProfile()) || {}).validityDays || 14,
     systems: [...chosenSystems],
     /* The full form, so a saved deal can be opened again.
        Without this the ledger stored a summary and nothing else, which meant
@@ -51,7 +65,7 @@ function loadDeal(id){
       ' <button type="button" class="ghost" data-act="newdeal">הצעה חדשה במקום</button>';
     show('draftNote', true);
   }
-  el('proposal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollToEl('proposal', 'start');
 }
 
 function saveCurrentDeal(){
@@ -61,11 +75,51 @@ function saveCurrentDeal(){
   renderLedger(); flashDoc('נשמר'); track('deal_saved');
 }
 
+/* The emotional peak of the whole product is the moment a proposal worth
+   real money leaves the building, and the entire acknowledgement used to
+   be a two-second grey toast. Worse than thin: it is the one moment the
+   operator is willing to do one more thing, and the one thing worth doing
+   is the thing that makes them come back. */
 function markSent(){
   if (!currentDealId) saveCurrentDeal();
   if (!currentDealId) return;
   PC.deals.setStatus(currentDealId, 'sent');
-  renderLedger(); flashDoc('סומנה כנשלחה'); track('deal_sent');
+  renderLedger(); track('deal_sent');
+  offerFollowup(currentDealId);
+}
+
+/* No server here means the product cannot notify anybody, ever. What it
+   can do is hand over a trigger that lives somewhere which does — the
+   operator's own calendar. One file, no account, no permission prompt,
+   and it still fires on a phone with this tab long closed. */
+function offerFollowup(id){
+  const d = PC.deals.get(id);
+  const due = d && PC.followup.dueState(d);
+  const bar = el('draftNote');
+  if (!d || !due || !bar) { flashDoc('סומנה כנשלחה'); return; }
+  const when = new Date(Math.max(
+    new Date(d.sentAt).getTime() + PC.followup.NUDGE_AFTER_DAYS * 864e5,
+    due.expires.getTime() - PC.followup.CLOSING_WINDOW_DAYS * 864e5));
+  bar.innerHTML = '<b>נשלחה.</b> התוקף שכתוב במסמך הוא ' +
+    due.expires.toLocaleDateString('he-IL') + '. ' +
+    'רוצה תזכורת ל-' + when.toLocaleDateString('he-IL') + ' לבדוק מה קרה? ' +
+    '<button type="button" class="ghost" data-deal="' + esc(id) + '" data-status="__ics">' +
+    'הוסף ליומן</button>';
+  show('draftNote', true);
+}
+
+function downloadFollowup(id){
+  const d = PC.deals.get(id);
+  if (!d) return;
+  const text = PC.followup.icsFor(d, { ils });
+  if (!text) { flashDoc('אין תאריך שליחה להצעה הזאת'); return; }
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = PC.followup.filenameFor(d);
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flashDoc('התזכורת ירדה — פתח את הקובץ כדי להוסיף אותה ליומן');
+  track('followup_added');
 }
 
 function flashDoc(msg){
@@ -74,7 +128,18 @@ function flashDoc(msg){
   f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2000);
 }
 
-function setDealStatus(id, s){ PC.deals.setStatus(id, s); renderLedger(); }
+/* Marking one sent from the ledger is the same event as sending it from
+   the document, and has to behave the same. Found by trying to walk the
+   send path in a browser: markSent() sits behind requireKey, so the
+   follow-up offer was reachable only past the export gate — which would
+   have put the one mechanism that feeds calibration behind the paywall,
+   while calibration is the thing the product argues it is for. */
+function setDealStatus(id, s){
+  const before = PC.deals.get(id);
+  PC.deals.setStatus(id, s);
+  renderLedger();
+  if (s === 'sent' && (!before || before.status !== 'sent')) offerFollowup(id);
+}
 
 function removeDeal(id){
   if (currentDealId === id) currentDealId = null;
@@ -95,7 +160,16 @@ const renderLedger = guard('ledger', function (){
   const cal = PC.deals.calibration();
   const win = PC.deals.winRate();
 
+  /* What is actually waiting, above the counts. The counts describe the
+     past; this is the only line here that asks for something. */
+  const waiting = PC.followup.summary(list);
+
   const summary = list.length ? `
+    ${waiting ? `<div class="ledger-act">
+      <b>${waiting.count === 1 ? 'הצעה אחת מחכה לך' : waiting.count + ' הצעות מחכות לך'}:</b>
+      ${esc(waiting.text)}.
+      <span class="ledger-act-n">תשובה שלא הגיעה היא עדיין מידע — סמנו אותה, כדי שהאומדן יתחיל להימדד.</span>
+    </div>` : ''}
     <div class="ledger-sum">
       <span>${list.length} הצעות</span>
       <span>${win.won} נסגרו · ${win.lost} נדחו · ${win.undecided} פתוחות</span>
@@ -111,10 +185,16 @@ const renderLedger = guard('ledger', function (){
   box.innerHTML = summary + (list.length ? list.map(d => {
     const o = d.outcome || {};
     const done = o.actualHours > 0;
-    return `<div class="deal">
+    /* Where this one stands in time. sentAt has been written on every
+       deal since this file existed and was never once read, so a proposal
+       sent three weeks ago and a proposal sent this morning looked
+       identical in here. */
+    const due = PC.followup.dueState(d);
+    return `<div class="deal${due && due.needsAction ? ' deal-act' : ''}">
       <div class="deal-h">
         <b>${esc(d.client)}</b>
         <span class="deal-st st-${d.status}">${PC.STATUS_LABEL[d.status]}</span>
+        ${due ? `<span class="deal-due due-${due.state}">${esc(due.label)}</span>` : ''}
         <span class="deal-meta">${d.priceQuoted ? ils(d.priceQuoted) : '—'} · אומדן ${d.estimatedHours || '—'} ש׳ · ${d.created.slice(0,10)}</span>
       </div>
       ${d.process ? `<div class="deal-p">${esc(d.process)}</div>` : ''}
@@ -125,6 +205,8 @@ const renderLedger = guard('ledger', function (){
         <button type="button" class="sbtn s-open" data-deal="${d.id}" data-status="__open"${
           d.form ? '' : ' disabled title="נשמרה לפני שהיה אפשר לפתוח מחדש"'}>פתח לעריכה</button>
         <button type="button" class="sbtn" data-deal="${d.id}" data-status="__remove">מחק</button>
+        ${due ? `<button type="button" class="sbtn s-cal" data-deal="${d.id}" data-status="__ics"
+          title="מוריד קובץ יומן עם תזכורת לבדוק מה קרה">תזכורת ליומן</button>` : ''}
       </div>
       ${d.status === 'won' || done ? `
         <div class="deal-out">
@@ -141,6 +223,90 @@ const renderLedger = guard('ledger', function (){
   if (bar) bar.innerHTML = list.length
     ? `<button type="button" class="ghost" data-act="newdeal">הצעה חדשה</button>
        <span class="dealbar-n">${list.length} שמורות · ${win.undecided} ממתינות לתשובה</span>` : '';
+
+  renderHistory(list);
+});
+
+/* ---------- the tool's own track record ----------
+
+   Everything above describes the deals. This describes the advice: how
+   good the estimate this tool produced has actually been, and which of
+   its four pricing methods has held up for this operator specifically.
+
+   The product says a great deal about where its defaults come from — the
+   effort table fitted backwards, the market tiers converted from US
+   ranges, the value coefficient the middle of a band. All honest, and all
+   still assertions about the tool rather than evidence about the person
+   using it. This is the part that can stop being an assertion, and the
+   panel is written so that the countdown to a finding is as visible as
+   the finding: silence here must never read as agreement. */
+const renderHistory = guard('history', function (list) {
+  const box = el('historyBox'); if (!box) return;
+  const rep = PC.history.report(list, PC.model.METHOD_LABEL);
+  if (!rep) { box.innerHTML = ''; show('historySec', false); return; }
+  show('historySec', true);
+
+  const acc = rep.accuracy;
+  const hold = PC.deals.priceHold();
+
+  /* Quoted versus closed across everything, at any n. priceHold() has
+     been written, commented and tested in deals.js since the ledger
+     existed and called from nowhere — the one question the operator most
+     wants answered, computed and thrown away on every render. */
+  const holdLine = hold.n ? `<div class="hist-row">
+      <span class="hist-k">המחיר ששלחת מול המחיר שנסגר</span>
+      <span class="hist-v">${hold.n === 1
+        ? (hold.held ? 'נסגרה במחיר המלא' : 'לא נסגרה במחיר המלא')
+        : `${hold.held} מתוך ${hold.n} נסגרו במחיר המלא`}${
+        hold.discounted
+          ? ` · ${hold.discounted === 1
+              ? `אחת ירדה ב-${hold.avgDiscount}%`
+              : `${hold.discounted} ירדו, בממוצע ${hold.avgDiscount}%`}`
+          : ''}</span>
+    </div>` : '';
+
+  const accLine = acc.n ? `<div class="hist-row">
+      <span class="hist-k">האומדן שלך מול המציאות</span>
+      <span class="hist-v">${acc.n === 1 ? 'מסירה אחת' : acc.n + ' מסירות'} · ${
+        acc.within === 1 && acc.n === 1 ? 'בתוך' : acc.within + ' בתוך'} ±${
+        Math.round(PC.history.CLOSE_ENOUGH * 100)}%${
+        acc.over ? ` · ${acc.over === 1 ? 'אחת חרגה' : acc.over + ' חרגו'}` : ''}${
+        acc.under ? ` · ${acc.under === 1 ? 'אחת מתחת' : acc.under + ' מתחת'}` : ''}</span>
+    </div>` : '';
+
+  const verdict = acc.verdict
+    ? `<div class="hist-find hist-${acc.verdict.kind}">${esc(acc.verdict.text)}</div>` : '';
+  const trendLine = rep.trend
+    ? `<div class="hist-find hist-${rep.trend.improving ? 'holds' : 'low'}">${esc(rep.trend.text)}</div>` : '';
+
+  const ready = rep.methods.rows.filter(r => r.enough);
+  const methodTable = ready.length ? `
+    <table class="hist-t">
+      <caption>לפי שיטת התמחור שקבעה את המחיר בפועל</caption>
+      <thead><tr><th scope="col">שיטה</th><th scope="col">הצעות</th>
+        <th scope="col">נסגרו</th><th scope="col">במחיר מלא</th></tr></thead>
+      <tbody>${ready.map(r => `<tr>
+        <th scope="row">${esc(r.label)}</th>
+        <td>${r.quoted}</td>
+        <td>${r.decided ? `${r.won}/${r.decided}` : '—'}</td>
+        <td>${r.pricedN ? `${r.heldFull}/${r.pricedN}${
+          r.avgDiscount > 0 ? ` · −${r.avgDiscount}%` : ''}` : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '';
+
+  /* The countdown, always, even once there are findings — because the
+     questions this panel still cannot answer do not stop existing when
+     one of them gets answered. */
+  const missing = rep.unknowns.length ? `
+    <div class="hist-gap">
+      <div class="hist-gap-h">מה עוד אי אפשר לומר</div>
+      <ul class="hist-gap-l">${rep.unknowns.map(u =>
+        `<li><b>${esc(u.what)}</b> — ${esc(u.text)}</li>`).join('')}</ul>
+    </div>` : '';
+
+  box.innerHTML = (accLine || holdLine
+      ? `<div class="hist-rows">${accLine}${holdLine}</div>` : '') +
+    verdict + trendLine + methodTable + missing;
 });
 
 function newDeal(){
@@ -156,5 +322,5 @@ function newDeal(){
   // re-saving the blank form here made the recovery notice reappear forever
   PC.draft && PC.draft.clear();
   show('draftNote', false);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollPageTop();
 }

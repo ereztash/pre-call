@@ -110,7 +110,7 @@ function applyTemplate(id){
   saveDraft();   // immediately: a template rewrites everything at once
   track('template_used');
   const doc = el('proposal');
-  if (doc) doc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (doc) scrollToEl(doc, 'start');
 }
 
 function clearTemplateChoice(){
@@ -144,7 +144,7 @@ function showPrompt(){
   // textContent, never innerHTML: the prompt contains the transcript verbatim
   el('trPromptText').textContent = PC.transcript.buildPrompt(t);
   show('trPrompt', true);
-  el('trPrompt').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  scrollToEl('trPrompt', 'nearest');
 }
 
 function copyPrompt(){
@@ -248,7 +248,7 @@ function applyExtraction(){
   renderScope(); recompute(); renderGuide(); saveDraft();
   track('transcript_applied');
   flashDoc('הטופס מולא מהשיחה');
-  el('proposal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollToEl('proposal', 'start');
 }
 
 /* A transcript says "מורנינג"; the chip says "חשבונית ירוקה / מורנינג". Match
@@ -552,6 +552,9 @@ const recompute = guard('recompute', function (){
    "go fill question 6" is only an instruction to someone who already knows
    where question 6 is. */
 let scopeConfirmed = false, skipped = new Set();
+/* Set when the operator arrived specifically to review proposals they have
+   already sent. See applyEntryRoute() for why the guide has to know. */
+let reviewingLedger = false;
 // which steps were already complete last render, so only a fresh one animates
 let doneSteps = new Set();
 
@@ -586,7 +589,7 @@ function goTo(anchor, fields){
     (/INPUT|TEXTAREA|SELECT/.test(n.tagName) ? n : n.querySelector('input,textarea,button'));
 
   setTimeout(() => {
-    (target || n).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    scrollToEl(target || n, 'center');
     if (target && target.focus) target.focus({ preventScroll: true });
     const glow = target && target.classList ? target : n;
     glow.classList.add('pointed');
@@ -596,6 +599,25 @@ function goTo(anchor, fields){
 
 const renderGuide = guard('guide', function (){
   const box = el('guideBar'); if (!box) return;
+
+  /* Someone who arrived to check what happened to proposals they already
+     sent is not building one. Found by simulating that exact arrival: the
+     ledger scrolled into view correctly, and the guide above it said
+     "step 1 of 5 — describe the process" — an instruction to start a new
+     proposal, stuck to the top of the screen the whole time they read the
+     old ones, because the bar is position:sticky. The entry page exists to
+     stop the product from answering a question nobody asked; leaving this
+     in would have reintroduced exactly that one layer down.
+
+     The moment they touch anything the flag clears and the guide returns,
+     so this hides an irrelevant instruction rather than removing a
+     feature. */
+  if (reviewingLedger && PC.draft && PC.draft.isEmpty(collectDraft(), PRISTINE)) {
+    box.innerHTML = ''; box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+
   let g = PC.guide.next(guideState());
 
   // a step the user explicitly skipped is not offered again on every keystroke
@@ -604,7 +626,10 @@ const renderGuide = guard('guide', function (){
     g = PC.guide.next(Object.assign(guideState(), { errFreq: 1, errCost: 1 }));
   }
 
-  box.className = 'guide' + (g.ready ? ' ready' : '');
+  box.className = 'guide' + (g.ready ? ' ready' : '') + (guidePinned ? ' stuck' : '');
+  /* Re-measure whenever the guide is in the flow and its content changed,
+     so the slot keeps reserving the right amount for the next collapse. */
+  if (!guidePinned) setTimeout(freezeGuideSlot, 0);
   box.innerHTML =
     '<div class="guide-top">' +
       // an optional step must not claim a number in the sequence — saying
@@ -655,6 +680,56 @@ const renderGuide = guard('guide', function (){
   const fill = box.querySelector('.guide-fill');
   if (fill) fill.style.width = g.percent + '%';
 });
+
+/* Watches the zero-height marker sitting at the guide's resting position.
+   While it is visible the guide is at rest; once it leaves the top of the
+   viewport the guide is pinned, and .stuck collapses it to one line — see
+   the note on .guide.stuck in post-call.css for what that is worth on a
+   phone. An observer rather than a scroll handler, so this costs nothing
+   per frame. Browsers without IntersectionObserver simply never collapse
+   it, which is exactly the behaviour they have today. */
+/* Held in a variable, not only on the element. renderGuide() rebuilds the
+   bar's className from scratch on every keystroke, which wiped the class
+   the observer had set — and because an IntersectionObserver only fires
+   when the intersection *changes*, nothing ever put it back. The result
+   was worse than the problem it was meant to solve: collapsed to 66px on
+   scroll, then 349px again — 52% of an iPhone SE — the moment the
+   operator typed anything, and stuck there for the rest of the session.
+
+   Found by an external reviewer reading the interaction between two
+   functions. The journey test had walked the scroll and checked the
+   collapse, and never typed afterwards; it does now. */
+let guidePinned = false;
+
+/* The pinned bar is position:fixed, so it leaves the flow and the slot
+   has to hold its place. The slot's height is not a constant that could
+   live in CSS — the guide is as tall as whatever step it is showing, and
+   that changes as the operator works — so it is frozen from the real
+   rendered height at the last moment the bar was in the flow.
+
+   This is the whole fix for the bounce: collapse used to remove ~240px of
+   document height, which moved every scroll target on the page while a
+   scroll animation was running. Now the document is exactly as tall
+   pinned as unpinned, so there is nothing for the loop to feed on. */
+function freezeGuideSlot(){
+  const slot = el('guideSlot'), bar = el('guideBar');
+  if (!slot || !bar || guidePinned) return;
+  const h = bar.getBoundingClientRect().height;
+  if (h > 0) slot.style.height = h + 'px';
+}
+
+function watchGuidePin(){
+  const sentinel = el('guideSentinel'), bar = el('guideBar');
+  if (!sentinel || !bar || typeof IntersectionObserver === 'undefined') return;
+  freezeGuideSlot();
+  new IntersectionObserver(([e]) => {
+    const pinning = !e.isIntersecting;
+    // measure before the class lands, while the bar is still in the flow
+    if (pinning && !guidePinned) freezeGuideSlot();
+    guidePinned = pinning;
+    bar.classList.toggle('stuck', guidePinned);
+  }, { threshold: 0 }).observe(sentinel);
+}
 
 function confirmScope(){
   confirmScopeSilently();
@@ -853,7 +928,26 @@ const renderSend = guard('send', function (){
     html: el('proposal').innerHTML,
     client: txt('q_client'), phone: txt('q_phone'), email: txt('q_email')
   });
+  /* An external review asked for this to block copy, print and send
+     outright. The concern is right — the document can go out with nobody's
+     name on it — but blocking is the wrong instrument here twice over.
+     This product warns and never blocks, deliberately and consistently:
+     implausible numbers, a price under the cost floor, a figure the
+     operator invented themselves, all of them say so and let the operator
+     proceed, because they are the one who knows. And there is a real case
+     for exporting without a letterhead — pasting the text into a template
+     that already has one.
+
+     So senderMissing() is used, which it was not before, at the moment it
+     matters: the click before it leaves. Loud, unmissable, one tap away
+     from fixing, and still the operator's decision. */
+  const anonymous = PC.senderMissing(readSender());
+
   box.innerHTML = '<div class="send-h">לשלוח ללקוח</div>' +
+    (anonymous ? '<div class="send-anon"><b>אין שם על ההצעה.</b> ' +
+      'הלקוח יקבל מסמך בלי מי שולח אותו ובלי דרך לחזור אליך. ' +
+      '<button type="button" class="ghost" data-act="goto" data-anchor="s_name" ' +
+      'data-fields="s_name,s_phone">להוסיף את השם שלי</button></div>' : '') +
     '<div class="send-rows">' + rs.map(r =>
       '<div class="send-row' + (r.ok ? '' : ' off') + '">' +
         '<button type="button" class="' + (r.ok ? 'act' : 'ghost') + '" data-act="sendvia" ' +
@@ -864,7 +958,7 @@ const renderSend = guard('send', function (){
 });
 
 function openSend(){ show('sendBox', true); renderSend();
-  el('sendBox').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  scrollToEl('sendBox', 'center'); }
 
 function sendVia(id){
   const rs = PC.send.routes({
@@ -880,6 +974,28 @@ function sendVia(id){
   markSent();
 }
 
+/* ---------- who is sending ----------
+   Operator-level and saved once, not per deal — see pc-sender.js. Kept
+   out of the draft on purpose: a draft is one unfinished proposal, this
+   is who you are, and discarding the former must never clear the latter. */
+function readSender(){
+  const s = {};
+  PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f) s[id] = f.value.trim(); });
+  s.attribution = el('s_attr') ? el('s_attr').checked : true;
+  return s;
+}
+let senderTimer = null;
+function saveSenderSoon(){
+  clearTimeout(senderTimer);
+  senderTimer = setTimeout(() => { PC.sender && PC.sender.save(readSender()); }, 500);
+}
+function restoreSender(){
+  const s = PC.sender && PC.sender.load();
+  if (!s) return;
+  PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f && s[id]) f.value = s[id]; });
+  if (el('s_attr')) el('s_attr').checked = s.attribution !== false;
+}
+
 /* ---------- the document ---------- */
 const renderProposal = guard('proposal', function (){
   /* Nothing entered yet means no document — not a document with the blanks
@@ -892,6 +1008,7 @@ const renderProposal = guard('proposal', function (){
   el('proposal').innerHTML = PC.proposal.build({
     m: model(),
     ils,
+    sender: readSender(),
     adapt: PC.client.adapt(clientProfile()),
     scope: { in: scopeList('in'), out: scopeList('out'), extra: scopeList('extra') },
     systems: [...chosenSystems],
@@ -938,7 +1055,15 @@ function collectDraft(){
 
 function saveDraft(){
   if (!PC.draft) return;
-  if (PC.draft.save(collectDraft())) { draftWarned = false; return; }
+  /* The emptiness verdict is stamped here rather than recomputed by whoever
+     reads the draft later. The rule lives in pc-draft.js and needs PRISTINE
+     — the untouched form — to tell a real answer from a select's default,
+     and this page is the only place that has it. The entry page was
+     re-deriving it from two fields and disagreeing with this one; an
+     external review caught the divergence. One owner, one answer. */
+  const state = collectDraft();
+  state.hasContent = !PC.draft.isEmpty(state, PRISTINE);
+  if (PC.draft.save(state)) { draftWarned = false; return; }
   if (draftWarned) return;
   draftWarned = true;
   flashDoc('הדפדפן חוסם שמירה — הטיוטה לא תשרוד רענון');
@@ -1122,6 +1247,7 @@ document.addEventListener('click', e => {
     const id = d.dataset.deal, st = d.dataset.status;
     if (st === '__remove') removeDeal(id);
     else if (st === '__outcome') saveOutcome(id);
+    else if (st === '__ics') downloadFollowup(id);
     else if (st === '__open') loadDeal(id);
     else setDealStatus(id, st);
     return;
@@ -1133,20 +1259,83 @@ document.addEventListener('click', e => {
 });
 
 document.querySelectorAll('input,select,textarea').forEach(n => {
+  // typing anything means they are building a proposal after all, so the
+  // guide stops standing down — see reviewingLedger in renderGuide()
+  n.addEventListener('input', () => { reviewingLedger = false; });
   n.addEventListener('input', recompute);
   n.addEventListener('input', saveDraftSoon);
 });
+// the sender's own details persist separately from the draft, and a
+// checkbox fires 'change' rather than 'input'
+[...PC.SENDER_FIELDS, 's_attr'].forEach(id => {
+  const f = el(id); if (!f) return;
+  f.addEventListener('input', saveSenderSoon);
+  f.addEventListener('change', () => { PC.sender && PC.sender.save(readSender()); recompute(); });
+});
 const backupFileInput = el('backupFile');
 if (backupFileInput) backupFileInput.addEventListener('change', handleBackupFile);
+
+/* ---------- arriving from the entry page ----------
+   The entry page asks which situation you are in, not which tool you want,
+   so two of its four answers land on THIS page needing it to open in a
+   particular state rather than at the top. Without this the routing is a
+   lie: "see what happened to your proposals" and "show me an example"
+   would both drop you at question 1 of a blank form.
+
+   Runs after the first render, so what it scrolls to or fills is already
+   on the page. */
+function applyEntryRoute(){
+  const wantsDemo = /(?:^|[?&])demo=1(?:&|$)/.test(location.search);
+  const wantsLedger = location.hash === '#ledger';
+  if (!wantsDemo && !wantsLedger) return;
+
+  if (wantsDemo) {
+    /* Never silently over an existing session — but never silently refuse
+       either. Found by walking the journey in a real browser: the first
+       version just declined and flashed a small notice, so somebody who
+       clicked "show me an example" landed on their own half-finished
+       proposal with no example and no explanation of why. Asking is the
+       only version where both answers are what the person meant. */
+    const busy = PC.draft && !PC.draft.isEmpty(collectDraft(), PRISTINE);
+    if (busy && !confirm('יש כאן הצעה שלא סיימת. לטעון את שיחת הדוגמה במקומה?\n\nההצעה הנוכחית תוחלף.')) {
+      flashDoc('הדוגמה לא נטענה. ההצעה שלך נשארה כמו שהיא.');
+      return;
+    }
+    loadDemo();
+    const box = el('trReview');
+    if (box) scrollToEl(box, 'start');
+    return;
+  }
+
+  /* 'auto', not 'smooth'. Arriving from a deep link is not an in-page
+     navigation — the person asked to be AT the ledger, so animating them
+     there means the page visibly lurches a beat after it settles. It was
+     also measurably unreliable: the smooth version landed in Firefox and
+     WebKit and silently did not in Chromium, found by running the journey
+     in all three rather than in the one that happened to be installed. */
+  reviewingLedger = true;   // renderGuide reads this — see the note there
+  renderGuide();
+  const box = el('ledgerBox');
+  if (box) box.scrollIntoView({ block: 'start' });
+}
 
 /* ---------- start ----------
    Every module is loaded by now, so first render happens here rather than at
    the bottom of whichever file happened to define the function. */
 mountGate();
 renderTemplates();
+restoreSender();  // before the first render, so the document has a letterhead
 restoreDraft();   // before the first render, so the page comes up as it was left
 renderScope();
 recompute();   // recompute drives the method, the client read and the document
 renderGuide();
 renderLedger();
+watchGuidePin();     // after the guide exists, before any scrolling happens
+applyEntryRoute();   // after the renders above, so there is something to land on
+/* Arriving at #ledger from another page reloads and runs the line above.
+   Arriving at it from this page changes only the fragment, so nothing
+   reloads and nothing re-runs — the route would silently do nothing.
+   Caught by driving the navigation in a browser rather than by reading
+   the code, where it looks like one path. */
+window.addEventListener('hashchange', applyEntryRoute);
 track('opened');

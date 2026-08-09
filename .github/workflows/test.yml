@@ -49,6 +49,10 @@ jobs:
         run: node assets/gate.test.js
       - name: backup and restore
         run: node assets/backup.test.js
+      - name: who the proposal is from
+        run: node assets/sender.test.js
+      - name: chasing a proposal that went quiet
+        run: node assets/followup.test.js
       - name: markup, CSP, print and telemetry contracts
         run: node assets/markup.test.js
       - name: PRE-CALL — parsing, the anchor sentence, and the private/public split
@@ -61,3 +65,35 @@ jobs:
         run: node api/event.test.js
       - name: the health endpoint
         run: node api/health.test.js
+      - name: what the tool's own advice has been worth
+        run: node assets/history.test.js
+      - name: the design scale, and that nothing invented a step of its own
+        run: node assets/tokens.test.js
+      - name: transfer weight and the no-dependency rule
+        run: node assets/weight.test.js
+
+  # The whole product, in a real browser, in all three engines it will
+  # actually be opened in. Separate job because it is the only thing here
+  # that needs an install step — everything above runs on the standard
+  # library alone, and that property is worth keeping visible.
+  journey:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # axe-core belongs here and was missing for weeks. The a11y step ran
+      # every push, failed to resolve it, printed "skipped" and exited 0 —
+      # so the accessibility check was green without ever having scanned a
+      # page. A11Y_REQUIRED below makes that failure mode loud.
+      - name: install playwright, the three engines, and axe-core
+        run: npm install --no-save playwright@1.62.1 axe-core@4.13.0 && npx playwright install --with-deps chromium firefox webkit
+      - name: the journey — entry page through to a priced proposal
+        run: node assets/journey.test.js
+      - name: accessibility — axe-core on every page, in every state
+        env:
+          A11Y_REQUIRED: '1'
+        run: node assets/a11y.test.js
+      - name: core web vitals on a throttled phone
+        run: node assets/perf.test.js

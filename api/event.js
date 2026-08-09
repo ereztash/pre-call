@@ -14,7 +14,8 @@
 const EVENTS = new Set([
   'opened', 'seeded', 'template_used', 'example_loaded',
   'transcript_parsed', 'transcript_applied', 'proposal_rendered', 'scope_changed',
-  'export_attempted', 'unlocked', 'deal_saved', 'deal_sent', 'outcome_recorded'
+  'export_attempted', 'unlocked', 'deal_saved', 'deal_sent', 'outcome_recorded',
+  'followup_added'
 ]);
 
 // coarse enough that a row cannot be traced back to a specific deal

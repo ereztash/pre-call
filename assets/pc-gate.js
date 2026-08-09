@@ -33,7 +33,7 @@ function requireKey(fn){
   pendingExport = fn;
   track('export_attempted');
   show('wall', true);
-  el('wall').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  scrollToEl('wall', 'center');
 }
 
 function keyValid(k){

@@ -4,6 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>POST-CALL · מהשיחה להצעה מתומחרת · אוטומציות</title>
+<!-- ============ איך הדף הזה נראה כששולחים אותו ============
+     Added after an AARRR pass found acquisition and referral at literally
+     zero: no description, no og tags, no icon, on any page. The channel
+     this product actually travels through is a link pasted into WhatsApp,
+     and without these that link renders as a bare URL — no title, no
+     picture, nothing to say what it is. That is not a defect in anything,
+     which is exactly why every automated check the project runs passed
+     over it for months. -->
+<meta name="description" content="עונים על מה שנאמר בשיחה, והמחיר וההצעה הכתובה נבנים תוך כדי. ארבע שיטות תמחור, וכל מספר עם המשפט שממנו הוא נלקח.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://pre-call-swart.vercel.app/post-call">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PRE-CALL · POST-CALL">
+<meta property="og:locale" content="he_IL">
+<meta property="og:url" content="https://pre-call-swart.vercel.app/post-call">
+<meta property="og:title" content="POST-CALL · מהשיחה להצעה מתומחרת">
+<meta property="og:description" content="עונים על מה שנאמר בשיחה, והמחיר וההצעה הכתובה נבנים תוך כדי. ארבע שיטות תמחור, וכל מספר עם המשפט שממנו הוא נלקח.">
+<meta property="og:image" content="https://pre-call-swart.vercel.app/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="מהשיחה להצעה מתומחרת — PRE-CALL ו-POST-CALL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#16191d">
 <link rel="stylesheet" href="assets/post-call.css">
 </head>
 <body>
@@ -26,8 +49,21 @@
 <!-- ============ המדריך — הוא שמוביל, לא המשתמש ============
      Exactly one instruction, always on screen, always taking you to the
      one place that instruction is about. Everything else on the page is
-     optional detail; this is the spine. -->
-<div class="guide" id="guideBar" role="status" aria-live="polite"></div>
+     optional detail; this is the spine.
+
+     The sentinel below is how the bar knows it has become stuck. It is a
+     zero-height marker at the guide's resting position: while it is in
+     view the guide is at rest and shows everything; once it scrolls out
+     of view the guide is pinned to the top of the screen and collapses to
+     a single line. An IntersectionObserver on this element costs nothing,
+     where a scroll handler would run on every frame of every scroll. -->
+<div id="guideSentinel" aria-hidden="true"></div>
+<!-- The slot holds the guide's place in the flow. Without it the guide's
+     collapse removed ~240px of document height mid-scroll, which fought
+     every scroll animation on the page — see the note in post-call.css. -->
+<div class="guide-slot" id="guideSlot">
+  <div class="guide" id="guideBar" role="status" aria-live="polite"></div>
+</div>
 
 <!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->
 <main>
@@ -96,6 +132,35 @@
       <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
       <div class="chips" id="sysChips"></div>
     </div>
+    <!-- ============ מי שולח ============
+         Asked once and reused for every proposal after this one, like the
+         business profile in PRE-CALL. It sits here rather than in a
+         drawer because a document with no sender is not sendable, and a
+         required thing hidden behind a disclosure triangle is a thing
+         that does not get filled in. -->
+    <div class="qa senderbox">
+      <div class="qt" id="qtSender">מי שולח את ההצעה
+        <span class="sender-once" id="senderOnce">נשמר פעם אחת ומשמש לכל ההצעות</span>
+      </div>
+      <div class="why">בלי זה ההצעה יוצאת בלי שם — הלקוח מקבל מסמך שלא ברור ממי הוא.</div>
+      <div class="row">
+        <div><label for="s_name">השם שלך</label>
+          <input type="text" id="s_name" placeholder="למשל: דנה לוי" autocomplete="name"></div>
+        <div><label for="s_business">העסק או התחום <span class="hint">לא חובה</span></label>
+          <input type="text" id="s_business" placeholder="למשל: אוטומציות לעסקים קטנים" autocomplete="organization"></div>
+      </div>
+      <div class="row">
+        <div><label for="s_phone">טלפון <span class="hint">איך הלקוח חוזר אליך</span></label>
+          <input type="tel" id="s_phone" placeholder="052-1234567" autocomplete="tel"></div>
+        <div><label for="s_email">אימייל</label>
+          <input type="email" id="s_email" placeholder="dana@example.co.il" autocomplete="email"></div>
+      </div>
+      <label class="checkline" for="s_attr">
+        <input type="checkbox" id="s_attr" checked>
+        <span>להשאיר שורה קטנה בתחתית המסמך שאומרת במה הוא נבנה</span>
+      </label>
+    </div>
+
     <label for="q_client">שם הלקוח או העסק</label>
     <input type="text" id="q_client" placeholder="לכותרת ההצעה">
     <div class="row mt12">
@@ -354,8 +419,13 @@
   <div id="privArea" class="priv hidden"></div>
 </div>
 
-<!-- ============ שלב 4 ============ -->
-<div class="sec">
+<!-- ============ שלב 4 ============
+     id="ledger" is the anchor the entry page's "what happened to my
+     proposals" route points at. It is on the section rather than on the
+     ledger box itself so the browser's own hash handling lands somewhere
+     sensible even before any script has run — the JS scroll refines that,
+     it is not what makes the link work. -->
+<div class="sec" id="ledger">
   <div class="sec-h">שלב 4 · אחרי שנשלחה</div>
   <h2>מה קרה בפועל</h2>
   <p class="lead">
@@ -363,6 +433,25 @@
     הכול נשאר בדפדפן הזה — שום פרט לקוח לא עוזב אותו.
   </p>
   <div class="box" id="ledgerBox"></div>
+</div>
+
+<!-- ============ מה הכלי הזה שווה לך ============
+     The section above is about the deals. This one is about the advice:
+     how good the estimate this tool produced turned out to be, and which
+     of its four pricing methods actually held up for this operator.
+
+     It is hidden until there is at least one saved deal, because an empty
+     panel explaining what it would eventually show is still an empty
+     panel, and the ledger above already says there is nothing saved. -->
+<div class="sec hidden" id="historySec">
+  <div class="sec-h">הכלי על עצמו</div>
+  <h2>כמה הייעוץ הזה היה שווה לך</h2>
+  <p class="lead">
+    הכלי אומר על עצמו שטבלת האומדן הותאמה אחורה ושמחירון השוק מומר מטווחים אמריקאיים —
+    זה נכון, וזו עדיין הצהרה עליו ולא ראיה עליך. כאן זה נמדד מול ההצעות שלך.
+    מה שעדיין אי אפשר לומר כתוב כאן בדיוק כמו מה שכן.
+  </p>
+  <div class="box" id="historyBox"></div>
 </div>
 </main>
 
@@ -387,7 +476,7 @@
 <div class="box next-tool">
   <h3 class="tpl-h">לפני התמחור</h3>
   <p class="hint-p">אם עוד לא הייתה שיחה — PRE-CALL בונה את תסריט השאלות שמוציא את המספרים שהעמוד הזה צריך.</p>
-  <a class="ghost" href="index.html">לתסריט השיחה · PRE-CALL</a>
+  <a class="ghost" href="pre-call.html">לתסריט השיחה · PRE-CALL</a>
 </div>
 </div>
 
@@ -396,6 +485,7 @@
   הכלי לא מבטיח שהלקוח יסכים למחיר. הוא מבטיח שהמחיר יהיה נגזר ממספר שהלקוח עצמו אמר.<br>
   <a href="https://github.com/ereztash/pre-call/blob/main/README.md" target="_blank" rel="noopener">איך הכלי עובד ולמה — המסמך המלא</a>
   · <a href="privacy.html">פרטיות</a>
+  · <a href="index.html">דף הפתיחה</a>
 </footer>
 
 </div>
@@ -411,6 +501,8 @@
 <script src="assets/pc-transcript.js"></script>
 <script src="assets/pc-example.js"></script>
 <script src="assets/pc-draft.js"></script>
+<script src="assets/pc-followup.js"></script>
+<script src="assets/pc-sender.js"></script>
 <script src="assets/pc-guide.js"></script>
 <script src="assets/pc-flow.js"></script>
 <script src="assets/pc-viz.js"></script>
@@ -418,6 +510,7 @@
 <script src="assets/pc-client.js"></script>
 <script src="assets/pc-proposal.js"></script>
 <script src="assets/pc-gate.js"></script>
+<script src="assets/pc-history.js"></script>
 <script src="assets/pc-ledger.js"></script>
 <script src="assets/post-call.js"></script>
 </body>

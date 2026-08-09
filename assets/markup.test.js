@@ -25,7 +25,12 @@ const test = (name, fn) => {
   catch (e) { fail++; console.log('  FAIL ' + name + '\n       ' + e.message); }
 };
 
-const PAGES = ['index.html', 'post-call.html'];
+/* index.html is the entry page — it asks which situation you are in and
+   routes; the two tools live beside it. Every structural/CSP rule below
+   applies to all three, because the entry page is the first thing anyone
+   sees and a broken CSP there breaks the front door. */
+const PAGES = ['index.html', 'pre-call.html', 'post-call.html'];
+const TOOLS = ['pre-call.html', 'post-call.html'];
 const html = Object.fromEntries(PAGES.map(f => [f, read(f)]));
 
 console.log('\ncontent security policy');
@@ -101,8 +106,14 @@ test('every event the client sends is on the server allowlist', () => {
   const allowed = (read('api/event.js').match(/const EVENTS = new Set\(\[([\s\S]*?)\]\)/) || [])[1] || '';
   const known = [...allowed.matchAll(/'([a-z_]+)'/g)].map(m => m[1]);
   assert.ok(known.length, 'could not read the allowlist');
-  const sent = [...new Set([...read('assets/post-call.js').matchAll(/track\('([a-z_]+)'/g)]
-    .map(m => m[1]))];
+  /* Every script, not just the shell. This test existed precisely to catch
+     an event the server would reject, and it still missed one — because it
+     read post-call.js alone, and the new event was emitted from
+     pc-ledger.js. A guard that inspects one file is a guard against one
+     file. Found by an external reviewer, which is its own lesson: the
+     blind spot was in the checker, not in the code it checks. */
+  const sent = [...new Set(SCRIPTS.flatMap(f =>
+    [...read(f).matchAll(/track\('([a-z_]+)'/g)].map(m => m[1])))];
   assert.ok(sent.length, 'no events found in the client');
   const rejected = sent.filter(e => !known.includes(e));
   assert.deepStrictEqual(rejected, [], 'the server would answer 400 and nobody would know');
@@ -189,24 +200,32 @@ test('every element hidden by the class is toggled through show()', () => {
 });
 
 console.log('\nstructure');
+/* These read the markup as the browser will parse it, so the comments have
+   to go first. This file's own convention is to explain a decision in a
+   comment right above the element it is about — which means a comment
+   quite reasonably contains a snippet like id="ledger", and a raw-text
+   regex then counts it as a second element with that id. The comment was
+   correct and the test was wrong; measuring the parsed markup fixes it for
+   every rule below at once rather than by rewording prose. */
+const code = Object.fromEntries(PAGES.map(f => [f, html[f].replace(/<!--[\s\S]*?-->/g, '')]));
 for (const f of PAGES) {
   test(f + ' has no duplicate element id', () => {
-    const ids = [...html[f].matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
+    const ids = [...code[f].matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
     const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
     assert.deepStrictEqual([...new Set(dupes)], [],
       'a duplicate id silently makes getElementById pick the wrong node');
   });
   test(f + ' has balanced div tags', () => {
-    const open = (html[f].match(/<div\b/g) || []).length;
-    const close = (html[f].match(/<\/div>/g) || []).length;
+    const open = (code[f].match(/<div\b/g) || []).length;
+    const close = (code[f].match(/<\/div>/g) || []).length;
     assert.strictEqual(open, close, 'an orphan </div> reparents everything after it');
   });
   test(f + ' labels every field', () => {
-    const fields = [...html[f].matchAll(/<(input|select|textarea)\b[^>]*>/g)].map(m => m[0]);
+    const fields = [...code[f].matchAll(/<(input|select|textarea)\b[^>]*>/g)].map(m => m[0]);
     const unlabelled = fields.filter(tag => {
       if (/aria-label/.test(tag)) return true; // handled, skip
       const id = (tag.match(/\sid="([^"]+)"/) || [])[1];
-      return !id || !html[f].includes('for="' + id + '"');
+      return !id || !code[f].includes('for="' + id + '"');
     }).filter(t => !/aria-label/.test(t));
     assert.deepStrictEqual(unlabelled, [], 'a field with no label is unusable by screen reader');
   });
@@ -262,13 +281,103 @@ console.log('\nthe route between the two tools');
    POST-CALL prices what came out of it — the whole product is that
    sequence — and until this test, someone landing on either page had no
    way to discover the other one exists. */
-test('index.html hands off to post-call.html once a script exists', () => {
-  assert.ok(/href="post-call\.html"/.test(html['index.html']),
+test('pre-call.html hands off to post-call.html once a script exists', () => {
+  assert.ok(/href="post-call\.html"/.test(html['pre-call.html']),
     'PRE-CALL has no link forward to where its output gets priced');
 });
-test('post-call.html links back to index.html for anyone arriving without a call script', () => {
-  assert.ok(/href="index\.html"/.test(html['post-call.html']),
+test('post-call.html links back to pre-call.html for anyone arriving without a call script', () => {
+  assert.ok(/href="pre-call\.html"/.test(html['post-call.html']),
     'POST-CALL has no link back to where the call gets prepared');
+});
+for (const f of TOOLS) {
+  test(f + ' can get back to the entry page', () => {
+    assert.ok(/href="index\.html"/.test(html[f]),
+      'a tool with no way back to the entry is a dead end for anyone who picked wrong');
+  });
+}
+
+console.log('\nthe entry page routes by situation, not by tool name');
+/* The product used to open on a tool, which assumed the visitor already
+   knew there were two and which one they needed. The entry page asks where
+   they are instead. These tests hold that line: the four situations must
+   stay reachable, and none of them may be phrased as a tool to pick. */
+test('the entry offers a route for every situation someone can arrive in', () => {
+  const e = html['index.html'];
+  const routes = [
+    ['pre-call.html', 'before the call'],
+    ['post-call.html', 'straight after the call'],
+    ['post-call.html#ledger', 'after sending, chasing an answer'],
+    ['post-call.html?demo=1', 'just looking']
+  ];
+  routes.forEach(([href, situation]) =>
+    assert.ok(e.includes('href="' + href + '"'),
+      'no route for: ' + situation + ' (expected ' + href + ')'));
+});
+test('both entry routes that need a landing state are honoured by the shell', () => {
+  const src = read('assets/post-call.js');
+  assert.ok(/demo=1/.test(src),
+    '?demo=1 is linked from the entry but the shell ignores it — the route is a lie');
+  assert.ok(/#ledger|'#ledger'|hash === '#ledger'/.test(src),
+    '#ledger is linked from the entry but the shell ignores it — it would land at the top of a blank form');
+});
+test('the entry names situations, never the tools as a choice to make', () => {
+  const visibleText = html['index.html']
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]+>/g, ' ');
+  // the question the page asks must be about the person, not the product
+  assert.ok(/איפה אתם/.test(visibleText),
+    'the entry must ask where the visitor is, not which tool they want');
+});
+
+console.log('\nhow a link to this looks when somebody sends it');
+/* Found by an AARRR pass rather than by any checker: acquisition and
+   referral were both literally zero. No description, no og tags, no icon,
+   on any page. The channel this product travels through is a link pasted
+   into WhatsApp, and without these that link renders as a bare URL — no
+   title, no picture, nothing saying what it is. Nothing was broken, which
+   is exactly why nothing here ever caught it. */
+const SHARE_PAGES = [...PAGES, 'privacy.html'];
+for (const f of SHARE_PAGES) {
+  const src = f === 'privacy.html' ? read(f) : html[f];
+  test(f + ' can be shared as a link', () => {
+    const need = ['og:title', 'og:description', 'og:image', 'og:url', 'og:type'];
+    const absent = need.filter(t => !src.includes('property="' + t + '"'));
+    assert.deepStrictEqual(absent, [], f + ' would paste into WhatsApp as a bare URL');
+    assert.ok(/<meta name="description" content="[^"]{60,}"/.test(src),
+      'a description under 60 characters tells a reader nothing');
+    assert.ok(/rel="icon"/.test(src), 'no icon means a blank tab among twenty others');
+  });
+  test(f + ' describes itself differently from the other pages', () => {
+    const desc = (src.match(/<meta name="description" content="([^"]+)"/) || [])[1] || '';
+    const others = SHARE_PAGES.filter(x => x !== f)
+      .map(x => ((x === 'privacy.html' ? read(x) : html[x])
+        .match(/<meta name="description" content="([^"]+)"/) || [])[1] || '');
+    assert.ok(!others.includes(desc),
+      'two pages share one description — a copied boilerplate line, not a description');
+  });
+}
+test('the share image exists and is the size every platform expects', () => {
+  const p = path.join(root, 'assets/og.png');
+  assert.ok(fs.existsSync(p), 'og:image points at a file that is not in the repo');
+  const buf = fs.readFileSync(p);
+  // PNG IHDR: width and height are big-endian uint32 at bytes 16 and 20
+  assert.strictEqual(buf.readUInt32BE(16), 1200, 'og image width must be 1200');
+  assert.strictEqual(buf.readUInt32BE(20), 630, 'og image height must be 630');
+});
+
+console.log('\nthe document says who it is from');
+/* The single most obviously unprofessional thing the product did, and it
+   survived every automated check for the same reason: a missing sender is
+   not a defect in anything. */
+test('post-call.html asks who is sending, outside any drawer', () => {
+  const beforeDrawers = html['post-call.html'].split('<details')[0];
+  ['s_name', 's_phone', 's_email'].forEach(id =>
+    assert.ok(beforeDrawers.includes('id="' + id + '"'),
+      id + ' is missing or hidden behind a disclosure — a document with no sender is not sendable'));
+});
+test('the sender survives a backup', () => {
+  assert.ok(read('assets/pc-backup.js').includes('postcall_sender_v1'),
+    'a cache clear would silently unsign every proposal after it');
 });
 
 console.log('\nprivacy.html — static, but not exempt from the CSP that killed every button once already');
@@ -322,8 +431,8 @@ console.log('\nmodule loading');
    a module that is written but never linked is dead code that still passes
    every other test in this file. */
 test('every module the assets directory defines is actually loaded', () => {
-  const linked = [...html['post-call.html'].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1])
-    .concat([...html['index.html'].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1]));
+  const linked = PAGES.flatMap(p =>
+    [...html[p].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1]));
   const orphans = SCRIPTS.filter(f => !linked.includes(f));
   assert.deepStrictEqual(orphans, [], 'written but never loaded by any page');
 });
@@ -376,7 +485,7 @@ test('assets are not cached under names that never change', () => {
 });
 
 test('every data-act in the markup has a handler in the script', () => {
-  const pairs = [['index.html', 'assets/pre-call.js'], ['post-call.html', 'assets/post-call.js']];
+  const pairs = [['pre-call.html', 'assets/pre-call.js'], ['post-call.html', 'assets/post-call.js']];
   for (const [page, script] of pairs) {
     const src = read(script);
     const acts = [...new Set([...html[page].matchAll(/data-act="([^"]+)"/g)].map(m => m[1]))];
@@ -384,6 +493,60 @@ test('every data-act in the markup has a handler in the script', () => {
     assert.deepStrictEqual(missing, [],
       page + ': buttons with no handler are dead on click — ' + missing.join(', '));
   }
+});
+
+console.log('\nthings the markup says are hidden are actually hidden');
+/* Found by screenshotting a page rather than asserting on it, which is
+   the only reason it was found at all. `.hidden` is one class, so any
+   later single-class rule that sets display beats it on source order —
+   and .draftnote and .viz each set display:flex several hundred lines
+   below. POST-CALL painted an empty 26px turquoise strip on every fresh
+   load. Nothing threw, no rule was violated, no assertion existed to
+   fail; the page simply had a box in it that nobody had put there.
+
+   This checks the collision statically, so it holds without a browser
+   and holds for classes that only become visible in states no test has
+   thought to enter yet. */
+const CSS_FOR = { 'index.html': 'assets/entry.css', 'pre-call.html': 'assets/pre-call.css',
+                  'post-call.html': 'assets/post-call.css' };
+
+test('the .hidden utility beats every rule that could contradict it', () => {
+  Object.values(CSS_FOR).forEach(f => {
+    const m = read(f).match(/\.hidden\s*\{([^}]*)\}/);
+    assert.ok(m, f + ' has no .hidden rule at all');
+    assert.ok(/display\s*:\s*none\s*!important/.test(m[1]),
+      f + ': .hidden is a plain single-class rule, so anything below it that sets ' +
+      'display wins on source order — it needs !important to do its one job');
+  });
+});
+
+PAGES.forEach(page => {
+  test(page + ': nothing carrying .hidden is contradicted lower down', () => {
+    /* Belt and braces: even with !important above, name the collisions,
+       because a future edit that drops the !important should fail loudly
+       here rather than quietly repaint a box. */
+    const css = read(CSS_FOR[page]);
+    const withHidden = new Set();
+    for (const m of html[page].matchAll(/class\s*=\s*"([^"]*)"/g)) {
+      const cs = m.group ? [] : m[1].split(/\s+/);
+      if (cs.includes('hidden')) cs.forEach(c => c && c !== 'hidden' && withHidden.add(c));
+    }
+    const hiddenAt = css.indexOf('.hidden{');
+    const clashes = [];
+    withHidden.forEach(c => {
+      const re = new RegExp('(?<![\\w.-])\\.' + c.replace(/[-[\]{}()*+?.,\\^$|#]/g, '\\$&') +
+                            '\\s*\\{([^}]*)\\}', 'g');
+      for (const m of css.matchAll(re))
+        if (/display\s*:/.test(m[1]) && m.index > hiddenAt)
+          clashes.push('.' + c + ' sets display after .hidden');
+    });
+    /* The two known ones are allowed to exist — they are why the
+       !important is there — but a third appearing means someone added a
+       component without knowing the rule, and should read this. */
+    assert.ok(clashes.length <= 2,
+      page + ': ' + clashes.length + ' rules override .hidden — ' + clashes.join(', ') +
+      '. That is fine only because .hidden is !important; keep it that way.');
+  });
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

@@ -9,7 +9,8 @@ function go(n){
   document.querySelectorAll('.stepbtn').forEach(b=>b.classList.toggle('on',+b.dataset.s===n));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('p'+n).classList.add('on');
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0,behavior:
+    (typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches)?'auto':'smooth'});
 }
 
 /* ---------- copy ---------- */
