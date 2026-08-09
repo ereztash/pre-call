@@ -58,7 +58,12 @@
      a single line. An IntersectionObserver on this element costs nothing,
      where a scroll handler would run on every frame of every scroll. -->
 <div id="guideSentinel" aria-hidden="true"></div>
-<div class="guide" id="guideBar" role="status" aria-live="polite"></div>
+<!-- The slot holds the guide's place in the flow. Without it the guide's
+     collapse removed ~240px of document height mid-scroll, which fought
+     every scroll animation on the page — see the note in post-call.css. -->
+<div class="guide-slot" id="guideSlot">
+  <div class="guide" id="guideBar" role="status" aria-live="polite"></div>
+</div>
 
 <!-- ============ זריעה — כל מה שצריך כדי שתהיה טיוטה ============ -->
 <main>
