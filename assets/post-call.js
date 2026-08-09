@@ -366,13 +366,46 @@ const renderScope = guard('scope', function (){
     '<p class="lead nomargin">אין עדיין פריטי סקופ — בחר את המערכות למעלה.</p>';
 
   box.querySelectorAll('.smove').forEach(b => b.onclick = () => {
-    scopeState[b.dataset.i] = b.dataset.s;
+    const id = b.dataset.i, to = b.dataset.s;
+    const item = items.find(i => i.id === id);
+    scopeState[id] = to;
     renderScope();
     renderProposal();   // the client read does not depend on scope
     renderGuide();
     saveDraftSoon();
+    announceScopeMove(item, to);
   });
 });
+
+/* Grouping the list made a move a structural change rather than a chip
+   lighting up, and that quietly cost two things that the old three-button
+   row had for free.
+
+   Measured rather than reasoned about: press Enter on a move and focus
+   landed on <body>. A keyboard operator lost their place completely, and
+   the row they were on had meanwhile moved to a different group, so there
+   was nothing to tab back to. And where the old row toggled aria-pressed
+   — which a screen reader announces — nothing now said anything at all.
+
+   Neither is visible to axe, which reads markup rather than what happens
+   after an interaction, and neither breaks a rule. Both are what the
+   grouping is worth minus what it took away, so both are given back:
+   focus follows the item into its new group, and the move is spoken. */
+function announceScopeMove(item, to){
+  const box = el('scopeBox'); if (!box) return;
+
+  /* The moved row's first control, which is the one that would send it
+     back — the natural next action after a move you did not mean. Its
+     accessible name carries the item and its new home, so focusing it
+     also says where the row went. */
+  const back = box.querySelector('.smove[data-i="' + (window.CSS && CSS.escape
+    ? CSS.escape(item && item.id) : (item && item.id)) + '"]');
+  if (back) back.focus();
+
+  const say = el('scopeLive');
+  if (say && item) say.textContent =
+    item.t + ' — הועבר ל' + SCOPE_LABEL[to] + '.';
+}
 
 /* ---------- method selector ----------
    Four chips asking someone to choose between value, market rate, cost-plus

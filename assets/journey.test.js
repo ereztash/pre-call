@@ -541,6 +541,38 @@ async function journey(engineName, base) {
     assert.ok(total <= 125,
       'POST-CALL paints ' + total + ' controls (ceiling 125, was 137 before the scope regroup). ' +
       'Raise this deliberately or move something behind a disclosure.');
+
+    /* What the grouping cost, and had to give back. Moving an item is now
+       a structural change instead of a chip lighting up, and the first
+       version lost two things the old three-button row had for free:
+       pressing Enter on a move put focus on <body>, and where the old row
+       toggled aria-pressed — which a screen reader announces — nothing
+       said anything at all. Neither breaks a rule, and axe reads markup
+       rather than what happens after an interaction, so neither would
+       ever have surfaced on its own. */
+    const moved = await fresh.evaluate(() => {
+      const btn = document.querySelector('.scope-g-in .smove-out');
+      const id = btn.dataset.i;
+      btn.focus();
+      btn.click();
+      const a = document.activeElement;
+      return {
+        onBody: a === document.body,
+        followsItem: !!(a && a.dataset && a.dataset.i === id),
+        announced: (document.getElementById('scopeLive') || {}).textContent || '',
+        landedIn: (() => { const b = document.querySelector('[data-i="' + id + '"]');
+          return b ? b.closest('.scope-g').className : 'gone'; })()
+      };
+    });
+    assert.strictEqual(moved.onBody, false,
+      'focus fell to <body> after a move — the row has meanwhile gone to another group, ' +
+      'so there is nothing to tab back to');
+    assert.ok(moved.followsItem,
+      'focus went somewhere, but not to the item that moved');
+    assert.ok(/הועבר/.test(moved.announced),
+      'the move is silent to a screen reader: ' + JSON.stringify(moved.announced));
+    assert.ok(/scope-g-out/.test(moved.landedIn),
+      'the item did not land in the group it was sent to');
     await c.close();
   });
 

@@ -582,13 +582,47 @@ test('the README leads with the licence rather than burying it', () => {
     'after three screens of architecture — which is three screens too late');
 });
 
-PAGES.forEach(page => {
+/* PAGES is the three tool pages. privacy.html is deliberately outside it —
+   it has no scripts and its own section of checks further up — and this is
+   the one rule where leaving it out was a real hole: the copyright line
+   went onto all four pages and the test only guarded three, so deleting it
+   from privacy.html left the suite green. Found in review. */
+const SHIPPED = [...PAGES, 'privacy.html'];
+const pageText = p => html[p] || read(p);
+
+SHIPPED.forEach(page => {
   test(page + ' carries a copyright line', () => {
-    assert.ok(/class="copy"/.test(html[page]),
+    const t = pageText(page);
+    assert.ok(/class="copy"/.test(t),
       page + ' has no copyright notice — the pages are the product, and they are ' +
       'what somebody sees before they ever reach the repository');
-    assert.ok(/©\s*\d{4}/.test(html[page]), page + ' has a copyright element with no year in it');
+    assert.ok(/©\s*\d{4}/.test(t), page + ' has a copyright element with no year in it');
   });
+});
+
+test('no page tells a visitor the code is open', () => {
+  /* privacy.html said "כל הקוד פתוח כאן" — literally "all the code is
+     open here" — three commits after the licence said the opposite, and
+     on the one page whose whole argument is that you can verify its
+     claims. Anyone landing there instead of the README got the reverse
+     licensing message, which is precisely the ambiguity the licence
+     exists to remove.
+
+     The claim that page needs is verifiability, not openness, and those
+     are different words. This asserts the difference across every shipped
+     page rather than only the one that got it wrong. */
+  /* Comments stripped first, or the note explaining the fix trips the
+     rule the note is about — which is how a comment containing id="ledger"
+     once registered as a duplicate id in this same file. */
+  const noComments = s => s.replace(/<!--[\s\S]*?-->/g, '');
+  const bad = [];
+  SHIPPED.forEach(page => {
+    const t = noComments(pageText(page));
+    if (/קוד\s+פתוח|open\s+source/i.test(t)) bad.push(page);
+  });
+  assert.deepStrictEqual(bad, [],
+    'these pages describe the code as open, which contradicts LICENSE: ' + bad.join(', ') +
+    '. The verifiable claim is that the code can be read, not that it may be used.');
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
