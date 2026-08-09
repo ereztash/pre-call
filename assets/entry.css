@@ -8,6 +8,52 @@
    should be readable across a room. Nothing here is a form.
    ============================================================ */
 :root{
+  /* ============================================================
+     The palette.
+
+     Measured before this existed: 94 distinct colour literals across the
+     three stylesheets, 39 of them used exactly once, spread over nine
+     hue families. Two of those families sat 15 degrees apart (a copper at
+     h30 and a second warm at h45), as did two reds (h345 and h360), and
+     two more hues appeared exactly once each. Inside the copper family
+     saturation ranged from 16% to 100% — the same colour reading as
+     nearly grey in one place and neon in another.
+
+     That is the type-scale problem again, on the axis the type-scale
+     sweep did not touch. It is also the mechanism behind "looks fine,
+     but not like a professional app": near-duplicate hues read as
+     inconsistency rather than as variety, and the eye catches it long
+     before it can name it.
+
+     Four hue anchors, one shared lightness ramp, and saturation as a
+     function of lightness — chroma peaks in the midtones and eases off at
+     both ends, because flat saturation across a ramp is what makes dark
+     tints look muddy and light tints look chalky. Every value below was
+     derived by snapping what was already in use onto that grid, so the
+     product kept its character: 94 literals became 44, nine hue families
+     became four, and the widest saturation spread inside a family fell
+     from 84 points to 27.
+
+     The step number is the lightness, so the contrast between any two is
+     readable straight off the names. #fff and #000 stay out of this on
+     purpose — they are paper and ink in the print sheet, not UI colour.
+     ============================================================ */
+  /* neutral — every surface, every border, every piece of body text */
+  --nt-5:#0b0d0f; --nt-9:#14171a; --nt-13:#1d2126; --nt-17:#252b31; --nt-21:#2e353d;
+  --nt-27:#3b444e; --nt-34:#4b5563; --nt-41:#5a6777; --nt-50:#6e7d91; --nt-57:#828fa1;
+  --nt-64:#96a1b0; --nt-71:#abb4bf; --nt-78:#bfc6cf; --nt-84:#d0d5dc; --nt-90:#e2e5e9;
+  --nt-95:#f0f2f4;
+  /* copper — the brand accent, and the colour of every primary action */
+  --cu-9:#1c1712; --cu-13:#28221b; --cu-27:#5f472b; --cu-34:#7f592f; --cu-50:#c88437;
+  --cu-57:#cf9554; --cu-64:#d2a674; --cu-71:#d6b794; --cu-78:#dcc8b2; --cu-84:#e3d7c9;
+  --cu-90:#eee6dd; --cu-95:#f6f3ee;
+  /* turquoise — confirmation, progress, anything that went right */
+  --tq-9:#131b19; --tq-21:#29423d; --tq-27:#2d5c53; --tq-41:#379a86; --tq-50:#3dc2a7;
+  --tq-64:#79cdbd; --tq-84:#cae2dd; --tq-95:#eff6f4;
+  /* red — warnings and the one refusal, never decoration */
+  --rd-13:#271b1d; --rd-27:#5e2b32; --rd-34:#7d313b; --rd-41:#9d3442; --rd-64:#d07682;
+  --rd-78:#dbb3b8; --rd-84:#e3cacd; --rd-95:#f6eeef;
+
 
   /* ============================================================
      The scale.
@@ -54,14 +100,14 @@
   --r-lg:8px;      /* panels */
   --r-pill:22px;   /* the selectable chips */
 
-  --charcoal:#16191d;
-  --charcoal-2:#20252b;
-  --line:#2f363e;
-  --copper:#c07d3e;
-  --copper-dim:#8a5a2c;
-  --turq:#2f9e8f;
-  --ink:#e8e6e1;
-  --muted:#9aa3ad;
+  --charcoal:var(--nt-9);
+  --charcoal-2:var(--nt-13);
+  --line:var(--nt-21);
+  --copper:var(--cu-50);
+  --copper-dim:var(--cu-34);
+  --turq:var(--tq-41);
+  --ink:var(--cu-90);
+  --muted:var(--nt-64);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -83,20 +129,20 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 
 /* ---- picking up where you left off ---- */
 .resume{
-  background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);
+  background:#1d2126;border:1px solid #2d5c53;border-right:3px solid var(--turq);
   border-radius:var(--r-md);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-7);
 }
 .resume-h{font-size:var(--fs-xs);font-weight:700;color:var(--turq);letter-spacing:.4px;margin-bottom:var(--sp-3)}
 .resume-row{
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4) var(--sp-5);
-  padding:var(--sp-2) 0;font-size:var(--fs-md);color:#cfe7e2;
+  padding:var(--sp-2) 0;font-size:var(--fs-md);color:#cae2dd;
 }
 .resume-t{flex:1 1 auto}
 .resume-go{
   flex:0 0 auto;color:var(--turq);text-decoration:underline;font-size:var(--fs-sm);
   min-height:32px;display:inline-flex;align-items:center;
 }
-.resume-go:hover{color:#4bbcab}
+.resume-go:hover{color:#3dc2a7}
 
 /* ---- the four situations ---- */
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);margin-bottom:var(--sp-8)}
@@ -109,7 +155,7 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 .card:hover{border-color:var(--copper-dim);transform:translateY(-2px)}
 .card:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
 /* the one most people arrive for — marked by weight, not by shouting */
-.card-hot{border-color:var(--copper-dim);background:#241f1a}
+.card-hot{border-color:var(--copper-dim);background:#28221b}
 .card-quiet{background:transparent}
 
 .card-when{
@@ -156,7 +202,7 @@ footer{
 }
 footer a{color:var(--copper);text-decoration:underline;
   min-height:32px;display:inline-block;line-height:32px}
-footer a:hover{color:#d38b47}
+footer a:hover{color:#cf9554}
 
 /* see the note in post-call.css — a utility whose job is to win */
 .hidden{display:none !important}

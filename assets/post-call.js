@@ -110,7 +110,7 @@ function applyTemplate(id){
   saveDraft();   // immediately: a template rewrites everything at once
   track('template_used');
   const doc = el('proposal');
-  if (doc) doc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (doc) scrollToEl(doc, 'start');
 }
 
 function clearTemplateChoice(){
@@ -144,7 +144,7 @@ function showPrompt(){
   // textContent, never innerHTML: the prompt contains the transcript verbatim
   el('trPromptText').textContent = PC.transcript.buildPrompt(t);
   show('trPrompt', true);
-  el('trPrompt').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  scrollToEl('trPrompt', 'nearest');
 }
 
 function copyPrompt(){
@@ -248,7 +248,7 @@ function applyExtraction(){
   renderScope(); recompute(); renderGuide(); saveDraft();
   track('transcript_applied');
   flashDoc('הטופס מולא מהשיחה');
-  el('proposal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollToEl('proposal', 'start');
 }
 
 /* A transcript says "מורנינג"; the chip says "חשבונית ירוקה / מורנינג". Match
@@ -589,7 +589,7 @@ function goTo(anchor, fields){
     (/INPUT|TEXTAREA|SELECT/.test(n.tagName) ? n : n.querySelector('input,textarea,button'));
 
   setTimeout(() => {
-    (target || n).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    scrollToEl(target || n, 'center');
     if (target && target.focus) target.focus({ preventScroll: true });
     const glow = target && target.classList ? target : n;
     glow.classList.add('pointed');
@@ -627,6 +627,9 @@ const renderGuide = guard('guide', function (){
   }
 
   box.className = 'guide' + (g.ready ? ' ready' : '') + (guidePinned ? ' stuck' : '');
+  /* Re-measure whenever the guide is in the flow and its content changed,
+     so the slot keeps reserving the right amount for the next collapse. */
+  if (!guidePinned) setTimeout(freezeGuideSlot, 0);
   box.innerHTML =
     '<div class="guide-top">' +
       // an optional step must not claim a number in the sequence — saying
@@ -698,11 +701,32 @@ const renderGuide = guard('guide', function (){
    collapse, and never typed afterwards; it does now. */
 let guidePinned = false;
 
+/* The pinned bar is position:fixed, so it leaves the flow and the slot
+   has to hold its place. The slot's height is not a constant that could
+   live in CSS — the guide is as tall as whatever step it is showing, and
+   that changes as the operator works — so it is frozen from the real
+   rendered height at the last moment the bar was in the flow.
+
+   This is the whole fix for the bounce: collapse used to remove ~240px of
+   document height, which moved every scroll target on the page while a
+   scroll animation was running. Now the document is exactly as tall
+   pinned as unpinned, so there is nothing for the loop to feed on. */
+function freezeGuideSlot(){
+  const slot = el('guideSlot'), bar = el('guideBar');
+  if (!slot || !bar || guidePinned) return;
+  const h = bar.getBoundingClientRect().height;
+  if (h > 0) slot.style.height = h + 'px';
+}
+
 function watchGuidePin(){
   const sentinel = el('guideSentinel'), bar = el('guideBar');
   if (!sentinel || !bar || typeof IntersectionObserver === 'undefined') return;
+  freezeGuideSlot();
   new IntersectionObserver(([e]) => {
-    guidePinned = !e.isIntersecting;
+    const pinning = !e.isIntersecting;
+    // measure before the class lands, while the bar is still in the flow
+    if (pinning && !guidePinned) freezeGuideSlot();
+    guidePinned = pinning;
     bar.classList.toggle('stuck', guidePinned);
   }, { threshold: 0 }).observe(sentinel);
 }
@@ -934,7 +958,7 @@ const renderSend = guard('send', function (){
 });
 
 function openSend(){ show('sendBox', true); renderSend();
-  el('sendBox').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  scrollToEl('sendBox', 'center'); }
 
 function sendVia(id){
   const rs = PC.send.routes({
@@ -1279,7 +1303,7 @@ function applyEntryRoute(){
     }
     loadDemo();
     const box = el('trReview');
-    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (box) scrollToEl(box, 'start');
     return;
   }
 

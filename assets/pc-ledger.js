@@ -65,7 +65,7 @@ function loadDeal(id){
       ' <button type="button" class="ghost" data-act="newdeal">הצעה חדשה במקום</button>';
     show('draftNote', true);
   }
-  el('proposal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollToEl('proposal', 'start');
 }
 
 function saveCurrentDeal(){
@@ -322,5 +322,5 @@ function newDeal(){
   // re-saving the blank form here made the recovery notice reappear forever
   PC.draft && PC.draft.clear();
   show('draftNote', false);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollPageTop();
 }

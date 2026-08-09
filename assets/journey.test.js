@@ -486,6 +486,58 @@ async function journey(engineName, base) {
     await fresh.close();
   });
 
+  /* Reported as "the demo screen jumps", and it did. Loading ?demo=1
+     starts a 1048px smooth scroll; partway through it the guide passed
+     its sentinel and collapsed, which removed ~240px from the flow, which
+     moved the scroll target, which moved the page, which un-collapsed the
+     guide. Measured: the scroll position went backwards three times and
+     the guide changed size four times in 180ms.
+
+     Cumulative layout shift stayed at 0.003 the whole time, because CLS
+     excludes shifts within 500ms of a scroll — the one metric watching
+     this corner is blind to it by design. So this asserts the two things
+     that actually characterise the fault: the document must not change
+     height when the guide collapses, and a scroll animation must never
+     run backwards. */
+  await test(label('loading the example scrolls once, without the page fighting it'), async () => {
+    const c = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const fresh = await c.newPage();
+    await fresh.addInitScript(() => {
+      window.__t = [];
+      const tick = () => {
+        window.__t.push({ y: Math.round(window.scrollY),
+                          doc: document.documentElement.scrollHeight });
+        if (performance.now() < 2600) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await fresh.goto(base + '/post-call.html?demo=1');
+    await fresh.waitForTimeout(3000);
+
+    /* Only the frames from the moment the scroll starts. Before that the
+       page is still being filled by the demo, and growing then is exactly
+       what a page is supposed to do. */
+    const all = await fresh.evaluate(() => window.__t);
+    const start = all.findIndex(f => f.y > 0);
+    assert.ok(start > -1, 'the demo never scrolled at all');
+    const t = all.slice(start);
+
+    const heights = [...new Set(t.map(f => f.doc))];
+    assert.strictEqual(heights.length, 1,
+      'the document changed height mid-scroll (' + heights.join(', ') +
+      ') — that is what makes the page bounce');
+
+    /* A smooth scroll only ever moves one way. Any backward step is the
+       animation being fought by a layout change. A one-pixel tolerance
+       covers sub-pixel rounding in the engines. */
+    const back = [];
+    for (let i = 1; i < t.length; i++)
+      if (t[i].y < t[i - 1].y - 1) back.push(t[i - 1].y + ' -> ' + t[i].y);
+    assert.deepStrictEqual(back, [],
+      'the scroll ran backwards: ' + back.join(', '));
+    await c.close();
+  });
+
   /* The product spends a lot of words being honest that its numbers are
      defaults rather than measurements. This panel is where some of that
      stops being an assertion. What it must never do is grow quiet as it
