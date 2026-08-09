@@ -134,15 +134,33 @@
         };
       },
 
-      /* Quoted versus closed — whether the price you sent is the price you got. */
+      /* Quoted versus closed — whether the price you sent is the price you got.
+
+         avgDiscount is the mean across the deals that were actually
+         discounted, not across every won deal. It used to be the latter,
+         and the difference is not academic: five wins where four held and
+         one gave 17% off reported "average discount 3.3%", which reads as
+         "discounts here are trivial" when in fact one client got a sixth
+         off the price. Averaging in the zeros answers a question nobody
+         asks and buries the one they do.
+
+         Nothing outside the tests ever read this — the function was
+         written, commented and left dark — so the shape could be
+         corrected rather than worked around. */
       priceHold() {
         const won = read().filter(d =>
           d.status === 'won' && d.priceQuoted > 0 && d.outcome && d.outcome.closedPrice > 0);
-        if (!won.length) return { n: 0, held: null, avgDiscount: null };
-        const held = won.filter(d => d.outcome.closedPrice >= d.priceQuoted).length;
-        const disc = won.reduce((s, d) =>
-          s + (1 - d.outcome.closedPrice / d.priceQuoted), 0) / won.length;
-        return { n: won.length, held, avgDiscount: +(disc * 100).toFixed(1) };
+        if (!won.length) return { n: 0, held: null, discounted: 0, avgDiscount: null };
+        const cut = won.filter(d => d.outcome.closedPrice < d.priceQuoted);
+        const disc = cut.length
+          ? cut.reduce((s, d) => s + (1 - d.outcome.closedPrice / d.priceQuoted), 0) / cut.length
+          : 0;
+        return {
+          n: won.length,
+          held: won.length - cut.length,
+          discounted: cut.length,
+          avgDiscount: cut.length ? +(disc * 100).toFixed(1) : null
+        };
       }
     };
     return api;

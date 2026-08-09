@@ -20,6 +20,17 @@
     errorAllowance: 1.15
   };
 
+  /* One source for the four names. They used to be written inline inside
+     compute(), which was fine until anything outside this file needed to
+     say "your market-priced quotes" — at which point the name would have
+     been retyped somewhere else and the two would drift. */
+  const METHOD_LABEL = {
+    cost: 'עלות + מרווח',
+    market: 'מחירון שוק',
+    value: 'ערך / ROI',
+    comparable: 'עסקה דומה'
+  };
+
   const PRICE = {
     valueCoeff: 0.25,      // mid of the defensible band
     bandLow: 0.17,         // published first-year ROI 200%–500% puts a
@@ -72,20 +83,20 @@
     const M = {};
 
     M.cost = {
-      label: 'עלות + מרווח',
+      label: METHOD_LABEL.cost,
       raw: round(floor * (1 + margin / 100)),
       basis: effort + ' שעות × ₪' + myRate + ' + ' + margin + '% מרווח'
     };
 
     const tier = marketTier(n, i.integration || 1);
     M.market = tier ? {
-      label: 'מחירון שוק',
+      label: METHOD_LABEL.market,
       raw: round((tier.lo + tier.hi) / 2),
       basis: 'טווח ' + tier.name + ': ' + ils(tier.lo) + '–' + ils(tier.hi)
     } : null;
 
     M.value = annualValue > 0 ? {
-      label: 'ערך / ROI',
+      label: METHOD_LABEL.value,
       raw: round(annualValue * PRICE.valueCoeff),
       basis: Math.round(PRICE.valueCoeff * 100) + '% מ' + ils(annualValue) +
              ' ערך שנתי · הטווח שניתן להגנה ' +
@@ -93,7 +104,7 @@
     } : null;
 
     M.comparable = (i.compLast > 0) ? {
-      label: 'עסקה דומה',
+      label: METHOD_LABEL.comparable,
       raw: round(i.compLast * (i.compScale || 1)),
       basis: ils(i.compLast) + ' × ' + (i.compScaleLabel || '')
     } : null;
@@ -127,6 +138,14 @@
       effort, floor, costFloor, myRate, maint, capture: i.capture,
       M, method, chosen, available, price, best, spread,
       usedFallback: !chosen,
+      /* Which method actually set the price, as opposed to which one was
+         asked for. They differ whenever the requested method had no data
+         behind it — ask for "comparable" with no previous deal and the
+         price silently comes out of cost. The ledger stored `method` and
+         nothing else, so a quote that was really cost-plus was filed under
+         whatever the operator had clicked, and any later claim about which
+         method performs would have been assembled from mislabelled rows. */
+      pricedBy: chosen ? method : 'cost',
       /* No belowCost flag here on purpose — it used to exist, computed as
          `price > 0 && price < floor`, and it could never once fire. Every
          method's .value is Math.max(raw, costFloor) a few lines up, and
@@ -149,7 +168,7 @@
   }
 
   root.PC = root.PC || {};
-  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier };
+  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier, METHOD_LABEL };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.model;
 })(typeof window !== 'undefined' ? window : globalThis);
