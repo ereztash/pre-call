@@ -891,7 +891,26 @@ const renderSend = guard('send', function (){
     html: el('proposal').innerHTML,
     client: txt('q_client'), phone: txt('q_phone'), email: txt('q_email')
   });
+  /* An external review asked for this to block copy, print and send
+     outright. The concern is right — the document can go out with nobody's
+     name on it — but blocking is the wrong instrument here twice over.
+     This product warns and never blocks, deliberately and consistently:
+     implausible numbers, a price under the cost floor, a figure the
+     operator invented themselves, all of them say so and let the operator
+     proceed, because they are the one who knows. And there is a real case
+     for exporting without a letterhead — pasting the text into a template
+     that already has one.
+
+     So senderMissing() is used, which it was not before, at the moment it
+     matters: the click before it leaves. Loud, unmissable, one tap away
+     from fixing, and still the operator's decision. */
+  const anonymous = PC.senderMissing(readSender());
+
   box.innerHTML = '<div class="send-h">לשלוח ללקוח</div>' +
+    (anonymous ? '<div class="send-anon"><b>אין שם על ההצעה.</b> ' +
+      'הלקוח יקבל מסמך בלי מי שולח אותו ובלי דרך לחזור אליך. ' +
+      '<button type="button" class="ghost" data-act="goto" data-anchor="s_name" ' +
+      'data-fields="s_name,s_phone">להוסיף את השם שלי</button></div>' : '') +
     '<div class="send-rows">' + rs.map(r =>
       '<div class="send-row' + (r.ok ? '' : ' off') + '">' +
         '<button type="button" class="' + (r.ok ? 'act' : 'ghost') + '" data-act="sendvia" ' +
@@ -999,7 +1018,15 @@ function collectDraft(){
 
 function saveDraft(){
   if (!PC.draft) return;
-  if (PC.draft.save(collectDraft())) { draftWarned = false; return; }
+  /* The emptiness verdict is stamped here rather than recomputed by whoever
+     reads the draft later. The rule lives in pc-draft.js and needs PRISTINE
+     — the untouched form — to tell a real answer from a select's default,
+     and this page is the only place that has it. The entry page was
+     re-deriving it from two fields and disagreeing with this one; an
+     external review caught the divergence. One owner, one answer. */
+  const state = collectDraft();
+  state.hasContent = !PC.draft.isEmpty(state, PRISTINE);
+  if (PC.draft.save(state)) { draftWarned = false; return; }
   if (draftWarned) return;
   draftWarned = true;
   flashDoc('הדפדפן חוסם שמירה — הטיוטה לא תשרוד רענון');

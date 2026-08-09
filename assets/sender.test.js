@@ -111,6 +111,28 @@ test('a sender name containing markup is escaped, not injected', () => {
   assert.ok(html.includes('&lt;script&gt;'));
 });
 
+console.log('\nthe anonymous-document warning');
+/* An external review asked for missing-sender to block export. The concern
+   is real and the instrument is wrong: this product warns and never blocks,
+   and there is a legitimate case for exporting without a letterhead. What
+   was actually wrong is that missing() was exported and never called. */
+test('missing() is wired into the shell, not merely exported', () => {
+  const shell = require('fs').readFileSync(__dirname + '/post-call.js', 'utf8');
+  assert.ok(/senderMissing\(/.test(shell),
+    'the check exists but nothing calls it — dead code shaped like a safeguard');
+});
+test('the warning fires exactly when there is no name to print', () => {
+  assert.strictEqual(missing({}), true);
+  assert.strictEqual(missing({ s_phone: '052-1234567' }), true, 'contacts alone are not a sender');
+  assert.strictEqual(missing({ s_name: 'דנה לוי' }), false);
+});
+test('export is warned about, never prevented', () => {
+  const shell = require('fs').readFileSync(__dirname + '/post-call.js', 'utf8');
+  const guarded = /senderMissing\([^)]*\)\s*\)?\s*(?:return|\|\|\s*return)/.test(shell);
+  assert.ok(!guarded,
+    'a missing letterhead must not stop the operator — see the note in renderSend');
+});
+
 console.log('\nthe backup carries it');
 test('the sender is included in a backup — losing it means every future proposal is unsigned', () => {
   const backup = require('./pc-backup.js');

@@ -666,6 +666,16 @@
   .ledger-act-n{display:block;margin-top:6px;font-size:12.5px;color:#bfae8a}
   .sbtn.s-cal{border-color:#2f6b62;color:var(--turq)}
 
+  /* The one warning that appears at the click before a document leaves.
+     Sized to be unmissable and still not a wall — this product warns and
+     lets the operator through, and that principle does not bend for the
+     letterhead any more than it bends for an implausible number. */
+  .send-anon{background:#271a10;border:1px solid #7a4326;border-right:3px solid #d1723a;
+    border-radius:6px;padding:11px 14px;margin-bottom:12px;font-size:13.5px;color:#f0d3bd;
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+  .send-anon b{color:#ffd9bd}
+  .send-anon button{margin:0}
+
   /* ---- restored draft ---- */
   .draftnote{background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);
              border-radius:6px;padding:10px 14px;margin:12px 0;font-size:13.5px;color:#bfe3dd;

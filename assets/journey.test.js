@@ -364,6 +364,91 @@ async function journey(engineName, base) {
     await c.close();
   });
 
+  /* All three found by an external review, and all three the same shape:
+     the entry page re-deriving a rule that already had an owner elsewhere,
+     and quietly disagreeing with it. */
+  await test(label('an unanswered proposal still counts as waiting on the entry page'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => localStorage.setItem('postcall_deals_v1', JSON.stringify([{
+      id: 'n', client: 'לא ענה', status: 'no_answer',
+      created: new Date(Date.now() - 9 * 864e5).toISOString(),
+      sentAt: new Date(Date.now() - 9 * 864e5).toISOString(),
+      priceQuoted: 8000, estimatedHours: 12, form: { fields: {}, systems: [], scope: {} }
+    }])));
+    await fresh.goto(base + '/');
+    await fresh.waitForTimeout(300);
+    const visible = await fresh.locator('#resumeBox').isVisible();
+    assert.ok(visible,
+      'the ledger chases no_answer and the entry page ignored it — three files, three ideas of "waiting"');
+    await c.close();
+  });
+
+  await test(label('a draft of numbers alone is still offered back'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    // no process, no client — only figures and a system, which pc-draft.js
+    // counts as content and the entry page used to miss entirely
+    await fresh.fill('#q_freq', '40');
+    await fresh.fill('#q_minutes', '8');
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(900);
+    await fresh.goto(base + '/');
+    await fresh.waitForTimeout(300);
+    const seen = await fresh.evaluate(() => {
+      const b = document.getElementById('resumeBox');
+      return { visible: !b.classList.contains('hidden'), text: b.textContent };
+    });
+    assert.ok(seen.visible, 'POST-CALL would restore this draft; the entry page pretended it was empty');
+    assert.ok(/לא סיימת/.test(seen.text), seen.text);
+    await c.close();
+  });
+
+  await test(label('a genuinely untouched form still shows nothing to resume'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.click('#sysChips .chip >> nth=0');   // touch, then untouch
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(900);
+    await fresh.goto(base + '/');
+    await fresh.waitForTimeout(300);
+    assert.strictEqual(await fresh.locator('#resumeBox').isVisible(), false,
+      'widening the rule must not make the box cry wolf on an empty form');
+    await c.close();
+  });
+
+  await test(label('sending without a name warns loudly and still lets it through'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'תהליך כלשהו');
+    await fresh.fill('#q_client', 'לקוח');
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(400);
+    await fresh.evaluate(() => { renderSend(); document.getElementById('sendBox').classList.remove('hidden'); });
+    await fresh.waitForTimeout(200);
+    const warned = await fresh.evaluate(() => {
+      const w = document.querySelector('.send-anon');
+      const routes = [...document.querySelectorAll('#sendBox [data-route]')];
+      return { shown: !!w, text: w ? w.textContent : '',
+               routesStillEnabled: routes.some(r => !r.disabled) };
+    });
+    assert.ok(warned.shown, 'no warning before an anonymous document goes out');
+    assert.ok(/אין שם/.test(warned.text), warned.text);
+    assert.ok(warned.routesStillEnabled,
+      'this product warns and never blocks — the same rule that governs implausible numbers');
+
+    await fresh.fill('#s_name', 'דנה לוי');
+    await fresh.waitForTimeout(300);
+    await fresh.evaluate(() => renderSend());
+    assert.strictEqual(await fresh.evaluate(() => !!document.querySelector('.send-anon')), false,
+      'the warning must clear the moment a name exists');
+    await c.close();
+  });
+
   // --- returning mid-flow ---
   await test(label('an unfinished proposal is offered back on the entry page'), async () => {
     const fresh = await ctx.newPage();

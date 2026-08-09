@@ -106,8 +106,14 @@ test('every event the client sends is on the server allowlist', () => {
   const allowed = (read('api/event.js').match(/const EVENTS = new Set\(\[([\s\S]*?)\]\)/) || [])[1] || '';
   const known = [...allowed.matchAll(/'([a-z_]+)'/g)].map(m => m[1]);
   assert.ok(known.length, 'could not read the allowlist');
-  const sent = [...new Set([...read('assets/post-call.js').matchAll(/track\('([a-z_]+)'/g)]
-    .map(m => m[1]))];
+  /* Every script, not just the shell. This test existed precisely to catch
+     an event the server would reject, and it still missed one — because it
+     read post-call.js alone, and the new event was emitted from
+     pc-ledger.js. A guard that inspects one file is a guard against one
+     file. Found by an external reviewer, which is its own lesson: the
+     blind spot was in the checker, not in the code it checks. */
+  const sent = [...new Set(SCRIPTS.flatMap(f =>
+    [...read(f).matchAll(/track\('([a-z_]+)'/g)].map(m => m[1])))];
   assert.ok(sent.length, 'no events found in the client');
   const rejected = sent.filter(e => !known.includes(e));
   assert.deepStrictEqual(rejected, [], 'the server would answer 400 and nobody would know');
