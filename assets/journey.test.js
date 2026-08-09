@@ -486,6 +486,89 @@ async function journey(engineName, base) {
     await fresh.close();
   });
 
+  /* The product spends a lot of words being honest that its numbers are
+     defaults rather than measurements. This panel is where some of that
+     stops being an assertion. What it must never do is grow quiet as it
+     learns: the questions it still cannot answer have to stay on screen
+     next to the ones it can, or its silence starts reading as agreement. */
+  await test(label('the track record shows what it knows and what it still cannot say'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(300);
+    const empty = await fresh.evaluate(() => {
+      const s = document.getElementById('historySec');
+      return !s || s.getBoundingClientRect().height === 0;
+    });
+    assert.ok(empty, 'with nothing saved, a panel explaining what it would show is still empty furniture');
+
+    await fresh.evaluate(() => {
+      localStorage.setItem('postcall_deals_v1', JSON.stringify(
+        [0, 1, 2, 3, 4, 5].map(i => ({
+          id: 'j' + i, client: 'לקוח ' + (i + 1), status: 'won',
+          priceQuoted: 12000, pricedBy: i < 3 ? 'value' : 'market',
+          estimatedHours: 10, created: '2026-0' + (i + 1) + '-01T09:00:00.000Z',
+          outcome: { actualHours: [18, 17, 16, 13, 13, 12][i], closedPrice: 12000,
+                     at: '2026-0' + (i + 1) + '-20T09:00:00.000Z' }
+        }))));
+    });
+    /* reload(), not goto('...#ledger'): navigating from post-call.html to
+       post-call.html#ledger differs only by fragment, so the browser does
+       a same-document navigation and never re-runs a line of script. The
+       first version of this test did exactly that and reported the panel
+       missing when the panel was fine. */
+    await fresh.reload();
+    await fresh.waitForTimeout(500);
+
+    const panel = await fresh.evaluate(() => {
+      const box = document.getElementById('historyBox');
+      return {
+        shown: !!box && box.getBoundingClientRect().height > 0,
+        findings: document.querySelectorAll('.hist-find').length,
+        methodRows: document.querySelectorAll('.hist-t tbody tr').length,
+        gaps: document.querySelectorAll('.hist-gap-l li').length,
+        text: box ? box.innerText : ''
+      };
+    });
+    assert.ok(panel.shown, 'six delivered jobs and the track record never appeared');
+    assert.ok(panel.findings >= 1, 'six deliveries produced no finding at all');
+    assert.strictEqual(panel.methodRows, 2, 'both pricing methods reached the threshold and should be listed');
+    assert.ok(panel.gaps >= 1,
+      'the panel found something and then went silent about what it still cannot say');
+    assert.ok(!/NaN|undefined|\[object/.test(panel.text),
+      'a raw JS value reached the screen: ' + panel.text.slice(0, 200));
+
+    /* A four-column table is exactly the shape that has broken the
+       narrowest phone width in this project before — the comparison
+       tables in PRE-CALL did, and nothing noticed until someone opened
+       one at 320px. The other scans reach this width with an empty
+       ledger, so the panel is hidden and unmeasured there. */
+    await fresh.setViewportSize({ width: 320, height: 800 });
+    await fresh.waitForTimeout(300);
+    const narrow = await fresh.evaluate(() => {
+      const doc = document.documentElement;
+      return {
+        page: doc.scrollWidth - doc.clientWidth,
+        parts: [...document.querySelectorAll('#historyBox *')]
+          /* clientWidth is defined as 0 for non-replaced inline elements,
+             so scrollWidth - clientWidth is the element's whole width for
+             every <b> and <span> on the page. Chromium and WebKit happened
+             to report 0 here and Firefox reported the truth, which made a
+             correct layout look broken in one engine only. Measure the
+             boxes that can actually overflow. */
+          .filter(e => getComputedStyle(e).display !== 'inline')
+          .map(e => ({ c: e.className || e.tagName, over: e.scrollWidth - e.clientWidth }))
+          .filter(x => x.over > 1)
+      };
+    });
+    assert.strictEqual(narrow.page, 0,
+      'the track record pushes the page sideways at 320px');
+    assert.deepStrictEqual(narrow.parts, [],
+      'something inside the track record overflows at 320px');
+    await c.close();
+  });
+
   /* The static half of this lives in markup.test.js. This is the half a
      stylesheet cannot answer: whether anything the page decided to hide
      at runtime is nevertheless painted. POST-CALL shipped an empty 26px

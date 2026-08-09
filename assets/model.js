@@ -20,6 +20,20 @@
     errorAllowance: 1.15
   };
 
+  /* One source for the four names. They used to be written inline inside
+     compute(), which was fine until anything outside this file needed to
+     say "your market-priced quotes" — at which point the name would have
+     been retyped somewhere else and the two would drift. */
+  const METHOD_LABEL = {
+    cost: 'עלות + מרווח',
+    market: 'מחירון שוק',
+    value: 'ערך / ROI',
+    comparable: 'עסקה דומה',
+    /* Not one of the four. It is what set the price whenever the chosen
+       method landed under what delivery costs — see pricedBy below. */
+    floor: 'רצפת עלות'
+  };
+
   const PRICE = {
     valueCoeff: 0.25,      // mid of the defensible band
     bandLow: 0.17,         // published first-year ROI 200%–500% puts a
@@ -72,20 +86,20 @@
     const M = {};
 
     M.cost = {
-      label: 'עלות + מרווח',
+      label: METHOD_LABEL.cost,
       raw: round(floor * (1 + margin / 100)),
       basis: effort + ' שעות × ₪' + myRate + ' + ' + margin + '% מרווח'
     };
 
     const tier = marketTier(n, i.integration || 1);
     M.market = tier ? {
-      label: 'מחירון שוק',
+      label: METHOD_LABEL.market,
       raw: round((tier.lo + tier.hi) / 2),
       basis: 'טווח ' + tier.name + ': ' + ils(tier.lo) + '–' + ils(tier.hi)
     } : null;
 
     M.value = annualValue > 0 ? {
-      label: 'ערך / ROI',
+      label: METHOD_LABEL.value,
       raw: round(annualValue * PRICE.valueCoeff),
       basis: Math.round(PRICE.valueCoeff * 100) + '% מ' + ils(annualValue) +
              ' ערך שנתי · הטווח שניתן להגנה ' +
@@ -93,7 +107,7 @@
     } : null;
 
     M.comparable = (i.compLast > 0) ? {
-      label: 'עסקה דומה',
+      label: METHOD_LABEL.comparable,
       raw: round(i.compLast * (i.compScale || 1)),
       basis: ils(i.compLast) + ' × ' + (i.compScaleLabel || '')
     } : null;
@@ -127,6 +141,30 @@
       effort, floor, costFloor, myRate, maint, capture: i.capture,
       M, method, chosen, available, price, best, spread,
       usedFallback: !chosen,
+      /* Which method actually set the price, as opposed to which one was
+         asked for. The ledger stored `method` and nothing else, so a quote
+         the operator did not really price that way was filed under
+         whatever they had clicked, and any later claim about which method
+         performs would have been assembled from mislabelled rows.
+
+         Three outcomes, not two — the first version of this had two, and
+         review caught the missing one:
+
+           · no data behind the requested method (ask for "comparable"
+             with no previous deal) → the price is M.cost.value, so 'cost'
+           · the requested method priced under what delivery costs → every
+             method's value is Math.max(raw, costFloor), so the number
+             sent is costFloor and the method contributed nothing to it.
+             Measured on a real input: value pricing raw ₪10 against a
+             ₪10,730 floor, quoted at ₪10,730 and filed under "value".
+             That is not a value-priced deal by any reading.
+           · otherwise the method genuinely set the price.
+
+         The floor gets its own name rather than being folded into 'cost',
+         because it is not the cost method either: cost+margin is
+         floor × 1.3 and the floor is floor × 1.1. Calling it 'cost' would
+         swap one mislabelled row for another. */
+      pricedBy: !chosen ? 'cost' : (chosen.raised ? 'floor' : method),
       /* No belowCost flag here on purpose — it used to exist, computed as
          `price > 0 && price < floor`, and it could never once fire. Every
          method's .value is Math.max(raw, costFloor) a few lines up, and
@@ -149,7 +187,7 @@
   }
 
   root.PC = root.PC || {};
-  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier };
+  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier, METHOD_LABEL };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.model;
 })(typeof window !== 'undefined' ? window : globalThis);

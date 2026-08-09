@@ -22,6 +22,13 @@ function dealSnapshot(){
     estimatedHours: m.effort,      // locked at save time — see deals.js
     priceQuoted: m.price,
     method: m.method,
+    /* Which method actually produced this price, which is not always the
+       one the operator clicked — ask for "comparable" with no previous
+       deal and the number quietly comes out of cost. Stored separately
+       and never conflated, because the track record below reads it to
+       say which method holds up, and a claim assembled from mislabelled
+       rows would be worse than no claim. */
+    pricedBy: m.pricedBy,
     /* The number of days the document itself promised. It is 14 by
        default and 21 when more than one person has to agree, and until
        now it was computed, printed for the client, and thrown away — so
@@ -216,6 +223,90 @@ const renderLedger = guard('ledger', function (){
   if (bar) bar.innerHTML = list.length
     ? `<button type="button" class="ghost" data-act="newdeal">הצעה חדשה</button>
        <span class="dealbar-n">${list.length} שמורות · ${win.undecided} ממתינות לתשובה</span>` : '';
+
+  renderHistory(list);
+});
+
+/* ---------- the tool's own track record ----------
+
+   Everything above describes the deals. This describes the advice: how
+   good the estimate this tool produced has actually been, and which of
+   its four pricing methods has held up for this operator specifically.
+
+   The product says a great deal about where its defaults come from — the
+   effort table fitted backwards, the market tiers converted from US
+   ranges, the value coefficient the middle of a band. All honest, and all
+   still assertions about the tool rather than evidence about the person
+   using it. This is the part that can stop being an assertion, and the
+   panel is written so that the countdown to a finding is as visible as
+   the finding: silence here must never read as agreement. */
+const renderHistory = guard('history', function (list) {
+  const box = el('historyBox'); if (!box) return;
+  const rep = PC.history.report(list, PC.model.METHOD_LABEL);
+  if (!rep) { box.innerHTML = ''; show('historySec', false); return; }
+  show('historySec', true);
+
+  const acc = rep.accuracy;
+  const hold = PC.deals.priceHold();
+
+  /* Quoted versus closed across everything, at any n. priceHold() has
+     been written, commented and tested in deals.js since the ledger
+     existed and called from nowhere — the one question the operator most
+     wants answered, computed and thrown away on every render. */
+  const holdLine = hold.n ? `<div class="hist-row">
+      <span class="hist-k">המחיר ששלחת מול המחיר שנסגר</span>
+      <span class="hist-v">${hold.n === 1
+        ? (hold.held ? 'נסגרה במחיר המלא' : 'לא נסגרה במחיר המלא')
+        : `${hold.held} מתוך ${hold.n} נסגרו במחיר המלא`}${
+        hold.discounted
+          ? ` · ${hold.discounted === 1
+              ? `אחת ירדה ב-${hold.avgDiscount}%`
+              : `${hold.discounted} ירדו, בממוצע ${hold.avgDiscount}%`}`
+          : ''}</span>
+    </div>` : '';
+
+  const accLine = acc.n ? `<div class="hist-row">
+      <span class="hist-k">האומדן שלך מול המציאות</span>
+      <span class="hist-v">${acc.n === 1 ? 'מסירה אחת' : acc.n + ' מסירות'} · ${
+        acc.within === 1 && acc.n === 1 ? 'בתוך' : acc.within + ' בתוך'} ±${
+        Math.round(PC.history.CLOSE_ENOUGH * 100)}%${
+        acc.over ? ` · ${acc.over === 1 ? 'אחת חרגה' : acc.over + ' חרגו'}` : ''}${
+        acc.under ? ` · ${acc.under === 1 ? 'אחת מתחת' : acc.under + ' מתחת'}` : ''}</span>
+    </div>` : '';
+
+  const verdict = acc.verdict
+    ? `<div class="hist-find hist-${acc.verdict.kind}">${esc(acc.verdict.text)}</div>` : '';
+  const trendLine = rep.trend
+    ? `<div class="hist-find hist-${rep.trend.improving ? 'holds' : 'low'}">${esc(rep.trend.text)}</div>` : '';
+
+  const ready = rep.methods.rows.filter(r => r.enough);
+  const methodTable = ready.length ? `
+    <table class="hist-t">
+      <caption>לפי שיטת התמחור שקבעה את המחיר בפועל</caption>
+      <thead><tr><th scope="col">שיטה</th><th scope="col">הצעות</th>
+        <th scope="col">נסגרו</th><th scope="col">במחיר מלא</th></tr></thead>
+      <tbody>${ready.map(r => `<tr>
+        <th scope="row">${esc(r.label)}</th>
+        <td>${r.quoted}</td>
+        <td>${r.decided ? `${r.won}/${r.decided}` : '—'}</td>
+        <td>${r.pricedN ? `${r.heldFull}/${r.pricedN}${
+          r.avgDiscount > 0 ? ` · −${r.avgDiscount}%` : ''}` : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '';
+
+  /* The countdown, always, even once there are findings — because the
+     questions this panel still cannot answer do not stop existing when
+     one of them gets answered. */
+  const missing = rep.unknowns.length ? `
+    <div class="hist-gap">
+      <div class="hist-gap-h">מה עוד אי אפשר לומר</div>
+      <ul class="hist-gap-l">${rep.unknowns.map(u =>
+        `<li><b>${esc(u.what)}</b> — ${esc(u.text)}</li>`).join('')}</ul>
+    </div>` : '';
+
+  box.innerHTML = (accLine || holdLine
+      ? `<div class="hist-rows">${accLine}${holdLine}</div>` : '') +
+    verdict + trendLine + methodTable + missing;
 });
 
 function newDeal(){

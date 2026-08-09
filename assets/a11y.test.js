@@ -196,6 +196,35 @@ async function scan(page, label) {
     await p.close();
   });
 
+  /* The scan above catches the track record in its countdown state — one
+     saved deal and nothing delivered. This one catches it with findings
+     in it, which is where the new colours live: four verdict panels, a
+     table, and numbers on tinted backgrounds. The colour that carries
+     "your estimate is systematically low" is the one nobody would think
+     to check by hand, because it looks fine. */
+  await test('the track record with real findings in it', async () => {
+    const p = await ctx.newPage();
+    await p.goto(base + '/privacy.html');
+    await p.evaluate(() => {
+      const deals = [0, 1, 2, 3, 4, 5].map(i => ({
+        id: 'h' + i, client: 'לקוח ' + (i + 1), status: i === 5 ? 'lost' : 'won',
+        priceQuoted: 12000, pricedBy: i < 3 ? 'value' : 'market',
+        estimatedHours: 10, created: '2026-0' + (i + 1) + '-01T09:00:00.000Z',
+        outcome: { actualHours: [18, 17, 16, 13, 13, 12][i],
+                   closedPrice: i === 1 ? 9000 : 12000,
+                   at: '2026-0' + (i + 1) + '-20T09:00:00.000Z' }
+      }));
+      localStorage.setItem('postcall_deals_v1', JSON.stringify(deals));
+    });
+    await p.goto(base + '/post-call.html#ledger');
+    await p.waitForTimeout(500);
+    const painted = await p.evaluate(() =>
+      !!document.querySelector('.hist-find') && !!document.querySelector('.hist-t'));
+    assert.ok(painted, 'the fixture produced no findings, so this scan proves nothing');
+    await scan(p, 'post-call.html · the track record with findings');
+    await p.close();
+  });
+
   await test('the transcript review, which is generated markup', async () => {
     const p = await ctx.newPage();
     await p.goto(base + '/post-call.html?demo=1');

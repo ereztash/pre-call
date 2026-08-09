@@ -754,6 +754,46 @@
   .send-anon b{color:#ffd9bd}
   .send-anon button{margin:0}
 
+  /* ---- the tool's own track record ----
+     Findings and gaps get the same visual weight on purpose. A panel that
+     paints its conclusions loudly and its countdown quietly is a panel
+     whose silence reads as agreement, which is the exact failure this
+     product spends its comments arguing against. */
+  .hist-rows{border-bottom:1px solid var(--line);padding-bottom:var(--sp-4);margin-bottom:var(--sp-4)}
+  .hist-row{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);
+            align-items:baseline;padding:var(--sp-2) 0;font-size:var(--fs-sm)}
+  .hist-k{color:var(--muted);flex:1 1 14ch}
+  .hist-v{color:#dfe3e8}
+
+  .hist-find{border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);
+             margin-bottom:var(--sp-4);font-size:var(--fs-sm);line-height:1.6}
+  /* An estimate that holds and one that is improving are the same news */
+  .hist-holds{background:#16262a;border-right:3px solid var(--turq);color:#bfe3dd}
+  /* Under-estimating costs money, so it is the loud one */
+  .hist-low{background:#271a10;border-right:3px solid #d1723a;color:#f0d3bd}
+  /* Over-estimating is a real finding and not an emergency */
+  .hist-high{background:#20252b;border-right:3px solid var(--copper-dim);color:#d9dde2}
+  /* The case a single ratio cannot express: baseline fine, one job broke */
+  .hist-outlier{background:#26200f;border-right:3px solid #d4a13c;color:#ede0c4}
+
+  .hist-t{width:100%;border-collapse:collapse;font-size:var(--fs-sm);margin-bottom:var(--sp-5)}
+  .hist-t caption{text-align:right;font-size:var(--fs-xs);color:var(--muted);
+                  padding-bottom:var(--sp-3)}
+  .hist-t th,.hist-t td{text-align:right;padding:var(--sp-3) var(--sp-4) var(--sp-3) 0;
+                        border-bottom:1px solid var(--line)}
+  .hist-t thead th{font-size:var(--fs-xs);color:var(--muted);font-weight:600}
+  .hist-t tbody th{font-weight:600;color:#eceef1}
+  .hist-t td{color:#c9cfd6;font-variant-numeric:tabular-nums}
+
+  .hist-gap{background:#1b1f24;border:1px solid var(--line);border-radius:var(--r-md);
+            padding:var(--sp-4) var(--sp-5)}
+  .hist-gap-h{font-size:var(--fs-xs);font-weight:700;color:var(--copper-label);
+              letter-spacing:.4px;margin-bottom:var(--sp-3)}
+  .hist-gap-l{margin:0;padding:0 var(--sp-6) 0 0;list-style:disc}
+  .hist-gap-l li{font-size:var(--fs-sm);color:#c9cfd6;line-height:1.6;margin-bottom:var(--sp-2)}
+  .hist-gap-l li:last-child{margin-bottom:0}
+  .hist-gap-l b{color:#dfe3e8}
+
   /* ---- restored draft ---- */
   .draftnote{background:#16262a;border:1px solid #2f6b62;border-right:3px solid var(--turq);
              border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin:var(--sp-4) 0;font-size:var(--fs-sm);color:#bfe3dd;
