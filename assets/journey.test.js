@@ -538,6 +538,34 @@ async function journey(engineName, base) {
       'the panel found something and then went silent about what it still cannot say');
     assert.ok(!/NaN|undefined|\[object/.test(panel.text),
       'a raw JS value reached the screen: ' + panel.text.slice(0, 200));
+
+    /* A four-column table is exactly the shape that has broken the
+       narrowest phone width in this project before — the comparison
+       tables in PRE-CALL did, and nothing noticed until someone opened
+       one at 320px. The other scans reach this width with an empty
+       ledger, so the panel is hidden and unmeasured there. */
+    await fresh.setViewportSize({ width: 320, height: 800 });
+    await fresh.waitForTimeout(300);
+    const narrow = await fresh.evaluate(() => {
+      const doc = document.documentElement;
+      return {
+        page: doc.scrollWidth - doc.clientWidth,
+        parts: [...document.querySelectorAll('#historyBox *')]
+          /* clientWidth is defined as 0 for non-replaced inline elements,
+             so scrollWidth - clientWidth is the element's whole width for
+             every <b> and <span> on the page. Chromium and WebKit happened
+             to report 0 here and Firefox reported the truth, which made a
+             correct layout look broken in one engine only. Measure the
+             boxes that can actually overflow. */
+          .filter(e => getComputedStyle(e).display !== 'inline')
+          .map(e => ({ c: e.className || e.tagName, over: e.scrollWidth - e.clientWidth }))
+          .filter(x => x.over > 1)
+      };
+    });
+    assert.strictEqual(narrow.page, 0,
+      'the track record pushes the page sideways at 320px');
+    assert.deepStrictEqual(narrow.parts, [],
+      'something inside the track record overflows at 320px');
     await c.close();
   });
 

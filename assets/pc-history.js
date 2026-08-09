@@ -126,10 +126,23 @@
     const recentMed = n >= MIN_FOR_TREND
       ? +median(rows.slice(Math.ceil(n / 2)).map(r => r.ratio)).toFixed(2) : null;
     const drifted = recentMed !== null && Math.abs(recentMed - med) > CLOSE_ENOUGH / 2;
+    /* Which way it drifted, which the first version never asked. It said
+       "but the recent deliveries are better" whenever the two medians
+       differed at all — so three accurate jobs followed by three that took
+       twice as long produced "the recent ones are better" here and "your
+       estimate is not improving" in the trend line directly underneath.
+       Two sentences of the same panel contradicting each other is worse
+       than either being wrong alone: it tells the reader the panel is not
+       reading its own data. */
+    const closer = recentMed !== null && Math.abs(recentMed - 1) < Math.abs(med - 1);
     out.recentRatio = recentMed;
+    /* Recent work is the right basis for the correction either way — it
+       is where the operator actually is — but the sentence has to say
+       which direction it moved. */
     const act = drifted ? recentMed : med;
     const alsoSay = drifted
-      ? ' (על פני כל ההיסטוריה זה ' + pct(Math.abs(med - 1)) + '%, אבל המסירות האחרונות טובות יותר)'
+      ? ' (על פני כל ההיסטוריה זה ' + pct(Math.abs(med - 1)) + '%, ' +
+        (closer ? 'אבל המסירות האחרונות טובות יותר' : 'והמסירות האחרונות דווקא גרועות יותר') + ')'
       : '';
 
     if (typical && mostlyFine && Math.abs(out.worst.off) > CLOSE_ENOUGH * 2) {

@@ -28,7 +28,10 @@
     cost: 'עלות + מרווח',
     market: 'מחירון שוק',
     value: 'ערך / ROI',
-    comparable: 'עסקה דומה'
+    comparable: 'עסקה דומה',
+    /* Not one of the four. It is what set the price whenever the chosen
+       method landed under what delivery costs — see pricedBy below. */
+    floor: 'רצפת עלות'
   };
 
   const PRICE = {
@@ -139,13 +142,29 @@
       M, method, chosen, available, price, best, spread,
       usedFallback: !chosen,
       /* Which method actually set the price, as opposed to which one was
-         asked for. They differ whenever the requested method had no data
-         behind it — ask for "comparable" with no previous deal and the
-         price silently comes out of cost. The ledger stored `method` and
-         nothing else, so a quote that was really cost-plus was filed under
-         whatever the operator had clicked, and any later claim about which
-         method performs would have been assembled from mislabelled rows. */
-      pricedBy: chosen ? method : 'cost',
+         asked for. The ledger stored `method` and nothing else, so a quote
+         the operator did not really price that way was filed under
+         whatever they had clicked, and any later claim about which method
+         performs would have been assembled from mislabelled rows.
+
+         Three outcomes, not two — the first version of this had two, and
+         review caught the missing one:
+
+           · no data behind the requested method (ask for "comparable"
+             with no previous deal) → the price is M.cost.value, so 'cost'
+           · the requested method priced under what delivery costs → every
+             method's value is Math.max(raw, costFloor), so the number
+             sent is costFloor and the method contributed nothing to it.
+             Measured on a real input: value pricing raw ₪10 against a
+             ₪10,730 floor, quoted at ₪10,730 and filed under "value".
+             That is not a value-priced deal by any reading.
+           · otherwise the method genuinely set the price.
+
+         The floor gets its own name rather than being folded into 'cost',
+         because it is not the cost method either: cost+margin is
+         floor × 1.3 and the floor is floor × 1.1. Calling it 'cost' would
+         swap one mislabelled row for another. */
+      pricedBy: !chosen ? 'cost' : (chosen.raised ? 'floor' : method),
       /* No belowCost flag here on purpose — it used to exist, computed as
          `price > 0 && price < floor`, and it could never once fire. Every
          method's .value is Math.max(raw, costFloor) a few lines up, and

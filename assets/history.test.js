@@ -125,6 +125,26 @@ test('the correction comes from recent work once the estimate has moved', () => 
   assert.ok(a.verdict.text.includes('כל ההיסטוריה'),
     'dropping the historic figure entirely hides why the number changed');
 });
+test('drifting the wrong way is never described as an improvement', () => {
+  /* Found in review. The parenthetical fired on any drift and always read
+     "but the recent deliveries are better", so three accurate jobs
+     followed by three that took twice as long said "the recent ones are
+     better" here and "your estimate is not improving" in the trend line
+     immediately below it. Two sentences of one panel contradicting each
+     other tells the reader it is not reading its own data. */
+  const at = i => '2026-01-' + (10 + i) + 'T09:00:00.000Z';
+  const rows = [10, 10, 10, 20, 20, 20].map((act, i) => done(10, act, {
+    outcome: { actualHours: act, closedPrice: 10000, at: at(i) }
+  }));
+  const a = H.accuracy(rows), t = H.trend(rows);
+  assert.ok(Math.abs(a.recentRatio - 1) > Math.abs(a.medianRatio - 1),
+    'the fixture must actually get worse: ' + a.medianRatio + ' -> ' + a.recentRatio);
+  assert.strictEqual(t.improving, false);
+  assert.ok(!/טובות יותר/.test(a.verdict.text),
+    'the verdict calls a worsening record an improvement: ' + a.verdict.text);
+  assert.ok(/גרועות יותר/.test(a.verdict.text),
+    'and it has to say which way it moved, not merely stop claiming the wrong one');
+});
 test('a steady record gets one number and no parenthetical', () => {
   const a = H.accuracy(Array.from({ length: 6 }, () => done(10, 14)));
   assert.strictEqual(a.verdict.kind, 'low');
@@ -195,6 +215,28 @@ test('the method that set the price is read, never the one that was asked for', 
                          pricedBy: r.pricedBy, outcome: { closedPrice: r.price } }],
                       M.METHOD_LABEL);
   assert.strictEqual(m.rows[0].method, 'cost');
+});
+test('a price the cost floor set is not credited to the method that was clicked', () => {
+  /* Found in review, and it is the same fault pricedBy was introduced to
+     prevent — the first version only caught the case where the requested
+     method had no data at all, and missed the case where it had data that
+     priced under what delivery costs. Every method's value is
+     Math.max(raw, costFloor), so the number sent is the floor and the
+     method contributed nothing to it. */
+  const r = M.compute({ method: 'value', systemCount: 5, integration: 1.4, edge: 1.2,
+                        freq: 1, freqUnit: 12, minutes: 5, rate: 60, capture: 0.5, myRate: 250 });
+  assert.strictEqual(r.method, 'value', 'the request is still recorded');
+  assert.ok(r.M.value.raised, 'the fixture must actually hit the floor');
+  assert.strictEqual(r.price, r.costFloor, 'and the floor must be what was quoted');
+  assert.strictEqual(r.pricedBy, 'floor',
+    'crediting "value" for a price the floor set is exactly the mislabelled row this prevents');
+  assert.notStrictEqual(r.pricedBy, 'cost',
+    'nor is it the cost method — cost+margin is floor x1.3, the floor is x1.1');
+
+  const m = H.methods([{ id: 'f', status: 'won', priceQuoted: r.price, pricedBy: r.pricedBy,
+                         outcome: { closedPrice: r.price } }], M.METHOD_LABEL);
+  assert.strictEqual(m.rows[0].label, M.METHOD_LABEL.floor,
+    'the floor needs a name of its own on screen, or the row is unreadable');
 });
 test('deals saved before pricedBy existed are excluded, not guessed at', () => {
   const m = H.methods([
