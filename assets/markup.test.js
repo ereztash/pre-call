@@ -549,5 +549,47 @@ PAGES.forEach(page => {
   });
 });
 
+console.log('\nthis is a product, and the repository says so');
+/* The repository is public and was, for its whole life, unlicensed —
+   which under copyright means all rights reserved, and which to anyone
+   reading it means "open source that nobody got around to tidying". Those
+   two readings are very far apart, and the second one is the one a public,
+   forkable, licence-free repository invites.
+
+   Worth stating plainly because this project's own comments are the thing
+   most worth protecting: the pricing model, the effort model and the scope
+   catalogue all ship with their reasoning attached. That is deliberate —
+   it is what makes the product maintainable and auditable — and it is not
+   an invitation. */
+test('a licence exists and says the software is not open source', () => {
+  const p = path.join(root, 'LICENSE');
+  assert.ok(fs.existsSync(p), 'no LICENSE file — a public repo without one reads as unfinished open source');
+  const t = fs.readFileSync(p, 'utf8');
+  assert.ok(/all rights reserved/i.test(t), 'the licence does not reserve any rights');
+  assert.ok(/not open source/i.test(t), 'the licence never says what it is not, which is the ambiguity it exists to remove');
+  ['pricing model', 'effort', 'scope'].forEach(k =>
+    assert.ok(new RegExp(k, 'i').test(t),
+      'the licence does not name the ' + k + ' — the reasoning in the comments is the asset, ' +
+      'and a licence that only covers "the code" invites the argument that it does not cover them'));
+});
+
+test('the README leads with the licence rather than burying it', () => {
+  const r = read('README.md');
+  assert.ok(/\[LICENSE\]\(LICENSE\)/.test(r), 'the README never links the licence');
+  const head = r.slice(0, 700);
+  assert.ok(/קנייני|לא קוד פתוח/.test(head),
+    'the licence notice is below the fold of the README, where a reader reaches it ' +
+    'after three screens of architecture — which is three screens too late');
+});
+
+PAGES.forEach(page => {
+  test(page + ' carries a copyright line', () => {
+    assert.ok(/class="copy"/.test(html[page]),
+      page + ' has no copyright notice — the pages are the product, and they are ' +
+      'what somebody sees before they ever reach the repository');
+    assert.ok(/©\s*\d{4}/.test(html[page]), page + ' has a copyright element with no year in it');
+  });
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
