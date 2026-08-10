@@ -161,5 +161,184 @@ test('zero and junk numbers are stored as null, not as values', () => {
   assert.strictEqual(d.calibration(1).n, 0, 'junk does not enter the ratio');
 });
 
+console.log('\nwhere the number came from, kept on the record');
+/* The form already carries q_provenance and dealSnapshot() already stores the
+   whole form with the deal, so every saved deal has held this value all along.
+   Nothing read it. Promoting it to a first-class field is what lets the track
+   record group by it the same way it groups by pricedBy. */
+test('a saved deal carries the provenance the form recorded', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'א', priceQuoted: 5000, form: { q_provenance: 'unprompted' } });
+  assert.strictEqual(a.provenance, 'unprompted');
+  assert.strictEqual(d.get(a.id).provenance, 'unprompted', 'and it survives the round trip');
+});
+test('an explicitly supplied provenance is not overwritten by the form', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'א', provenance: 'mine', form: { q_provenance: 'prompted' } });
+  assert.strictEqual(a.provenance, 'mine', 'the caller is more specific than the form dump');
+});
+test('a deal with neither is unattributed, never guessed', () => {
+  /* The rule pc-history.js already applies to pricedBy: a record saved before
+     the field existed is counted as unattributable rather than assigned a
+     value. Defaulting to 'mine' here would invent the most damning reading of
+     a deal nobody recorded anything about. */
+  const d = make(mem());
+  const a = d.save({ client: 'א', priceQuoted: 5000 });
+  assert.strictEqual(a.provenance, null);
+  assert.strictEqual(d.provenanceOf(d.get(a.id)), null);
+});
+test('the four values the form can produce all survive, including "no number"', () => {
+  /* The select has four options, not three. 'none' is an answer — the client
+     never named a figure — and it is not the same thing as a record that was
+     saved before anyone asked. Folding them together would hide the first
+     inside the second. */
+  ['unprompted', 'prompted', 'mine', 'none'].forEach(v => {
+    const d = make(mem());
+    const a = d.save({ client: 'א', priceQuoted: 5000, form: { q_provenance: v } });
+    assert.strictEqual(a.provenance, v, v + ' did not survive the save');
+  });
+});
+test('a value nobody defined reads as unattributed, not as its own group', () => {
+  /* A hand-edited store, or a fifth option added to the form later without
+     anyone teaching the track record about it. Either way the panel must not
+     grow a bucket named after a string it cannot explain. */
+  const d = make(mem());
+  const a = d.save({ client: 'א', priceQuoted: 5000, form: { q_provenance: 'לא-קיים' } });
+  assert.strictEqual(a.provenance, null);
+  assert.strictEqual(d.provenanceOf({ provenance: 'banana' }), null);
+});
+test('a record already in storage is read through the fallback, not rewritten', () => {
+  /* save() can only promote what passes through it. Deals sitting in
+     localStorage from before this existed never pass through it again, so the
+     read side has to reach into form itself or they stay invisible. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([{
+    id: 'old1', client: 'עתיק', status: 'won', priceQuoted: 4000,
+    form: { q_provenance: 'prompted' }
+  }]));
+  const d = make(st);
+  const rec = d.get('old1');
+  assert.strictEqual(rec.provenance, undefined, 'storage is not rewritten behind the operator');
+  assert.strictEqual(d.provenanceOf(rec), 'prompted', 'but it is readable');
+});
+
+console.log('\nwho moved the price');
+/* A discount the client asked for and a discount the operator offered without
+   being asked call for opposite corrections — one says the price was too high
+   for this buyer, the other says nothing about the buyer at all. A single mean
+   across both cannot tell them apart, which is the same argument this module
+   already makes about averaging the zeros into avgDiscount. */
+test('a concession defaults to unknown rather than to either side', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 8000 });
+  assert.strictEqual(d.get(a.id).outcome.concession, 'unknown',
+    'guessing who asked would invent the finding this field exists to record');
+});
+test('the two answers are stored as given', () => {
+  ['client_asked', 'i_offered'].forEach(v => {
+    const d = make(mem());
+    const a = d.save({ client: 'a', priceQuoted: 10000 });
+    d.setStatus(a.id, 'won');
+    d.recordOutcome(a.id, { closedPrice: 8000, concession: v });
+    assert.strictEqual(d.get(a.id).outcome.concession, v);
+  });
+});
+test('a value outside the three falls back to unknown', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 8000, concession: 'maybe' });
+  assert.strictEqual(d.get(a.id).outcome.concession, 'unknown');
+});
+test('priceHold splits the average by who moved it, and reports the two apart', () => {
+  const d = make(mem());
+  const mk = (price, closed, conc) => {
+    const x = d.save({ client: 'c', priceQuoted: price });
+    d.setStatus(x.id, 'won');
+    d.recordOutcome(x.id, { closedPrice: closed, concession: conc });
+  };
+  mk(10000, 8000, 'client_asked');    // 20%
+  mk(10000, 9000, 'client_asked');    // 10%
+  mk(10000, 5000, 'i_offered');       // 50%
+  mk(10000, 10000, 'client_asked');   // held, must not enter any average
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 3);
+  assert.strictEqual(p.byConcession.client_asked.n, 2);
+  assert.strictEqual(p.byConcession.client_asked.avgDiscount, 15);
+  assert.strictEqual(p.byConcession.i_offered.n, 1);
+  assert.strictEqual(p.byConcession.i_offered.avgDiscount, 50);
+  assert.strictEqual(p.byConcession.unknown.n, 0);
+  assert.strictEqual(p.byConcession.unknown.avgDiscount, null,
+    'a side with no deals has no average, not an average of zero');
+});
+test('a deal that held its price is in no concession group at all', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 10000, concession: 'i_offered' });
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 0);
+  assert.strictEqual(p.byConcession.i_offered.n, 0,
+    'the price did not move, so nobody moved it — whatever the field says');
+});
+test('an unanswered concession is counted on its own, not folded into either side', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 7000 });
+  const p = d.priceHold();
+  assert.strictEqual(p.byConcession.unknown.n, 1);
+  assert.strictEqual(p.byConcession.unknown.avgDiscount, 30);
+  assert.strictEqual(p.byConcession.client_asked.n, 0);
+  assert.strictEqual(p.byConcession.i_offered.n, 0);
+});
+test('every discounted deal lands in exactly one group, whatever the field holds', () => {
+  /* The invariant, asserted directly rather than through any one bad value.
+     Reported in review: a value outside the three fell through all three
+     filters, so `discounted` could exceed the groups it is supposed to be made
+     of and the panel would underreport unattributed discounts without saying
+     so. pc-backup.js restores ledger JSON verbatim, so an edited or
+     hand-written backup is a real way in. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'r1', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 8000, concession: 'banana' } },
+    { id: 'r2', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 9000, concession: 'client_asked' } },
+    { id: 'r3', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 5000, concession: '' } }
+  ]));
+  const p = make(st).priceHold();
+  const summed = Object.keys(p.byConcession)
+    .reduce((s, k) => s + p.byConcession[k].n, 0);
+  assert.strictEqual(summed, p.discounted,
+    'discounted=' + p.discounted + ' but the groups add to ' + summed);
+  assert.strictEqual(p.byConcession.unknown.n, 2,
+    'an unrecognised value and an empty one are both "nobody recorded it"');
+});
+test('a bad value on the record is repaired the next time an outcome is saved', () => {
+  /* Root cause of the above: the carry-forward kept whatever was already
+     there. Preserving the answer an operator gave is the point of it, but a
+     string nobody defined is not an answer to preserve. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'r1', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 8000, concession: 'banana' } }
+  ]));
+  const d = make(st);
+  d.recordOutcome('r1', { closedPrice: 8000, actualHours: 12 });
+  assert.strictEqual(d.get('r1').outcome.concession, 'unknown');
+});
+test('recording an outcome again does not silently reset the answer', () => {
+  /* The outcome form re-renders after every save, and the hours field is the
+     one an operator comes back to. Wiping the concession on a second save
+     because that dropdown was not re-sent would lose the answer they gave. */
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 8000, concession: 'i_offered' });
+  d.recordOutcome(a.id, { closedPrice: 8000, actualHours: 12 });
+  assert.strictEqual(d.get(a.id).outcome.concession, 'i_offered');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

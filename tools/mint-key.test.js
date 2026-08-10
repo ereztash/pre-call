@@ -69,6 +69,31 @@ test('the tool and pc-gate.js agree about which keys are bad, not only which are
   assert.ok(!mint.passesChecksum(broken), 'the tool accepted a key with the wrong check character');
 });
 
+test('the checksum is still a filter, not a lock', () => {
+  /* Carried over from tools/mintkey.test.js, which this file replaced when the
+     two minters were merged. Everything else that suite asserted is covered
+     above; this was not, and it is the one assertion about what the checksum
+     is FOR. It stops somebody typing PC-AAAA-AAAA and getting in, and nothing
+     more — pc-gate.js says that in prose, and this says it in behaviour so
+     nobody later mistakes it for security.
+
+     A seeded generator rather than Math.random, so a bad build fails every
+     time instead of one run in twenty. Note the full [A-Z0-9] alphabet, not
+     mint.SAFE: what matters is what a person can type, not what the tool
+     draws from. */
+  const ALPHA = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const r = (n => () => (n = (n * 1103515245 + 12345) % 2147483648) / 2147483648)(7);
+  let refused = 0, tried = 0;
+  for (let i = 0; i < 400; i++) {
+    const body = Array.from({ length: 8 }, () => ALPHA[Math.floor(r() * 36)]).join('');
+    tried++;
+    if (!realKeyValid(mint.format(body))) refused++;
+  }
+  /* One in thirty-six passes by luck. That is the design, not a shortfall. */
+  assert.ok(refused / tried > 0.9,
+    'the checksum refused only ' + refused + ' of ' + tried + ' random strings of the right shape');
+});
+
 console.log('\nkeys a person has to read and type');
 test('no character anyone confuses for another', () => {
   const AMBIGUOUS = /[01OI]/;

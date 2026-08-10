@@ -253,6 +253,137 @@ test('the labels come from the model, so the two can never drift apart', () => {
   assert.strictEqual(m.rows[0].label, M.METHOD_LABEL.market);
 });
 
+console.log('\nwhere the number came from, as a track record');
+/* Same shape as methods() above, on the axis the ledger has been storing and
+   never reading. The point of grouping by it is that the four values are not
+   interchangeable inputs to the same calculation — a figure the client named
+   unprompted and a figure you estimated for him are different kinds of claim,
+   and if they close differently the operator should be the one to see it. */
+const P = require('./deals.js');
+const prov = (provenance, status, price, closed) => ({
+  id: 'p' + (++seq), client: 'ל' + seq, status, priceQuoted: price,
+  provenance, created: '2026-01-01T00:00:00.000Z',
+  outcome: closed == null ? null : { closedPrice: closed, actualHours: 0 }
+});
+
+test('groups by provenance and holds to the same threshold as the methods table', () => {
+  const r = H.provenance([prov('unprompted', 'won', 10000, 10000),
+                          prov('unprompted', 'won', 8000, 8000)], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.rows[0].quoted, 2);
+  assert.strictEqual(r.rows[0].enough, false,
+    'two quotes is no more a finding here than it is about a pricing method');
+});
+test('at three it reports, and averages only the discounts that happened', () => {
+  const r = H.provenance([
+    prov('mine', 'won', 10000, 10000),
+    prov('mine', 'won', 10000, 8000),    // 20% off
+    prov('mine', 'lost', 10000, null)
+  ], P.PROVENANCE_LABEL);
+  const row = r.rows[0];
+  assert.strictEqual(row.enough, true);
+  assert.strictEqual(row.quoted, 3);
+  assert.strictEqual(row.winRate, 0.67, 'two won of three decided');
+  assert.strictEqual(row.heldFull, 1);
+  assert.strictEqual(row.avgDiscount, 20, 'not 10 — averaging in the zero answers nobody’s question');
+});
+test('"no number" is its own group, not folded into the unattributed', () => {
+  const r = H.provenance([
+    prov('none', 'won', 4000, 4000),
+    { id: 'x', status: 'won', priceQuoted: 4000 }        // saved before the field was read
+  ], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.attributed, 1);
+  assert.strictEqual(r.unattributed, 1);
+  assert.strictEqual(r.rows.length, 1);
+  assert.strictEqual(r.rows[0].provenance, 'none',
+    '"the client never gave a figure" is an answer; "nobody recorded it" is not');
+});
+test('an old deal is read through its stored form rather than being dropped', () => {
+  /* The value was in form.q_provenance on every saved deal long before
+     anything read it, so a ledger full of old rows is not a blank slate. */
+  /* 'unprompted' rather than 'prompted': this test is about the value being
+     readable out of the stored form at all, and 'prompted' additionally needs a
+     confirmation flag — a different rule, tested on its own below. */
+  const r = H.provenance([
+    { id: 'o1', status: 'won', priceQuoted: 4000, form: { q_provenance: 'unprompted' } },
+    { id: 'o2', status: 'won', priceQuoted: 4000, form: { q_provenance: 'unprompted' } },
+    { id: 'o3', status: 'won', priceQuoted: 4000, form: { q_provenance: 'unprompted' } }
+  ], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.attributed, 3);
+  assert.strictEqual(r.rows[0].enough, true);
+});
+test('the labels come from deals.js, so the two can never drift apart', () => {
+  const r = H.provenance([prov('unprompted', 'won', 1000, 1000)], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.rows[0].label, P.PROVENANCE_LABEL.unprompted);
+});
+test('a legacy "prompted" is not counted as a choice somebody made', () => {
+  /* Raised in review, and it is the same ambiguity from the other end: deals
+     saved before the default changed hold 'prompted' because nobody touched the
+     question, and by value alone they are indistinguishable from a deliberate
+     'prompted'. The panel claims every row is a choice, so either that claim
+     needs a disclaimer or these rows need to leave. They leave — a record that
+     was actually answered carries the flag collectDraft() now writes, and one
+     that was not is unattributed, which the panel already discloses. */
+  const legacy   = { id: 'L', status: 'won', priceQuoted: 4000,
+                     form: { q_provenance: 'prompted' } };            // no flag
+  const answered = { id: 'A', status: 'won', priceQuoted: 4000, provenance: 'prompted',
+                     form: { q_provenance: 'prompted', provenanceAnswered: true } };
+  const r = H.provenance([legacy, answered], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.attributed, 1, 'the legacy row was counted as a choice');
+  assert.strictEqual(r.unattributed, 1);
+  assert.strictEqual(r.rows[0].quoted, 1);
+});
+test('the three answers that were never a default need no flag', () => {
+  /* Only 'prompted' is ambiguous. Requiring a flag from the others would
+     discard real answers from every record written before it existed. */
+  ['unprompted', 'mine', 'none'].forEach(v => {
+    const r = H.provenance([{ id: 'x', status: 'won', priceQuoted: 4000,
+                              form: { q_provenance: v } }], P.PROVENANCE_LABEL);
+    assert.strictEqual(r.attributed, 1, v + ' was discarded for lacking a flag it never needed');
+  });
+});
+test('a deal with no recorded source is disclosed, not just dropped', () => {
+  /* Found by rendering the panel in a browser: the row was correctly kept out
+     of every bucket, and nothing on screen said so. Excluding a deal quietly
+     and excluding it visibly are different products — the whole panel is built
+     on saying what it cannot answer. */
+  const u = H.unknowns([
+    prov('unprompted', 'won', 4000, 4000),
+    { id: 'n1', status: 'won', priceQuoted: 4000, pricedBy: 'value' }   // no provenance anywhere
+  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(u.some(x => /בלי שנרשם מאיפה|בלי מקור/.test(x.what + x.text)),
+    'the excluded deal is invisible: ' + JSON.stringify(u.map(x => x.what)));
+});
+test('the form default never becomes a group, so every row is a real choice', () => {
+  /* This replaces a test that asserted the opposite arrangement. The form used
+     to default to 'prompted', so that group mixed deals somebody had marked with
+     deals nobody had touched, and the panel had to disclaim it. The default is
+     'unset' now, which deliberately has no label — and the label map is what
+     defines the buckets — so it can be stored and can never be claimed about.
+     The disclaimer is gone with the ambiguity, and this is what keeps it gone. */
+  const r = H.provenance([
+    prov('unset', 'won', 4000, 4000),
+    prov('unset', 'won', 4000, 4000),
+    prov('unset', 'won', 4000, 4000),
+    Object.assign(prov('prompted', 'won', 4000, 4000),
+                  { form: { provenanceAnswered: true } })
+  ], P.PROVENANCE_LABEL);
+  assert.deepStrictEqual(r.rows.map(x => x.provenance), ['prompted'],
+    'the unanswered ones became a group: ' + JSON.stringify(r.rows.map(x => x.provenance)));
+  assert.strictEqual(r.unattributed, 3, 'and they are counted as unattributed instead');
+
+  const u = H.unknowns([Object.assign(prov('prompted', 'won', 4000, 4000),
+                                     { form: { provenanceAnswered: true } })],
+                       M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(!u.some(x => /ברירת המחדל של הטופס/.test(x.text)),
+    'a disclaimer that no longer describes the code teaches the reader to discount the ones that do');
+});
+test('report() carries the breakdown, and unknowns() counts down to it', () => {
+  const rep = H.report([prov('mine', 'won', 5000, 5000)], M.METHOD_LABEL);
+  assert.ok(rep.provenance, 'report() must expose it or the ledger cannot render it');
+  assert.ok(rep.unknowns.some(u => /מאיפה/.test(u.what) || /מקור/.test(u.what)),
+    'one quote is not enough to conclude from, so it belongs in the countdown');
+});
+
 console.log('\nwhat it admits it cannot say');
 test('an empty history reports no findings rather than an empty panel', () => {
   assert.strictEqual(H.report([]), null);

@@ -366,13 +366,46 @@ const renderScope = guard('scope', function (){
     '<p class="lead nomargin">אין עדיין פריטי סקופ — בחר את המערכות למעלה.</p>';
 
   box.querySelectorAll('.smove').forEach(b => b.onclick = () => {
-    scopeState[b.dataset.i] = b.dataset.s;
+    const id = b.dataset.i, to = b.dataset.s;
+    const item = items.find(i => i.id === id);
+    scopeState[id] = to;
     renderScope();
     renderProposal();   // the client read does not depend on scope
     renderGuide();
     saveDraftSoon();
+    announceScopeMove(item, to);
   });
 });
+
+/* Grouping the list made a move a structural change rather than a chip
+   lighting up, and that quietly cost two things that the old three-button
+   row had for free.
+
+   Measured rather than reasoned about: press Enter on a move and focus
+   landed on <body>. A keyboard operator lost their place completely, and
+   the row they were on had meanwhile moved to a different group, so there
+   was nothing to tab back to. And where the old row toggled aria-pressed
+   — which a screen reader announces — nothing now said anything at all.
+
+   Neither is visible to axe, which reads markup rather than what happens
+   after an interaction, and neither breaks a rule. Both are what the
+   grouping is worth minus what it took away, so both are given back:
+   focus follows the item into its new group, and the move is spoken. */
+function announceScopeMove(item, to){
+  const box = el('scopeBox'); if (!box) return;
+
+  /* The moved row's first control, which is the one that would send it
+     back — the natural next action after a move you did not mean. Its
+     accessible name carries the item and its new home, so focusing it
+     also says where the row went. */
+  const back = box.querySelector('.smove[data-i="' + (window.CSS && CSS.escape
+    ? CSS.escape(item && item.id) : (item && item.id)) + '"]');
+  if (back) back.focus();
+
+  const say = el('scopeLive');
+  if (say && item) say.textContent =
+    item.t + ' — הועבר ל' + SCOPE_LABEL[to] + '.';
+}
 
 /* ---------- method selector ----------
    Four chips asking someone to choose between value, market rate, cost-plus
@@ -457,6 +490,14 @@ function provenanceWarning(m){
   if (!m.annualValue) return '';
   const p = el('q_provenance').value;
   if (p === 'unprompted') return '';
+  /* The case that used to fall off the end of this function and return ''. The
+     form's default was one of the answers, so an untouched question produced
+     the 'prompted' warning — wrong, but at least a warning. With an explicit
+     unanswered default it would have produced silence on the one field that
+     decides whether the number may be quoted, which is worse than either. */
+  if (p === 'unset') return '<div class="tri-warn"><b>לא סימנת מאיפה הגיע המספר.</b> ' +
+    'זו השאלה שקובעת אם אפשר לצטט אותו ללקוח כמספר שלו, ועד שתסמן פסקת ההחזר לא נכנסת למסמך. ' +
+    'העדר הסימון לא שינה את המחיר — רק את מה שנכנס למסמך.</div>';
   if (p === 'prompted') return '<div class="tri-warn">המספר הגיע אחרי ששאלת. ' +
     'ייתכן שהוא אמיתי, וייתכן שהוא נבנה בשבילך בזמן השיחה. לפני שאתה שולח מחיר שנשען עליו, ' +
     'שאל אותו שאלה אחת: "איך אתה יודע את זה?" — אם אין תשובה, זה אומדן ולא מדידה.</div>';
@@ -621,6 +662,10 @@ function guideState(){
     errFreq: num('q_err_freq'),
     errCost: num('q_err_cost'),
     numbersAreMine: el('q_provenance').value === 'mine',
+    /* Separate from numbersAreMine on purpose. That flag decides the pricing
+       METHOD in pc-guide.js, and an unanswered question must never change the
+       price — only what the tool is willing to claim. */
+    numbersUnset: el('q_provenance').value === 'unset',
     comparableLast: num('c_last'),
     scopeConfirmed,
     client: txt('q_client'),
@@ -939,7 +984,9 @@ const renderFlow = guard('flow', function (){
    what is deliberately absent and why. */
 const renderViz = guard('viz', function (){
   const box = el('vizBox'); if (!box) return;
-  const v = PC.viz.forModel(model(), { numbersAreMine: el('q_provenance').value === 'mine' });
+  const v = PC.viz.forModel(model(), {
+    numbersAreMine: el('q_provenance').value === 'mine',
+    numbersUnset:   el('q_provenance').value === 'unset' });
   if (!v.payback && !v.share && !v.waiting) { show('vizBox', false); box.innerHTML = ''; return; }
 
   let html = '';
@@ -1103,7 +1150,17 @@ function collectDraft(){
   PC.DRAFT_FIELDS.forEach(id => { const f = el(id); if (f) fields[id] = f.value; });
   return { fields, systems: [...chosenSystems], scope: scopeState,
            template: activeTemplate, dealId: currentDealId, override: clientOverride,
-           scopeConfirmed };
+           scopeConfirmed,
+           /* Whether somebody actually answered where the number came from, as a
+              sibling flag in the same shape as scopeConfirmed. It exists because
+              of one irreducible ambiguity: 'prompted' used to be the form's
+              default, so a stored 'prompted' cannot be told apart from an
+              untouched question by looking at the value. The other three answers
+              were never a default and need no flag.
+              Records written before this flag existed simply lack it, which is
+              exactly the reading we want — unconfirmed. */
+           provenanceAnswered: el('q_provenance')
+             ? el('q_provenance').value !== 'unset' : false };
 }
 
 function saveDraft(){
@@ -1140,6 +1197,18 @@ const PRISTINE = (() => {
 function applyDraft(d){
   if (!d) return;
   Object.entries(d.fields || {}).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
+  /* Reopening a draft or a saved deal used to restore the old default verbatim,
+     so the ROI paragraph went back into a client-facing document on the strength
+     of a question nobody had answered — the exact thing the new default exists
+     to stop, surviving in every record written before it. Raised in review.
+
+     Only the ambiguous value is downgraded, and only when the flag is absent.
+     'unprompted', 'mine' and 'none' were never a default, so restoring them
+     verbatim is safe; a 'prompted' that was genuinely chosen carries the flag
+     and is left alone. Nothing is rewritten in storage — this is the value on
+     the form, and answering it again saves it stamped. */
+  const prov = el('q_provenance');
+  if (prov && !d.provenanceAnswered && prov.value === 'prompted') prov.value = 'unset';
   selectSystems(d.systems || []);
   scopeState = Object.assign(defaultScopeState(), d.scope || {});
   activeTemplate = d.template || null;

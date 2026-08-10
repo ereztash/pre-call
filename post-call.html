@@ -267,6 +267,10 @@
   <h2>על מה מתחייבים, ומה נשאר בחוץ</h2>
   <p class="lead">כל שורה כבר מסומנת, עם הסיבה לידה. משנים רק מה שלא מתאים — והמסמך למעלה מתעדכן מיד.</p>
   <div class="box" id="scopeBox"></div>
+  <!-- Moving an item between groups is a structural change with nothing
+       to announce it — the old three-button row toggled aria-pressed,
+       which a screen reader speaks. This says it instead. -->
+  <p class="sr-only" id="scopeLive" role="status" aria-live="polite"></p>
   <div class="scope-confirm">
     <button class="act" data-act="confirmscope" id="scopeConfirmBtn">עברתי על הרשימה, ממשיכים</button>
     <span class="hint-p" id="scopeConfirmNote">רוב הפעמים אין מה לשנות. אם הכול נראה בסדר — אישור ומתקדמים.</span>
@@ -396,10 +400,17 @@
   <div class="box">
     <label for="q_provenance">מאיפה הגיע המספר בשאלה 6
       <span class="hint">בשיחות מתועדות בתחומים דומים, הלקוח נותן ספרות רק אחרי שהמוכר מכוון אותו לשם.
-        אם זה מה שקרה, המספר מודד את השאלה שלך ולא את העסק שלו.</span></label>
+        אם זה מה שקרה, המספר מודד את השאלה שלך ולא את העסק שלו.
+        <b>כל עוד לא סימנת, פסקת ההחזר לא נכנסת למסמך שנשלח</b> — הכלי לא מצטט ללקוח מספר
+        שאף אחד לא אמר שהוא שלו.</span></label>
+    <!-- The default is deliberately not one of the answers. It used to be
+         "prompted", which meant an untouched question was stored, counted and
+         quoted as though somebody had answered it — see the note on 'unset' in
+         assets/deals.js. -->
     <select id="q_provenance">
+      <option value="unset" selected>עוד לא סימנתי</option>
       <option value="unprompted">הוא נקב במספר מעצמו, בלי שכיוונתי</option>
-      <option value="prompted" selected>הוא נקב אחרי ששאלתי ישירות</option>
+      <option value="prompted">הוא נקב אחרי ששאלתי ישירות</option>
       <option value="mine">אני הערכתי בשבילו</option>
       <option value="none">לא היה מספר</option>
     </select>

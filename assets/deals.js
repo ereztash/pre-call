@@ -22,6 +22,47 @@
     lost: 'נדחתה', no_answer: 'ללא מענה'
   };
 
+  /* Where the annual-value figure came from. The form has asked this since the
+     transcript step existed, and dealSnapshot() has been storing the whole form
+     with every deal — so this value has been on every saved record all along
+     and nothing has ever read it. Promoting it to a field of its own is what
+     lets the track record group by it, the way it already groups by pricedBy.
+
+     Four answers, and a fifth value that is not one. 'none' is an answer: the
+     client named no figure at all. 'unset' is the form's default and means
+     nobody has said yet — a different fact from every answer, and the reason it
+     exists is that 'prompted' used to hold that job. An untouched question was
+     therefore stored as an answer, counted as one in the track record, and
+     quoted to the client as one.
+
+     'unset' is listed here so it survives a save, and deliberately absent from
+     the label map below, because that map is what pc-history.js uses as its set
+     of buckets. So it can be stored, and it can never become a group the panel
+     makes a claim about. */
+  const PROVENANCE = ['unprompted', 'prompted', 'mine', 'none', 'unset'];
+  const PROVENANCE_LABEL = {
+    unprompted: 'הוא נקב מעצמו',
+    prompted:   'הוא נקב אחרי שאלה',
+    mine:       'אתה הערכת',
+    none:       'לא היה מספר'
+  };
+
+  /* Who moved the price, when the closing price came in under the quote.
+     Recorded after delivery rather than asked before it, and only when the
+     number actually dropped — if the price held there is nothing to attribute.
+
+     Three values because two of them are answers and the third is the honest
+     absence of one. 'unknown' is the default and is never inferred: a discount
+     the client asked for and a discount the operator offered unasked call for
+     opposite corrections, and guessing which one happened would manufacture
+     exactly the finding this field exists to record. */
+  const CONCESSION = ['client_asked', 'i_offered', 'unknown'];
+  const CONCESSION_LABEL = {
+    client_asked: 'הלקוח ביקש',
+    i_offered:    'הצעת מעצמך',
+    unknown:      'לא נרשם'
+  };
+
   function make(storage) {
     const read = () => {
       try { return JSON.parse(storage.getItem(KEY)) || []; }
@@ -48,6 +89,13 @@
       save(deal) {
         const list = read();
         deal = defined(deal);
+        /* Promoted here rather than at the call site so every caller gets it —
+           the form dump is already in `deal.form`, and a value that has to be
+           lifted out by hand is a value the next caller forgets to lift. An
+           explicit `provenance` from the caller is left alone: it is more
+           specific than a form dump, not less. */
+        if (deal.provenance === undefined && deal.form && valid(deal.form.q_provenance))
+          deal.provenance = deal.form.q_provenance;
         const i = deal.id ? list.findIndex(d => d.id === deal.id) : -1;
         if (i >= 0) {
           // update: merge only what was actually supplied. Applying the blank
@@ -66,6 +114,7 @@
           estimatedHours: null,
           priceQuoted: null,
           method: null,
+          provenance: null,
           outcome: null
         }, deal);
         list.push(rec);
@@ -82,15 +131,45 @@
 
       /* actualHours is the only field that can decalcify the effort model.
          closedPrice tells you whether the price survived contact. */
-      recordOutcome(id, { closedPrice, actualHours, note } = {}) {
+      recordOutcome(id, { closedPrice, actualHours, note, concession } = {}) {
         const d = api.get(id); if (!d) return null;
+        const prev = d.outcome || {};
         d.outcome = {
           closedPrice: num(closedPrice),
           actualHours: num(actualHours),
           note: note || '',
+          /* Carried over when the caller does not send one. The outcome form
+             re-renders after every save and the hours field is the one an
+             operator comes back to — dropping the answer they already gave,
+             because that one control was not re-sent, would lose the only
+             field here nobody can reconstruct later. */
+          /* Root cause of the same defect: this kept whatever was already on the
+             record. Preserving the answer the operator gave is the point, but a
+             string nobody defined is not an answer to preserve — so the carried
+             value is validated on the way through too, and a bad one is
+             repaired the next time an outcome is saved. */
+          concession: conc(concession) || conc(prev.concession) || 'unknown',
           at: new Date().toISOString()
         };
         return api.save(d);
+      },
+
+      /* save() can only promote what passes through it, and a deal sitting in
+         storage from before the field existed never passes through it again.
+         So the read side reaches into the form itself. Nothing rewrites
+         storage to backfill: silently editing the operator's saved records to
+         make a new panel look populated is the wrong trade, and an unreadable
+         old record is supposed to show up as unattributed anyway.
+
+         Anything that is not one of the four known values reads as null. A
+         hand-edited store or a future form option would otherwise become its
+         own bucket in the track record, which is a claim assembled from a
+         string nobody defined. */
+      provenanceOf(d) {
+        // 'unset' is storable but is not an attribution, so it reads as none
+        const real = v => valid(v) && v !== 'unset' ? v : null;
+        if (!d) return null;
+        return real(d.provenance) || (d.form ? real(d.form.q_provenance) : null);
       },
 
       remove(id) { return write(read().filter(d => d.id !== id)); },
@@ -152,14 +231,40 @@
           d.status === 'won' && d.priceQuoted > 0 && d.outcome && d.outcome.closedPrice > 0);
         if (!won.length) return { n: 0, held: null, discounted: 0, avgDiscount: null };
         const cut = won.filter(d => d.outcome.closedPrice < d.priceQuoted);
-        const disc = cut.length
-          ? cut.reduce((s, d) => s + (1 - d.outcome.closedPrice / d.priceQuoted), 0) / cut.length
-          : 0;
+        const off = d => 1 - d.outcome.closedPrice / d.priceQuoted;
+        const mean = rows => rows.length
+          ? +(rows.reduce((s, d) => s + off(d), 0) / rows.length * 100).toFixed(1)
+          : null;
+
+        /* The same argument this function already makes about the zeros, one
+           level in. A mean over every discount cannot tell "the client
+           negotiated" from "you moved first", and those two demand opposite
+           corrections: the first says the price was too high for this buyer,
+           the second says nothing about the buyer at all. Reported apart, and
+           the deals nobody answered for stay in their own column rather than
+           being distributed across the two that mean something.
+
+           Only discounted deals appear here. A deal that held its price was
+           not conceded by anyone, whatever its field happens to say. */
+        const byConcession = {};
+        CONCESSION.forEach(k => {
+          /* Normalised, not compared raw. A value outside the three used to fall
+             through all three filters, so `discounted` could exceed the groups
+             it is made of and the panel underreported unattributed discounts
+             with nothing to show for it. pc-backup.js restores ledger JSON
+             verbatim, so an edited backup is a real way in. Every discounted
+             deal now lands in exactly one group, and deals.test.js asserts that
+             as an invariant rather than testing one bad string. */
+          const rows = cut.filter(d => (conc(d.outcome.concession) || 'unknown') === k);
+          byConcession[k] = { n: rows.length, avgDiscount: mean(rows) };
+        });
+
         return {
           n: won.length,
           held: won.length - cut.length,
           discounted: cut.length,
-          avgDiscount: cut.length ? +(disc * 100).toFixed(1) : null
+          avgDiscount: mean(cut),
+          byConcession
         };
       }
     };
@@ -167,13 +272,21 @@
   }
 
   const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
+  const valid = v => PROVENANCE.indexOf(v) !== -1;
+  // anything outside the three reads as no answer, never as one of the two
+  const conc = v => CONCESSION.indexOf(v) !== -1 ? v : null;
 
   root.PC = root.PC || {};
   root.PC.dealsFactory = make;
   root.PC.STATUS_LABEL = STATUS_LABEL;
   root.PC.STATUS = STATUS;
+  root.PC.PROVENANCE = PROVENANCE;
+  root.PC.PROVENANCE_LABEL = PROVENANCE_LABEL;
+  root.PC.CONCESSION = CONCESSION;
+  root.PC.CONCESSION_LABEL = CONCESSION_LABEL;
   if (typeof localStorage !== 'undefined') root.PC.deals = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, STATUS, STATUS_LABEL };
+    module.exports = { make, STATUS, STATUS_LABEL,
+                       PROVENANCE, PROVENANCE_LABEL, CONCESSION, CONCESSION_LABEL };
 })(typeof window !== 'undefined' ? window : globalThis);
