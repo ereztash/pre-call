@@ -59,13 +59,23 @@ function withConfig(src, { paymentUrl, contact }) {
   }
   if (contact !== undefined) {
     const before = src;
-    src = src.replace("contact: ''", 'contact: ' + JSON.stringify(contact));
+    /* Matched by shape, not by the empty literal it used to be. The repository
+       now ships a real address, and a helper that only recognised '' would have
+       stopped substituting anything the moment it was filled in — every test
+       below would then have gone on passing while measuring the shipped
+       configuration instead of the one it asked for. */
+    src = src.replace(/contact:\s*'[^']*'/, 'contact: ' + JSON.stringify(contact));
     assert.notStrictEqual(src, before, 'SALES.contact moved — this test now proves nothing');
   }
   return src;
 }
 
-function page({ store = {}, remote = null, typed = '', paymentUrl, contact } = {}) {
+/* `contact` defaults to empty rather than to whatever the repository happens to
+   ship. A test that describes the not-for-sale wall has to keep describing it
+   after the operator fills in an address, or filling one in would silently
+   rewrite what a dozen assertions below mean. The shipped value gets its own
+   test instead, at the end of this file. */
+function page({ store = {}, remote = null, typed = '', paymentUrl, contact = '' } = {}) {
   const env = {
     calls: 0, shown: {}, tracked: [], store,
     els: { keyIn: { value: typed }, keyErr: { textContent: '' },
@@ -368,6 +378,23 @@ test('the address is on screen as text, not only behind the button', () => {
     'the scheme is machine syntax — what is shown should read as an address');
 });
 
+test('a WhatsApp route prints the number, not the link that wraps it', () => {
+  /* Same reason as the line above, one route over. This text exists for the
+     buyer whose click did nothing, and "wa.me/972..." typed into a phone is not
+     a number they can reach anybody on. The plus stays: the country code is what
+     makes it dialable, and WhatsApp itself refuses the local form. */
+  const p = page({ contact: 'https://wa.me/972524545963' });
+  p.run('renderBuyRoute()');
+  assert.strictEqual(p.els.buyContact.textContent, '+972524545963');
+  assert.ok(!/wa\.me/.test(p.els.buyContact.textContent), 'a URL is not a phone number');
+});
+test('an address in no recognised shape is printed as it stands', () => {
+  // wrong on screen beats mangled on screen: the operator can see what they set
+  const p = page({ contact: 'https://forms.example.org/key' });
+  p.run('renderBuyRoute()');
+  assert.strictEqual(p.els.buyContact.textContent, 'https://forms.example.org/key');
+});
+
 test('a mailto replaces the location; an https route opens a tab instead', () => {
   const mail = page({ contact: 'mailto:sales@example.org' });
   mail.run('renderBuyRoute()');
@@ -479,6 +506,23 @@ test('the wall never tells a buyer to edit a source file', () => {
     .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   assert.ok(!/alert\(/.test(src), 'an alert() in the gate is addressed to the wrong person');
   assert.ok(!/PAYMENT_URL[^\n]*assets\/pc-gate/.test(src), 'instructions for the developer are on the buyer’s screen');
+});
+
+test('the address this repository actually ships is one a buyer can open', () => {
+  /* Every test above substitutes its own address, so none of them ever looks at
+     the configured one — and the configured one is the only address a real buyer
+     will ever click. Two ways to get it wrong and see nothing: a WhatsApp number
+     in local form, which wa.me resolves to a dead page rather than an error, and
+     a bare number with no scheme, which the wall would open as a relative path
+     on its own origin. */
+  const shipped = (SRC.match(/contact:\s*'([^']*)'/) || [])[1];
+  assert.notStrictEqual(shipped, undefined, 'SALES.contact is gone from the file');
+  if (!shipped) return;                       // not selling yet is a valid state
+  assert.ok(/^mailto:[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(shipped) ||
+            /^https:\/\/wa\.me\/[1-9]\d{8,14}$/.test(shipped),
+    'neither an email nor an international wa.me number: ' + shipped);
+  assert.ok(!/wa\.me\/0/.test(shipped),
+    'a leading zero is a local number — wa.me opens a dead page for it, not an error');
 });
 
 (async () => {
