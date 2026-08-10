@@ -466,6 +466,22 @@
   details.drawer .box{border:0;background:transparent;margin-bottom:0}
   details.drawer .nums{border:0;border-radius:0}
 
+  /* Entering deals that already happened. A grid rather than the page's usual
+     stacked labels, because these four are one row of one record and reading them
+     as four separate questions is what makes a repeated-entry job feel long.
+     auto-fit collapses it to a single column on a phone with no breakpoint. */
+  .retro-row{display:grid;gap:var(--sp-4);
+             grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));
+             padding:0 var(--sp-5) var(--sp-4)}
+  .retro-row label{margin-top:0}
+  .retro-opt{color:var(--muted);font-weight:400;font-size:var(--fs-xs)}
+  .retro-acts{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;
+              padding:0 var(--sp-5) var(--sp-5)}
+  /* aria-live, so a refusal is announced and not only coloured. The reasons this
+     prints are the ones addPast() refuses on, and a button that silently does
+     nothing is how somebody decides the feature is broken. */
+  .retro-flag{font-size:var(--fs-sm);color:var(--muted)}
+
   /* ---- deal ledger ---- */
   .ledger-sum{display:flex;flex-wrap:wrap;gap:var(--sp-5);font-size:var(--fs-sm);color:var(--muted);
               padding-bottom:var(--sp-4);border-bottom:1px solid var(--line);margin-bottom:var(--sp-4)}

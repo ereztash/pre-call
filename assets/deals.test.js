@@ -447,5 +447,94 @@ test('a deal that was discounted AND widened is counted in both', () => {
   assert.strictEqual(p.heldClean, 0);
 });
 
+console.log('\ndeals that happened before the tool existed');
+/* The advantage this product offers is an accumulation, so it is worth nothing on
+   deal one — which is exactly when people leave. And every threshold in here
+   sensibly refuses to speak without evidence, so guidance arrives inversely to
+   need: the operator who has priced fifteen jobs gets the findings, and the one
+   who has priced none gets a blank panel.
+
+   Entering deals that already happened is the only fix that needs no server, no
+   account and no second side. What it must not do is let a remembered number
+   pass itself off as a measured one. */
+test('a past deal that closed is stored as a win with both prices', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'מאפייה', quoted: 8000, closed: 7000 });
+  assert.strictEqual(r.status, 'won');
+  assert.strictEqual(r.priceQuoted, 8000);
+  assert.strictEqual(r.outcome.closedPrice, 7000);
+});
+test('a past deal that did not close is stored as lost, not as a zero-price win', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'יבואן', quoted: 12000, lost: true });
+  assert.strictEqual(r.status, 'lost');
+  assert.strictEqual(r.outcome, null, 'there is no closing price to record');
+  assert.strictEqual(d.winRate().lost, 1);
+});
+test('it carries no estimate, so it can never enter the calibration figures', () => {
+  /* The whole reason calibration() exists is estimate-versus-actual on a number
+     locked at quote time. Nobody can reconstruct that from memory, and letting a
+     remembered figure in would corrupt the one statistic the effort table depends
+     on to stop being fitted backwards. */
+  const d = make(mem());
+  d.addPast({ client: 'a', quoted: 8000, closed: 8000, hours: 40 });
+  const r = d.list()[0];
+  assert.strictEqual(r.estimatedHours, null, 'an estimate nobody locked is not an estimate');
+  assert.strictEqual(d.calibration().n, 0, 'a remembered deal must not calibrate anything');
+});
+test('provenance is unset, because it cannot be remembered honestly', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'a', quoted: 8000, closed: 8000, provenance: 'unprompted' });
+  assert.strictEqual(d.provenanceOf(r), null,
+    'whether the client volunteered a figure months ago is not recoverable, and a ' +
+    'caller claiming it does not make it so');
+});
+test('scope drift is unmeasurable on a past deal rather than absent', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'a', quoted: 8000, closed: 8000 });
+  assert.strictEqual(d.scopeDrift(r).measurable, false);
+});
+test('it is marked as entered rather than measured', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'a', quoted: 8000, closed: 8000 });
+  assert.strictEqual(r.retro, true,
+    'nothing may present a remembered deal as one the tool watched happen');
+});
+test('who asked for the discount is recorded when there was one', () => {
+  const d = make(mem());
+  d.addPast({ client: 'a', quoted: 10000, closed: 8000, concession: 'i_offered' });
+  assert.strictEqual(d.priceHold().byConcession.i_offered.n, 1);
+});
+test('a concession on a deal that held its price is not recorded as one', () => {
+  const d = make(mem());
+  d.addPast({ client: 'a', quoted: 10000, closed: 10000, concession: 'i_offered' });
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 0, 'nothing was conceded, whatever the field says');
+  assert.strictEqual(p.byConcession.i_offered.n, 0);
+});
+test('a closing price above the quote is refused rather than stored', () => {
+  const d = make(mem());
+  assert.strictEqual(d.addPast({ client: 'a', quoted: 8000, closed: 9000 }), null,
+    'that is not a discount and not a hold — it is a typo, and it would report as a hold');
+});
+test('a missing or junk quote is refused', () => {
+  const d = make(mem());
+  [{}, { quoted: 0 }, { quoted: -5 }, { quoted: 'הרבה' }].forEach(row =>
+    assert.strictEqual(d.addPast(row), null, JSON.stringify(row)));
+  assert.strictEqual(d.list().length, 0);
+});
+test('six entered deals are enough for the ceiling finding to speak', () => {
+  /* The point of the whole exercise: the beginner enters what already happened
+     and the panel starts working the same afternoon. Six wins, none discounted,
+     none lost — and the tool can now say the thing it could never say before,
+     that the price has never actually been tested. */
+  const d = make(mem());
+  for (let i = 0; i < 6; i++) d.addPast({ client: 'c' + i, quoted: 6000, closed: 6000 });
+  const w = d.winRate();
+  assert.strictEqual(w.won, 6);
+  assert.strictEqual(w.rate, 1);
+  assert.strictEqual(d.priceHold().discounted, 0);
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

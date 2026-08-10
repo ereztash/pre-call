@@ -1376,6 +1376,8 @@ const ACTIONS = {
   trlocal:  localExtraction,
   trdemo:   loadDemo,
   trapply:  applyExtraction,
+  retroadd:  () => addPastDeal(false),
+  retrolost: () => addPastDeal(true),
   'backup-export': downloadBackup,
   'backup-import': pickBackupFile
 };

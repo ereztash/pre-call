@@ -121,6 +121,67 @@
         return write(list) ? rec : null;
       },
 
+      /* A deal that happened before this tool did.
+
+         The advantage this product offers is an accumulation, which means it is
+         worth nothing on deal one — exactly when people leave. And because every
+         threshold here refuses to speak without evidence, guidance arrives
+         inversely to need: fifteen priced jobs gets you the findings, none gets
+         you a blank panel. Entering what already happened is the only fix that
+         needs no server, no account and no second party.
+
+         What it must not do is let a remembered number pass as a measured one, so
+         three fields are deliberately refused no matter what the caller sends:
+
+           estimatedHours — nobody can reconstruct an estimate locked at quote
+             time, and calibration() exists precisely to stop the effort table
+             being fitted backwards. A remembered figure would corrupt the one
+             statistic that can decalcify it.
+           provenance — whether the client volunteered the annual figure months
+             ago is not recoverable. It stays unattributed, which the track record
+             already reports honestly.
+           scopeAtQuote — no baseline, so scopeDrift() reads unmeasurable rather
+             than "nothing moved".
+
+         What it does feed is everything that only needs the two prices and the
+         outcome: winRate(), priceHold(), byConcession, and through them the
+         ceiling finding and the guide's stretch warning. Which is the whole
+         point — six remembered deals and the panel starts working this
+         afternoon. */
+      addPast(row) {
+        const r = row || {};
+        const quoted = num(r.quoted);
+        if (!quoted) return null;
+        const lost = !!r.lost;
+        const closed = lost ? null : num(r.closed);
+        if (!lost && !closed) return null;
+        /* Above the quote is neither a discount nor a hold. It is a typo, and
+           stored it would report as a clean full-price win — the instrument
+           saying the opposite of what happened, which is the defect this whole
+           area was just fixed for. */
+        if (closed && closed > quoted) return null;
+        return api.save({
+          client: (r.client || '').trim() || 'ללא שם',
+          status: lost ? 'lost' : 'won',
+          priceQuoted: quoted,
+          estimatedHours: null,
+          method: null,
+          pricedBy: null,
+          provenance: 'unset',
+          retro: true,          // nothing may present this as a deal the tool watched
+          outcome: lost ? null : {
+            closedPrice: closed,
+            actualHours: null,
+            note: '',
+            /* Only meaningful when the price actually dropped. priceHold() already
+               ignores the field on a deal that held, and recording an answer there
+               would put a concession in the record of a deal nobody conceded. */
+            concession: closed < quoted ? (conc(r.concession) || 'unknown') : 'unknown',
+            at: new Date().toISOString()
+          }
+        });
+      },
+
       setStatus(id, status) {
         if (!STATUS.includes(status)) return null;
         const d = api.get(id); if (!d) return null;

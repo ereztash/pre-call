@@ -475,6 +475,53 @@
     הכול נשאר בדפדפן הזה — שום פרט לקוח לא עוזב אותו.
   </p>
   <div class="box" id="ledgerBox"></div>
+
+  <!-- ============ עסקאות שקדמו לכלי ============
+       What the tool can tell you here is an accumulation, so on the first deal it
+       is worth nothing — which is exactly when a person leaves. And because every
+       threshold in the panel below sensibly refuses to speak without evidence,
+       the guidance arrives inversely to need: somebody who has priced fifteen
+       jobs gets the findings, somebody who has priced none gets a countdown.
+
+       Entering deals that already happened is the only fix for that which needs
+       no account, no server and no second party. Four fields, because four is
+       what the two prices and the outcome actually require — and deliberately no
+       hours field: an estimate nobody locked at quote time cannot calibrate
+       anything, and asking for one would invite a remembered number into the one
+       statistic that stops the effort table being fitted backwards.
+
+       Behind a disclosure because it is a one-time job, not part of the flow. -->
+  <details class="drawer" id="retroDrawer">
+    <summary>יש לך עסקאות מלפני הכלי? אפשר להזין אותן</summary>
+    <p class="lead nomargin">
+      מספיק המחיר שנקבת והמחיר שנסגר. מזה הפאנל למטה מתחיל לעבוד עוד היום,
+      במקום אחרי עשר הצעות חדשות. מה שלא נכנס: שעות עבודה — אומדן שאף אחד לא נעל
+      מראש לא יכול לכייל כלום, ולכן העסקאות האלה לא נוגעות בדיוק האומדן.
+    </p>
+    <div class="retro-row">
+      <label for="rp_client">לקוח <span class="retro-opt">לא חובה</span>
+        <input id="rp_client" type="text" autocomplete="off" placeholder="מאפייה">
+      </label>
+      <label for="rp_quoted">המחיר שנקבת
+        <input id="rp_quoted" type="number" inputmode="numeric" min="0" placeholder="8000">
+      </label>
+      <label for="rp_closed">המחיר שנסגר
+        <input id="rp_closed" type="number" inputmode="numeric" min="0" placeholder="7000">
+      </label>
+      <label for="rp_conc">אם ירד — מי ביקש
+        <select id="rp_conc">
+          <option value="unknown">לא זוכר</option>
+          <option value="client_asked">הלקוח ביקש</option>
+          <option value="i_offered">הצעתי מעצמי</option>
+        </select>
+      </label>
+    </div>
+    <div class="retro-acts">
+      <button type="button" class="ghost" data-act="retroadd">הוסף עסקה</button>
+      <button type="button" class="ghost" data-act="retrolost">לא נסגרה</button>
+      <span class="retro-flag" id="retroFlag" aria-live="polite"></span>
+    </div>
+  </details>
 </div>
 
 <!-- ============ מה הכלי הזה שווה לך ============

@@ -146,6 +146,40 @@ function removeDeal(id){
   PC.deals.remove(id); renderLedger();
 }
 
+/* Entering a deal that already happened. `lost` is a separate button rather than
+   a status dropdown, because a lost deal has no closing price and a form that
+   asks for one and then ignores it teaches the operator that the fields are
+   decoration.
+
+   Reports refusals in words. addPast() returns null for a missing quote and for a
+   closing price above it, and a button that silently does nothing is how somebody
+   concludes the feature is broken and stops. */
+function addPastDeal(lost){
+  const flag = el('retroFlag');
+  const say = m => { if (flag) flag.textContent = m; };
+  const rec = PC.deals.addPast({
+    client: txt('rp_client'),
+    quoted: el('rp_quoted').value,
+    closed: el('rp_closed').value,
+    lost: !!lost,
+    concession: el('rp_conc').value
+  });
+  if (!rec) {
+    const q = parseFloat(el('rp_quoted').value), c = parseFloat(el('rp_closed').value);
+    say(!(q > 0) ? 'צריך את המחיר שנקבת'
+      : (!lost && c > q) ? 'המחיר שנסגר גבוה מהמחיר שנקבת — שווה לבדוק את המספרים'
+      : !lost ? 'צריך את המחיר שנסגר, או ללחוץ "לא נסגרה"'
+      : 'לא הצלחתי לשמור — ייתכן שאחסון הדפדפן חסום');
+    return;
+  }
+  ['rp_client', 'rp_quoted', 'rp_closed'].forEach(id => { el(id).value = ''; });
+  el('rp_conc').value = 'unknown';
+  say('נוספה: ' + rec.client + ' · ' + (lost ? 'לא נסגרה' : ils(rec.outcome.closedPrice)));
+  el('rp_client').focus();
+  renderLedger(); recompute();
+  track('past_deal_added');
+}
+
 function saveOutcome(id){
   /* The concession control only exists once a lower closing price has been
      saved, so on the first save there is nothing to read. recordOutcome keeps

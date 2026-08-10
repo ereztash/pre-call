@@ -27,7 +27,12 @@ const EVENTS = new Set([
   // export_attempted: the two together say whether surfacing the requirement
   // early actually moves anyone, or only adds a line to the page.
   'key_requested',
-  'followup_added'
+  'followup_added',
+  /* A deal entered from memory rather than built in the tool. Counted apart from
+     deal_saved because the two answer different questions: whether anyone uses
+     the product, and whether the cold-start fix is what gets them past the
+     thresholds that stay silent without evidence. */
+  'past_deal_added'
 ]);
 
 // coarse enough that a row cannot be traced back to a specific deal
