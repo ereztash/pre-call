@@ -1,0 +1,10 @@
+# tools/ is operator tooling, not part of the product. There is no build step
+# here, so anything left in the repo is served as a static file — mint-key.js
+# would sit at a public URL otherwise. It holds no secret (the checksum it uses
+# ships in assets/pc-gate.js on every page load), but a page that mints
+# licence-shaped keys has no reason to be reachable from the internet.
+tools/
+
+# There is no build step to leave this behind either. assets/weight.test.js
+# fails the run if it appears in the repo root, because it would deploy as-is.
+node_modules/
