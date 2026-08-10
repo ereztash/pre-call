@@ -110,7 +110,12 @@
              operator comes back to — dropping the answer they already gave,
              because that one control was not re-sent, would lose the only
              field here nobody can reconstruct later. */
-          concession: conc(concession) || prev.concession || 'unknown',
+          /* Root cause of the same defect: this kept whatever was already on the
+             record. Preserving the answer the operator gave is the point, but a
+             string nobody defined is not an answer to preserve — so the carried
+             value is validated on the way through too, and a bad one is
+             repaired the next time an outcome is saved. */
+          concession: conc(concession) || conc(prev.concession) || 'unknown',
           at: new Date().toISOString()
         };
         return api.save(d);
@@ -192,7 +197,14 @@
            not conceded by anyone, whatever its field happens to say. */
         const byConcession = {};
         CONCESSION.forEach(k => {
-          const rows = cut.filter(d => (d.outcome.concession || 'unknown') === k);
+          /* Normalised, not compared raw. A value outside the three used to fall
+             through all three filters, so `discounted` could exceed the groups
+             it is made of and the panel underreported unattributed discounts
+             with nothing to show for it. pc-backup.js restores ledger JSON
+             verbatim, so an edited backup is a real way in. Every discounted
+             deal now lands in exactly one group, and deals.test.js asserts that
+             as an invariant rather than testing one bad string. */
+          const rows = cut.filter(d => (conc(d.outcome.concession) || 'unknown') === k);
           byConcession[k] = { n: rows.length, avgDiscount: mean(rows) };
         });
 

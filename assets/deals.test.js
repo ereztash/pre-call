@@ -230,6 +230,43 @@ test('an unanswered concession is counted on its own, not folded into either sid
   assert.strictEqual(p.byConcession.client_asked.n, 0);
   assert.strictEqual(p.byConcession.i_offered.n, 0);
 });
+test('every discounted deal lands in exactly one group, whatever the field holds', () => {
+  /* The invariant, asserted directly rather than through any one bad value.
+     Reported in review: a value outside the three fell through all three
+     filters, so `discounted` could exceed the groups it is supposed to be made
+     of and the panel would underreport unattributed discounts without saying
+     so. pc-backup.js restores ledger JSON verbatim, so an edited or
+     hand-written backup is a real way in. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'r1', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 8000, concession: 'banana' } },
+    { id: 'r2', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 9000, concession: 'client_asked' } },
+    { id: 'r3', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 5000, concession: '' } }
+  ]));
+  const p = make(st).priceHold();
+  const summed = Object.keys(p.byConcession)
+    .reduce((s, k) => s + p.byConcession[k].n, 0);
+  assert.strictEqual(summed, p.discounted,
+    'discounted=' + p.discounted + ' but the groups add to ' + summed);
+  assert.strictEqual(p.byConcession.unknown.n, 2,
+    'an unrecognised value and an empty one are both "nobody recorded it"');
+});
+test('a bad value on the record is repaired the next time an outcome is saved', () => {
+  /* Root cause of the above: the carry-forward kept whatever was already
+     there. Preserving the answer an operator gave is the point of it, but a
+     string nobody defined is not an answer to preserve. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'r1', status: 'won', priceQuoted: 10000,
+      outcome: { closedPrice: 8000, concession: 'banana' } }
+  ]));
+  const d = make(st);
+  d.recordOutcome('r1', { closedPrice: 8000, actualHours: 12 });
+  assert.strictEqual(d.get('r1').outcome.concession, 'unknown');
+});
 test('recording an outcome again does not silently reset the answer', () => {
   /* The outcome form re-renders after every save, and the hours field is the
      one an operator comes back to. Wiping the concession on a second save
