@@ -484,6 +484,22 @@ test('scope drift reaches the panel instead of being computed and discarded', ()
   assert.ok(/hold\.widened/.test(ledger),
     'deals.js reports widened and nothing renders it — dead code shaped like a finding');
 });
+test('a threshold crossing is announced where the action caused it', () => {
+  /* The only trigger in this product that needs no channel: there is no server, so
+     nothing can be pushed, but a crossing is caused by an action inside the tool
+     and the tool is therefore already open. crossed() would be dead code without
+     both call sites, and the two actions that can cause one are recording an
+     outcome and entering a past deal. */
+  const ledger = read('assets/pc-ledger.js');
+  assert.ok(/crossed\(/.test(ledger), 'crossed() is computed nowhere — dead code');
+  const calls = (ledger.match(/announceCrossings\(/g) || []).length;
+  assert.ok(calls >= 3,
+    'expected the helper plus both call sites (outcome recorded, past deal added), found ' +
+    calls + ' references');
+  assert.ok(/const before = reportNow\(\)/.test(ledger),
+    'a crossing is a difference — without a snapshot taken BEFORE the mutation ' +
+    'there is nothing to difference against');
+});
 test('the ceiling finding reaches the panel', () => {
   /* winRate() was computed in deals.js and printed as a score from the day the
      ledger existed, and nothing ever interpreted it. ceiling() is the

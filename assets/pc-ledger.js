@@ -156,6 +156,7 @@ function removeDeal(id){
    concludes the feature is broken and stops. */
 function addPastDeal(lost){
   const flag = el('retroFlag');
+  const before = reportNow();
   const say = m => { if (flag) flag.textContent = m; };
   const rec = PC.deals.addPast({
     client: txt('rp_client'),
@@ -178,6 +179,40 @@ function addPastDeal(lost){
   el('rp_client').focus();
   renderLedger(); recompute();
   track('past_deal_added');
+  announceCrossings(before);
+}
+
+/* The one trigger in this product that needs no channel.
+
+   There is no server, so nothing can be pushed. But a threshold crossing is
+   CAUSED by an action in the tool — an outcome recorded, a past deal entered — so
+   the tool is already open at the moment it happens, and the whole trigger is to
+   say it there. Once.
+
+   Snapshot before, mutate, snapshot after. Nothing is stored between sessions: the
+   crossing is a property of the action, not a flag to keep and risk announcing
+   twice.
+
+   It lands in draftNote, which is aria-live and persists, rather than in the 2s
+   toast — this is news, and news that vanishes before it is read was not
+   delivered. Precision over recall: it fires only on a real set difference, and
+   never on a ledger that moved backwards, because one alarm that turns out to be
+   nothing costs more than two good ones earn. */
+function reportNow(){
+  return PC.history.report(PC.deals.list(), PC.model.METHOD_LABEL,
+                           PC.PROVENANCE_LABEL, PC.deals.priceHold());
+}
+function announceCrossings(before){
+  const gained = PC.history.crossed(before, reportNow());
+  if (!gained.length) return;
+  const bar = el('draftNote'); if (!bar) return;
+  bar.innerHTML = '<b>' + (gained.length === 1
+      ? 'עכשיו אפשר לומר משהו נוסף:'
+      : 'עכשיו אפשר לומר עוד ' + gained.length + ' דברים:') + '</b> ' +
+    gained.map(esc).join(' · ') +
+    '<span class="ledger-act-n">הפאנל "כמה הייעוץ הזה היה שווה לך" עודכן.</span>';
+  show('draftNote', true);
+  track('finding_unlocked');
 }
 
 function saveOutcome(id){
@@ -186,12 +221,14 @@ function saveOutcome(id){
      the previous answer when none is sent, so reading it as absent here is
      safe rather than destructive. */
   const conc = el('oc_conc_' + id);
+  const before = reportNow();
   PC.deals.recordOutcome(id, {
     closedPrice: el('oc_price_' + id).value,
     actualHours: el('oc_hours_' + id).value,
     concession: conc ? conc.value : undefined
   });
   renderLedger(); recompute(); track('outcome_recorded');
+  announceCrossings(before);
 }
 
 const renderLedger = guard('ledger', function (){

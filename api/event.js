@@ -32,7 +32,12 @@ const EVENTS = new Set([
      deal_saved because the two answer different questions: whether anyone uses
      the product, and whether the cold-start fix is what gets them past the
      thresholds that stay silent without evidence. */
-  'past_deal_added'
+  'past_deal_added',
+  /* The moment the ledger crossed a threshold and could say something it could
+     not say a second earlier. Counted because it is the only trigger in the
+     product that needs no channel, and whether it actually moves anyone is the
+     thing worth knowing before building one that spends attention. */
+  'finding_unlocked'
 ]);
 
 // coarse enough that a row cannot be traced back to a specific deal
