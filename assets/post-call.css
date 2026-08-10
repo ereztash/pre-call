@@ -281,6 +281,19 @@
   .wall h3{font-size:var(--fs-xl);margin-bottom:var(--sp-3)}
   .wall p{font-size:var(--fs-md);color:#bfc6cf;margin-bottom:var(--sp-5)}
   .wall .price{font-size:var(--fs-4xl);font-weight:700;color:var(--copper);margin:var(--sp-3) 0}
+  /* ---- how a key is actually obtained ----
+     Written by renderBuyRoute(), because it depends on whether the sale is
+     automated, manual, or not happening yet. Narrower than the wall: this is
+     two or three sentences of instruction and the line-length rule applies to
+     it exactly as it does to prose anywhere else. */
+  .buyroute{max-width:var(--measure);margin:var(--sp-5) auto 0}
+  .wall .buyroute p{font-size:var(--fs-sm);color:#abb4bf;margin-bottom:var(--sp-3)}
+  /* The address, as text and not only as a destination. Monospaced and
+     selectable so it can be copied or read out loud when the button's route
+     is not available — a mailto with no mail client behind it opens nothing. */
+  .wall .buyaddr{font-family:ui-monospace,"Cascadia Code",Consolas,monospace;
+                 font-size:var(--fs-md);color:var(--copper);user-select:all;margin-bottom:0}
+  .wall .buyaddr:empty{display:none}
   .keyrow{display:flex;gap:var(--sp-3);max-width:400px;margin:var(--sp-5) auto 0}
   .keyrow input{flex:1}
   .wall .err{color:#dbb3b8;font-size:var(--fs-sm);margin-top:var(--sp-3)}
@@ -416,6 +429,16 @@
                font-variant-numeric:tabular-nums;direction:ltr}
   .docacts{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
   .docacts button{margin:0}
+  /* The "you will need a key" note, in the same continuous-card treatment as
+     .guardrails below it: side borders only, no radius of its own, so the seam
+     from the price header down into the document stays one card whether this is
+     on screen or not. Quiet on purpose — it is a fact stated once next to the
+     buttons it applies to, and the moment it reads as an advert it has become
+     the noise it was meant to prevent. */
+  .keyahead{background:var(--charcoal-2);border:1px solid var(--line);border-top:0;border-bottom:0;
+            padding:var(--sp-4) var(--sp-5);display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+  .keyahead p{font-size:var(--fs-sm);color:#abb4bf;max-width:var(--measure);margin:0;flex:1 1 260px}
+  .keyahead button{margin:0}
   .out{border-radius:0 0 var(--r-lg) var(--r-lg);margin-top:0}
 
   /* Sits between .docbar and .out as one continuous card — no radius of its

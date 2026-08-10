@@ -17,10 +17,17 @@
 # tests — every suite, wherever it lives
 *.test.js
 
-# the key minter: a dev tool, and dev tooling is not part of the product
+# The key minter, and operator tooling generally. It holds no secret — the
+# checksum it uses ships in assets/pc-gate.js on every page load — but a page
+# that mints licence-shaped keys has no reason to be reachable from the
+# internet, and with no build step it would sit at a public URL.
 tools/
 
 # repository furniture
 .github/
 LICENSE
 README.md
+
+# Nothing leaves this behind for us either. assets/weight.test.js fails the run
+# if it appears in the repo root, because it would deploy exactly as it sits.
+node_modules/

@@ -205,9 +205,24 @@
   .q .qn{display:inline-block;background:#14171a;color:#f6f3ee;font-size:var(--fs-xs);padding:1px var(--sp-3);
          border-radius:var(--r-sm);margin-left:var(--sp-2);font-weight:600;vertical-align:middle}
   .q .why{display:block;font-size:var(--fs-xs);color:#5a6777;margin-top:var(--sp-3);font-weight:400}
-  .stop{background:#f6eeef;border-right:3px solid var(--red);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
+  /* .gap shares this exactly, and shares it on purpose: both say "do not go
+     forward from here yet". A gap is the softer case — something that was
+     supposed to be prepared before the call and was not, so the script is
+     about to ask you to invent it while somebody waits. Same voice, because
+     it is the same instruction. */
+  .stop,.gap{background:#f6eeef;border-right:3px solid var(--red);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
         font-size:var(--fs-sm);color:#5e2b32;margin:var(--sp-3) 0}
-  .stop b{color:var(--red)}
+  .stop b,.gap b{color:var(--red)}
+  /* The one line in the document whose whole job is to be said out loud.
+     Question 10 used to ask the operator to compose it live, mid-call, out
+     of a multi-line note. Reading and speaking compete for the same
+     channel, and composing under that load is what turns a conversation
+     into somebody audibly reading off a page. It is written in step 3 now
+     and arrives here finished, which is why it gets the weight of a thing
+     you read verbatim rather than the weight of a question. */
+  .say{background:#fff;border-right:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);
+       border-radius:var(--r-sm);font-size:var(--fs-lg);font-weight:600;color:#14171a;
+       margin-bottom:var(--sp-3);box-shadow:0 1px 2px rgba(0,0,0,.05)}
   /* the table keeps a sane minimum width for its Hebrew sentences; the wrapper
      is what scrolls at 320px, so the page itself never gains a horizontal bar */
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:var(--sp-3)}
@@ -215,6 +230,33 @@
   table.read th{background:#14171a;color:#f6f3ee;padding:var(--sp-3) var(--sp-4);text-align:right;font-size:var(--fs-xs);font-weight:600}
   table.read td{border-bottom:1px solid #e3d7c9;padding:var(--sp-3) var(--sp-4);vertical-align:top;color:#2e353d}
   table.read td.no{color:var(--red)}
+  /* ---- the same card at 390px ----
+     The decision here used to be that three or four columns of full Hebrew
+     sentences have no narrow layout, only a choice of what scrolls — so the
+     wrapper scrolled and the table kept its 480px floor. Measured on a
+     390px phone, that leaves the reading card, the artefact that decides
+     what you are allowed to offer, behind a horizontal scroll, in the
+     middle of a live call. Guidance for cards used while talking is blunt
+     about that case: horizontal scroll is unacceptable.
+
+     So there is a narrow layout after all. One row becomes one block, and
+     the column heading each cell just lost travels with the cell itself in
+     data-l. The wrapper stays for the band between this breakpoint and the
+     table's natural width.
+
+     The roles in the generated markup are load bearing here: display:block
+     strips a table of its semantics for assistive technology, so the markup
+     names table/rowgroup/row/columnheader/cell explicitly and this layout
+     change cannot quietly take the structure with it. */
+  @media screen and (max-width:600px){
+    table.read,table.read tbody,table.read tr,table.read th,table.read td{display:block}
+    table.read{min-width:0}
+    table.read tr:first-child{display:none}   /* the heading row; data-l carries it instead */
+    table.read tr{border-bottom:1px solid #e3d7c9;padding:var(--sp-3) 0}
+    table.read tr:last-child{border-bottom:0}
+    table.read td{border-bottom:0;padding:var(--sp-1) 0}
+    table.read td::before{content:attr(data-l) " — ";color:#5a6777;font-size:var(--fs-xs)}
+  }
   .rule{background:#eff6f4;border-right:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
         font-size:var(--fs-sm);color:#29423d;margin:var(--sp-4) 0}
   ul.prep{margin:var(--sp-3) 0 0;padding:0 var(--sp-6) 0 0;list-style:disc}
@@ -261,6 +303,48 @@
     .out{padding:0}
     .q{box-shadow:none;border-right:3px solid #828fa1}
   }
+
+  /* ---- call mode ----
+     Measured on a 390x844 phone with a full profile: the finished script is
+     5,923px, seven screens, and 1,605px of that — 27% — is not the script.
+     It is the header, the four step buttons, the copy/print row, the backup
+     box and the footer. Every one of them is already named in one place:
+     the print sheet directly above, which has hidden exactly this list
+     since the day printing produced a blank page.
+
+     So call mode is not a new idea. It is that list, applied to the screen,
+     for the twenty-five minutes when the reader is talking to somebody
+     instead of preparing. markup.test.js fails if the two lists drift.
+
+     @media screen is load bearing. These rules also drop the twelve `why`
+     lines and the post-call reading card, and printing from inside call
+     mode must keep both — the paper copy is the prep copy, always. Without
+     this wrapper, hitting print while in call mode would emit a script with
+     its reasoning and its reading card silently missing. */
+  @media screen{
+    body.callmode header,
+    body.callmode .steps,
+    body.callmode .note,
+    body.callmode #errBoundary,
+    body.callmode .backupbox,
+    body.callmode footer,
+    body.callmode .next-tool,
+    body.callmode #p4 .box:first-of-type{display:none}
+    body.callmode .wrap{padding-top:var(--sp-5)}
+    /* The two things the room does not need. The `why` under each question
+       is why that question earns its place — read once, before the call.
+       The reading card and the writing rules only start being useful after
+       the last answer, which is what the bar's second button is for. */
+    body.callmode #outArea .why,
+    body.callmode #outArea .blk-post{display:none}
+  }
+  /* The only chrome call mode keeps: the way out, and the way to the card
+     you need the moment the call ends. Sticky because the one thing you
+     cannot afford to hunt for mid-call is the exit. */
+  .callbar{display:flex;gap:var(--sp-3);flex-wrap:wrap;align-items:center;
+           position:sticky;top:0;z-index:2;background:var(--charcoal);
+           padding:var(--sp-3) 0;margin-bottom:var(--sp-3)}
+  .callbar button{margin-top:0}
 
   /* utility classes replacing inline style attributes — see the CSP note */
   /* !important because this is the one declaration in the file whose whole

@@ -6,6 +6,8 @@ const S = {};
 /* ---------- nav ---------- */
 document.querySelectorAll('.stepbtn').forEach(b=>b.onclick=()=>go(+b.dataset.s));
 function go(n){
+  if(n!==4) callMode(false); // the step buttons are hidden in call mode; leaving step 4 must not hide them
+  if(n===3) refreshEdgeRef();
   document.querySelectorAll('.stepbtn').forEach(b=>b.classList.toggle('on',+b.dataset.s===n));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('p'+n).classList.add('on');
@@ -13,9 +15,55 @@ function go(n){
     (typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches)?'auto':'smooth'});
 }
 
+/* ---------- call mode ----------
+   Everything this does lives in CSS (see the @media screen block next to the
+   print sheet); this only flips the class and swaps which control bar is on
+   screen. Deliberately not a persisted preference: call mode is a state you
+   are in for twenty-five minutes, not a setting, and a page that reopened
+   with its header missing would look broken rather than focused. */
+function callMode(on){
+  document.body.classList.toggle('callmode', on);
+  show('callbar', on);
+}
+/* The reading card is hidden while the call is running, so the way to it is
+   also the way out — one button, at the moment the call ends. */
+function toReadingCard(){
+  callMode(false);
+  const el=document.getElementById('afterCall');
+  if(el && el.scrollIntoView) el.scrollIntoView({behavior:
+    (typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches)?'auto':'smooth'});
+}
+
+/* The observation in step 2 is a general one about your clients; the sentence
+   in step 3 is about this one person. Showing the first next to the field for
+   the second is the whole point — otherwise you are being asked to remember
+   what you wrote on a screen you left. */
+function refreshEdgeRef(){
+  const el=document.getElementById('edgeRef');
+  if(!el) return;
+  const edge=(document.getElementById('f_edge').value||'').split('\n').map(s=>s.trim()).filter(Boolean).join(' ');
+  el.textContent = edge
+    ? 'האבחנה הכללית שלכם, לגזור ממנה: "' + edge + '"'
+    : 'לא מילאתם "מה רק אתם רואים אצל הלקוחות שלכם" בשלב 2. בלי זה אין ממה לגזור את המשפט.';
+}
+
 /* ---------- copy ---------- */
 function cp(id,flag){ copyText(document.getElementById(id).innerText, flag); }
-function cpText(id,flag){ copyText(document.getElementById(id).innerText, flag); }
+/* innerText is what the eye sees, not what the DOM holds — anything CSS has
+   set to display:none is left out of it. Call mode hides the twelve `why`
+   lines and the whole post-call reading card, so copying from inside call
+   mode would emit a quietly truncated script: no error, no warning, just a
+   shorter document than the one on the page. Same silent-breakage class as
+   the CSP that killed every button and the print sheet that produced a blank
+   page. Dropping the class for the length of one synchronous read costs one
+   layout and cannot be seen. */
+function cpText(id,flag){
+  const wasCall = document.body.classList.contains('callmode');
+  if(wasCall) document.body.classList.remove('callmode');
+  const text = document.getElementById(id).innerText;
+  if(wasCall) document.body.classList.add('callmode');
+  copyText(text, flag);
+}
 
 async function copyText(t, flag){
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -204,11 +252,12 @@ function buildDR(){
    between calls if you generate one script and come back to prep another.
    Nothing clears them on its own, so leftover info from the last prospect
    quietly rides along into the next script. This wipes it explicitly. */
-const PROSPECT_FIELDS = ['p_paste','p_name','p_co','p_trig','p_how'];
+const PROSPECT_FIELDS = ['p_paste','p_name','p_co','p_trig','p_how','p_own'];
 function newProspect(){
   PROSPECT_FIELDS.forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('p_pair').value='1';
   buildDR();
+  refreshEdgeRef();
   resetOutput(); // the previous prospect's script was staying on step 4, name and all
 }
 
@@ -218,7 +267,7 @@ const build = guard('build', function build(){
   S.what=v('f_what'); S.who=v('f_who'); S.unit=v('f_unit'); S.price=v('f_price');
   S.last=v('f_last'); S.src=v('f_src'); S.gain=v('f_gain'); S.edge=v('f_edge'); S.no=v('f_no');
   S.pname=v('p_name'); S.pco=v('p_co'); S.ptext=v('p_paste'); S.ptrig=v('p_trig');
-  S.phow=v('p_how'); S.ppair=v('p_pair');
+  S.phow=v('p_how'); S.ppair=v('p_pair'); S.pown=v('p_own');
 
   const err2=document.getElementById('err2');
   if(!S.what){
@@ -251,6 +300,7 @@ function resetOutput(){
   document.getElementById('outArea').innerHTML=EMPTY_OUT;
   S.priv=[];
   renderPrivate();
+  callMode(false); // call mode over an empty script is a blank page with no way off it
 }
 
 function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
@@ -278,16 +328,31 @@ function render(){
     anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך [כאן נכנס המספר מהעסקה האחרונה שלכם]. אצלך זה יותר או פחות?`;
   }
 
-  /* --- ownership move. The edge field is a general observation about YOUR clients,
-     so it can't be handed over as a guess about this specific person, and splicing it
-     into a sentence dropped every line after the first. It's shown whole, as reference
-     material, and the phrasing stays the operator's job. */
-  let own;
-  if(S.edge){
-    const edgeFull = S.edge.split('\n').map(l=>l.trim()).filter(Boolean).join(' ');
+  /* --- ownership move ---
+     The edge field is a general observation about YOUR clients, so it can't be
+     handed over as a guess about this specific person, and splicing it into a
+     sentence dropped every line after the first.
+
+     What it used to do instead was worse than either: it printed the whole
+     observation into the room and told the operator to compose the sentence
+     from it, live. That is the one place in the document that asks for
+     authoring rather than reading, at the one moment the operator has no
+     capacity for it — reading and speaking compete, and composing while
+     listening is what produces the read-off-a-page voice. The composing moved
+     to step 3. When the sentence is prepared, this block hands over a
+     finished line and nothing else; when it is not, the script says so
+     plainly rather than pretending the old instruction was fine. */
+  let own, sayLine = '', ownGap = '';
+  const edgeFull = S.edge ? S.edge.split('\n').map(l=>l.trim()).filter(Boolean).join(' ') : '';
+  if(S.pown){
+    own = `אמרו לו את המשפט שהכנתם, ואז שאלו:`;
+    sayLine = `<div class="say">${esc(S.pown)}</div>`;
+  }else if(S.edge){
     own = `מה שאתם רואים אצל לקוחות כאלה, והם עצמם לא: "${edgeFull}" — זו אבחנה כללית שלכם, לא עובדה עליו. נסחו ממנה משפט אחד עליו, בגוף שני, מעט לא מדויק בכוונה. ואז שאלו:`;
+    ownGap = `<div class="gap"><b>המשפט הזה לא הוכן.</b> ניסוח בזמן השיחה הוא מה שנשמע כמו קריאה מדף. חזרו לשלב 3, לשדה "המשפט שתגידו בשאלה 10", ונסחו אותו לפני שאתם מתקשרים.</div>`;
   }else{
     own = `נסחו לו את הצוואר שלו במשפט אחד, מעט לא מדויק בכוונה, ואז שאלו:`;
+    ownGap = `<div class="gap"><b>אין ממה לנסח את המשפט.</b> מלאו את "מה רק אתם רואים" בשלב 2, ואז את המשפט עצמו בשלב 3. בלי שניהם שאלה 10 מבקשת מכם להמציא ניסוח באוויר, מול אדם שמחכה.</div>`;
   }
 
   /* --- contextual openers ---
@@ -313,6 +378,25 @@ function render(){
   // the space after the badge is load-bearing: without it innerText (what the copy
   // button emits) glued the number to the question — "1מה אתה צריך ממני?"
   const q=(n,txt,why)=>`<div class="q"><span class="qn">${n}</span> ${esc(txt)}${why?`<span class="why">${esc(why)}</span>`:''}</div>`;
+
+  /* --- the reading tables ---
+     Written as data rather than as markup for one reason: below 600px the
+     heading row is hidden and every cell carries its own heading in data-l
+     instead (see the narrow-table rules in the stylesheet). Hand-written
+     data-l attributes would drift from the <th> above them the first time a
+     column was renamed, and nothing on screen would say so — the wrong
+     label simply appears under the right cell. Here they cannot drift: they
+     are the same strings. A cell is either text, or {t, no:true} for the
+     "do not offer this" column. */
+  const readTable=(heads, rows)=>
+    '<div class="tbl-wrap">\n  <table class="read" role="table"><tbody role="rowgroup">' +
+    '<tr role="row">' + heads.map(h=>`<th role="columnheader">${esc(h)}</th>`).join('') + '</tr>' +
+    rows.map(r=>'<tr role="row">' + r.map((c,i)=>{
+      const txt = typeof c === 'string' ? c : c.t;
+      const cls = (typeof c === 'object' && c.no) ? ' class="no"' : '';
+      return `<td role="cell"${cls} data-l="${esc(heads[i])}">${esc(txt)}</td>`;
+    }).join('') + '</tr>').join('') +
+    '</tbody></table>\n  </div>';
 
   return `
 <h3>תסריט שיחת אפיון · ${esc(name)}</h3>
@@ -353,19 +437,16 @@ ${openers.length?`<div class="blk">
   <div class="blk-h">חלק ג · מהלך אחד</div>
   <div class="blk-t">מי מנסח את הבעיה</div>
   <div class="blk-d">${esc(own)}</div>
+  ${sayLine}
   ${q(10,'זה נשמע לך מדויק, או שאתה היית מנסח אחרת?','בקשו אישור על אבחנה, לא על כיוון. "הכיוון בסדר?" מקבל "כן" ומעביר נושא.')}
-  <!-- .tbl-wrap: three columns of full sentences at 320px is wider than the
-       screen. The table itself keeps its natural width; the wrapper scrolls
-       instead of the page, and the content stays readable rather than
-       compressed into an unreadable column. -->
-  <div class="tbl-wrap">
-  <table class="read">
-    <tr><th>מה שהוא עושה</th><th>מה זה אומר</th><th>מה מותר להציע</th></tr>
-    <tr><td>מנסח מחדש בשפתו ומוסיף חומר</td><td>הוא הבעלים של הבעיה</td><td>תהליך מלא</td></tr>
-    <tr><td>דוחה ומחדד גרסה משלו</td><td>יש בעלות, הניסוח שלכם החטיא</td><td>תהליך שמתחיל מהניסוח שלו</td></tr>
-    <tr><td>מהנהן, "כן", "נכון"</td><td>הוא לא אוחז בבעיה</td><td class="no">לא תהליך. מפגש בודד או שיחת המשך.</td></tr>
-  </table>
-  </div>
+  ${ownGap}
+  ${readTable(
+    ['מה שהוא עושה','מה זה אומר','מה מותר להציע'],
+    [
+      ['מנסח מחדש בשפתו ומוסיף חומר','הוא הבעלים של הבעיה','תהליך מלא'],
+      ['דוחה ומחדד גרסה משלו','יש בעלות, הניסוח שלכם החטיא','תהליך שמתחיל מהניסוח שלו'],
+      ['מהנהן, "כן", "נכון"','הוא לא אוחז בבעיה',{t:'לא תהליך. מפגש בודד או שיחת המשך.',no:true}]
+    ])}
 </div>
 
 <div class="blk">
@@ -373,52 +454,40 @@ ${openers.length?`<div class="blk">
   <div class="blk-t">המספר, ומי מחזיק אותו</div>
   <div class="blk-d">אל תשאלו "כמה זה שווה לך לדעתך". השאלה הזו מייצרת "אני לא יודע" כמעט תמיד, ואז הלחץ נשאר בחדר. תנו עוגן שהוא מכייל.</div>
   ${q(11,anchor,'הוא מכייל מספר קיים במקום לייצר מאפס. אם הוא אומר "פחות", בקשו כמה פחות. זה עדיין מספר שלו.')}
+  ${!S.gain?`<div class="gap"><b>אין לכם מספר לעוגן.</b> שאלה 11 מכילה סוגריים במקום סכום, ולכן היא מבקשת מכם להמציא מספר בזמן השיחה — וזה המספר שכל ההצעה נגזרת ממנו. מלאו "מה הלקוח האחרון הרוויח" בשלב 2.</div>`:''}
   ${q(12,'עד מתי, ואיזה מספר קונקרטי צריך לזוז כדי שתגיד שזה היה שווה?','זו הנעילה. חסר תאריך או חסר מספר, לא עוברים לדבר על מחיר.')}
   <div class="stop"><b>הכלל.</b> אם בסוף החלק הזה אין מספר שהוא אמר, אין מחיר בשיחה הזאת. שלחו את ההצעה אחרי שהוא נקב, לא לפני.</div>
 </div>
 
-<div class="blk">
+<!-- .blk-post: useful only once the last answer is in. Call mode hides these
+     two so the room holds the questions and nothing else; the bar's second
+     button brings them back at the moment the call ends. Print keeps them. -->
+<div class="blk blk-post" id="afterCall">
   <div class="blk-h">אחרי השיחה</div>
   <div class="blk-t">כרטיס קריאה · חמש הסיבות</div>
   <div class="blk-d">מצאו את השורה שמתאימה לתשובות בחלק ב. העמודה האחרונה היא מה שלא לכתוב בהצעה, גם אם מתחשק.</div>
-  <div class="tbl-wrap">
-  <table class="read">
-    <tr><th>אם שמעתם</th><th>מה נעצר</th><th>מה ההצעה מכילה</th><th>מה לא להציע</th></tr>
-    <tr>
-      <td>שאלה 8: תעריף שעה או "תלוי"</td>
-      <td>אין לו יחידה מתומחרת</td>
-      <td>בניית יחידה אחת. פורמט, תוצר, מחיר, רציונל.</td>
-      <td class="no">תמחור לפי ערך לפני שיש יחידה. תפריט אפשרויות.</td>
-    </tr>
-    <tr>
-      <td>שאלה 5 "מהתוכן" + שאלה 6 "יש אבל כללי"</td>
-      <td>הערוץ לא נושא את הערך</td>
-      <td>העברת האבחון שהוא כבר עושה בשיחה, אל תוך הערוץ. תוצר ספיר.</td>
-      <td class="no">תוכנית תוכן. שיפור פוסטים.</td>
-    </tr>
-    <tr>
-      <td>שאלה 6 "כלום" + שאלה 5 "היכרות"</td>
-      <td>שום דבר לא יוצא החוצה</td>
-      <td>הוצאה של נכס אחד קיים, בשבוע. עם נמען מוגדר.</td>
-      <td class="no">בניית מוצר חדש. תיק עבודות. הוא לא צריך עוד נכס.</td>
-    </tr>
-    <tr>
-      <td>שאלה 7 "אין שעות" ויש לו נכסים</td>
-      <td>הקשב לא מוקצה לרכישה</td>
-      <td>שעה קבועה, רשימה תחומה, מדד שבועי אחד.</td>
-      <td class="no">אסטרטגיה. מיצוב. זה לא הצוואר שלו.</td>
-    </tr>
-    <tr>
-      <td>שאלה 9 "עבר לעשות לבד" או "נגרר"</td>
-      <td>אין ניסוח למה עדיין צריך אותו</td>
-      <td>שלב שני שהוא לא המשך של הראשון, עם קריטריון סיום כתוב.</td>
-      <td class="no">ליווי חודשי. הרחבת סקופ. הבעיה היא הגבול.</td>
-    </tr>
-  </table>
-  </div>
+  ${readTable(
+    ['אם שמעתם','מה נעצר','מה ההצעה מכילה','מה לא להציע'],
+    [
+      ['שאלה 8: תעריף שעה או "תלוי"','אין לו יחידה מתומחרת',
+       'בניית יחידה אחת. פורמט, תוצר, מחיר, רציונל.',
+       {t:'תמחור לפי ערך לפני שיש יחידה. תפריט אפשרויות.',no:true}],
+      ['שאלה 5 "מהתוכן" + שאלה 6 "יש אבל כללי"','הערוץ לא נושא את הערך',
+       'העברת האבחון שהוא כבר עושה בשיחה, אל תוך הערוץ. תוצר ספיר.',
+       {t:'תוכנית תוכן. שיפור פוסטים.',no:true}],
+      ['שאלה 6 "כלום" + שאלה 5 "היכרות"','שום דבר לא יוצא החוצה',
+       'הוצאה של נכס אחד קיים, בשבוע. עם נמען מוגדר.',
+       {t:'בניית מוצר חדש. תיק עבודות. הוא לא צריך עוד נכס.',no:true}],
+      ['שאלה 7 "אין שעות" ויש לו נכסים','הקשב לא מוקצה לרכישה',
+       'שעה קבועה, רשימה תחומה, מדד שבועי אחד.',
+       {t:'אסטרטגיה. מיצוב. זה לא הצוואר שלו.',no:true}],
+      ['שאלה 9 "עבר לעשות לבד" או "נגרר"','אין ניסוח למה עדיין צריך אותו',
+       'שלב שני שהוא לא המשך של הראשון, עם קריטריון סיום כתוב.',
+       {t:'ליווי חודשי. הרחבת סקופ. הבעיה היא הגבול.',no:true}]
+    ])}
 </div>
 
-<div class="blk">
+<div class="blk blk-post">
   <div class="blk-h">שלושה כללים לכתיבת ההצעה</div>
   <div class="rule">המספר בהצעה נגזר מהעוגן שהוא נקב בשאלה 11, לא מהשוק ולא משעות.</div>
   <div class="rule">אין הנחה יזומה. אם צריך להוריד, מורידים סקופ ולא מחיר.</div>
@@ -480,6 +549,7 @@ document.getElementById('promptBiz').innerText=P_BIZ;
 buildDR();
 resetOutput(); // step 4 opened as a blank white slab before anything was built
 loadProfile();
+refreshEdgeRef(); // the profile has just loaded; step 3's reference line reflects it from the first paint
 PROFILE_FIELDS.forEach(id=>{
   const el=document.getElementById(id);
   el.addEventListener('input', saveProfileDebounced); // debounced: don't hit localStorage on every keystroke
@@ -499,6 +569,9 @@ const ACTIONS = {
   go3:            () => go(3),
   newprospect:    newProspect,
   build:          build,
+  'callmode-on':  () => callMode(true),
+  'callmode-off': () => callMode(false),
+  'to-card':      toReadingCard,
   print:          () => window.print(),
   'backup-export': downloadBackup,
   'backup-import': pickBackupFile

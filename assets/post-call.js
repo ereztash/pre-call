@@ -539,6 +539,10 @@ const recompute = guard('recompute', function (){
       top.classList.add('bumped');
     }
   }
+  /* A real price is also the signal that there is something worth exporting,
+     which is the only state in which telling somebody they will need a key is
+     information rather than an advert. See renderKeyAhead() in pc-gate.js. */
+  renderKeyAhead(priceTxt !== '—');
   el('s_payback').textContent = m.payback ? m.payback.toFixed(1) : '—';
   el('s_band').textContent = m.annualValue
     ? ils(m.low) + ' – ' + ils(m.high)
@@ -1334,6 +1338,8 @@ const ACTIONS = {
   save:    saveCurrentDeal,
   sent:    markSent,
   unlock:  tryUnlock,
+  askkey:  askForKeyAhead,
+  laterkey: dismissKeyAhead,
   newdeal: confirmNewDeal,
   discard: discardDraft,
   confirmscope: confirmScope,

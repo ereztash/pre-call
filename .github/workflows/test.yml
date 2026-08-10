@@ -67,12 +67,16 @@ jobs:
         run: node api/health.test.js
       - name: what the tool's own advice has been worth
         run: node assets/history.test.js
-      - name: the key minter agrees with the gate that has to accept its keys
-        run: node tools/mintkey.test.js
       - name: the design scale, and that nothing invented a step of its own
         run: node assets/tokens.test.js
       - name: transfer weight and the no-dependency rule
         run: node assets/weight.test.js
+      # A key has to satisfy the server allowlist AND the in-page checksum, and
+      # those live in two files that know nothing about each other. This runs the
+      # minted keys through the real keyValid() and the real endpoint regex, so a
+      # retune of either one fails here instead of on a buyer's train.
+      - name: issuing a licence key by hand
+        run: node tools/mint-key.test.js
 
   # The whole product, in a real browser, in all three engines it will
   # actually be opened in. Separate job because it is the only thing here

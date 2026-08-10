@@ -72,7 +72,12 @@ function page() {
       addEventListener() {},
       createElement: () => makeEl('__tmp'),
       execCommand: () => true,
-      body: { appendChild() {}, removeChild() {} }
+      /* body carries a classList because call mode is a class on it. The
+         fake DOM cannot model CSS, so nothing here can tell you what call
+         mode *looks* like — that is journey.test.js and a11y.test.js in a
+         real browser. What it can tell you is that the class is set and
+         cleared where it should be, which is the part that has logic in it. */
+      body: Object.assign(makeEl('body'), { appendChild() {}, removeChild() {} })
     },
     setTimeout, clearTimeout
   };
@@ -335,6 +340,120 @@ test('no edge falls back to the generic instruction', () => {
   p.call('build');
   const out = p.run("document.getElementById('outArea').innerHTML");
   assert.ok(out.includes('נסחו לו את הצוואר שלו במשפט אחד'));
+});
+
+console.log('\nthe sentence for question 10 — prepared, not composed in the room');
+/* The change these protect: the script used to hand over a multi-line
+   observation and ask the operator to turn it into one sentence about this
+   person, live, mid-call. That is the only place in the document that asks for
+   authoring rather than reading, at the moment there is no capacity for it. */
+test('a prepared sentence is handed over finished, and the composing instruction is gone', () => {
+  const p = page();
+  p.set('f_what', 'X');
+  p.set('f_gain', '40,000 ₪'); // otherwise the anchor gap fires and this test is about the other one
+  p.set('f_edge', 'אף אחד לא מוגדר כאחראי על המעקב');
+  p.set('p_own', 'אני מנחש שאצלכם זה חוזר אליך בסוף כל חודש');
+  p.call('build');
+  const out = p.run("document.getElementById('outArea').innerHTML");
+  assert.ok(out.includes('אני מנחש שאצלכם זה חוזר אליך בסוף כל חודש'),
+    'the prepared sentence never reached the script');
+  assert.ok(/class="say"/.test(out), 'it must render as the line you say out loud, not as prose');
+  assert.ok(!out.includes('נסחו ממנה משפט אחד עליו'),
+    'the live-composition instruction survived alongside the finished sentence');
+  assert.ok(!/class="gap"/.test(out), 'nothing is missing, so nothing should be flagged as missing');
+});
+test('an unprepared sentence is named as a gap instead of quietly asking for it live', () => {
+  const p = page();
+  p.set('f_what', 'X');
+  p.set('f_edge', 'אף אחד לא מוגדר כאחראי על המעקב');
+  p.call('build');
+  const out = p.run("document.getElementById('outArea').innerHTML");
+  assert.ok(/class="gap"/.test(out), 'no gap flagged for the sentence that was never written');
+  assert.ok(out.includes('המשפט שתגידו בשאלה 10'),
+    'the gap must name the field that fixes it, not just report a problem');
+});
+test('the prospect sentence is never persisted, and a new prospect clears it', () => {
+  const p = page();
+  p.set('f_what', 'עסק קבוע');
+  p.set('p_own', 'משפט על הלקוח הקודם');
+  p.call('saveProfile');
+  assert.strictEqual(JSON.parse(p.store['precall_profile_v1']).p_own, undefined,
+    'a sentence written about one specific person has no business surviving a reload');
+  p.call('newProspect');
+  assert.strictEqual(p.val('p_own'), '',
+    'the previous prospect’s sentence would otherwise be said to the next one');
+});
+test('a missing anchor number is named as a gap, not left as brackets to fill live', () => {
+  const p = page();
+  p.set('f_what', 'X'); p.set('p_own', 'משפט מוכן'); // so the only gap is the anchor
+  p.call('build');
+  const out = p.run("document.getElementById('outArea').innerHTML");
+  assert.ok(out.includes('כאן נכנס המספר מהעסקה האחרונה'), 'setup: the placeholder should still be there');
+  assert.ok(out.includes('אין לכם מספר לעוגן'),
+    'question 11 carries brackets instead of a number and the script says nothing about it');
+});
+test('with both prepared, the script flags nothing', () => {
+  const p = page();
+  p.set('f_what', 'X'); p.set('f_gain', '40,000 ₪'); p.set('p_own', 'משפט מוכן');
+  p.call('build');
+  const out = p.run("document.getElementById('outArea').innerHTML");
+  assert.ok(!/class="gap"/.test(out), 'a fully prepared script must be free of warnings');
+});
+
+console.log('\ncall mode');
+test('entering call mode sets the class and shows the bar; leaving reverses both', () => {
+  const p = page();
+  p.call('callMode', true);
+  assert.ok(p.run("document.body.classList.contains('callmode')"));
+  assert.ok(!p.run("document.getElementById('callbar').classList.contains('hidden')"),
+    'the exit bar is the only chrome call mode keeps — it cannot be the thing that is hidden');
+  p.call('callMode', false);
+  assert.ok(!p.run("document.body.classList.contains('callmode')"));
+  assert.ok(p.run("document.getElementById('callbar').classList.contains('hidden')"));
+});
+test('leaving step 4 always leaves call mode — the step buttons are hidden by it', () => {
+  const p = page();
+  p.call('callMode', true);
+  p.call('go', 2);
+  assert.ok(!p.run("document.body.classList.contains('callmode')"),
+    'step 2 with the header and the step buttons hidden is a page with no way off it');
+});
+test('going to step 4 does not turn call mode on by itself', () => {
+  const p = page();
+  p.call('go', 4);
+  assert.ok(!p.run("document.body.classList.contains('callmode')"),
+    'call mode is a state the operator enters on purpose, not a side effect of finishing a script');
+});
+test('resetting the output leaves call mode, so it is never a blank focused page', () => {
+  const p = page();
+  p.set('f_what', 'X');
+  p.call('build');
+  p.call('callMode', true);
+  p.call('newProspect');
+  assert.ok(!p.run("document.body.classList.contains('callmode')"));
+});
+test('the reading card is reachable from inside call mode, which is also the way out', () => {
+  const p = page();
+  p.call('callMode', true);
+  p.call('toReadingCard');
+  assert.ok(!p.run("document.body.classList.contains('callmode')"),
+    'the card is hidden by call mode, so reaching it has to leave it');
+});
+
+console.log('\nstep 3 shows the observation the sentence is derived from');
+test('the reference line quotes the edge field, joined across lines', () => {
+  const p = page();
+  p.set('f_edge', 'שורה ראשונה\nשורה שנייה');
+  p.call('refreshEdgeRef');
+  const ref = p.run("document.getElementById('edgeRef').textContent");
+  assert.ok(ref.includes('שורה ראשונה שורה שנייה'),
+    'the operator would have to remember what they wrote on a screen they left');
+});
+test('an empty edge field says what is missing and where', () => {
+  const p = page();
+  p.call('refreshEdgeRef');
+  const ref = p.run("document.getElementById('edgeRef').textContent");
+  assert.ok(/שלב 2/.test(ref), 'a blank reference line is just a blank line');
 });
 
 console.log('\ncontextual openers — each condition is independent');
