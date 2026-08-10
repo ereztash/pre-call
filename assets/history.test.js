@@ -541,5 +541,66 @@ test('with baselines present the scope clause is stated, because then it is know
     'six tracked deals that did not widen — say so, that is a real part of the case');
 });
 
+console.log('\nthe moment something became sayable');
+/* The cheapest real trigger in the product, and it needs no channel at all.
+
+   There is no server here, so nothing can be pushed. But a threshold crossing is
+   CAUSED by an action inside the tool — recording an outcome, entering a past
+   deal — which means the tool is already open at the moment it happens. The
+   trigger is simply to say it, once, there.
+
+   And it needs no new vocabulary: unknowns() is already the list of what cannot
+   yet be said, so an item that LEAVES that list is a thing that became sayable.
+   Defining a crossing as a set difference over that list means the two can never
+   describe different sets of findings. */
+const reportOf = (deals, hold) =>
+  H.report(deals, M.METHOD_LABEL, { unprompted: 'א', prompted: 'ב', mine: 'ג', none: 'ד' }, hold);
+
+test('an item leaving the cannot-say list is a crossing', () => {
+  const four = Array.from({ length: 4 }, () => done(10, 11));
+  const five = Array.from({ length: 5 }, () => done(10, 11));
+  const before = reportOf(four), after = reportOf(five);
+  const gained = H.crossed(before, after);
+  assert.ok(gained.includes('כמה מדויק האומדן שלך'),
+    'the fifth delivery makes accuracy sayable and nothing said so: ' + JSON.stringify(gained));
+});
+test('no change means no crossing, so nothing is announced twice', () => {
+  const five = Array.from({ length: 5 }, () => done(10, 11));
+  assert.deepStrictEqual(H.crossed(reportOf(five), reportOf(five)), []);
+});
+test('an item that is still unsayable is not reported as gained', () => {
+  const two = Array.from({ length: 2 }, () => done(10, 11));
+  const three = Array.from({ length: 3 }, () => done(10, 11));
+  const gained = H.crossed(reportOf(two), reportOf(three));
+  assert.ok(!gained.includes('כמה מדויק האומדן שלך'),
+    'three deliveries is still under the threshold of five');
+});
+test('losing data is never reported as a gain', () => {
+  /* A restored backup or a deleted deal can move the ledger backwards. A crossing
+     is a strict set difference in one direction: what left the list, never what
+     joined it. Announcing a regression as news would be worse than silence. */
+  const five = Array.from({ length: 5 }, () => done(10, 11));
+  const two = Array.from({ length: 2 }, () => done(10, 11));
+  assert.deepStrictEqual(H.crossed(reportOf(five), reportOf(two)), [],
+    'the ledger went backwards and something was announced as newly sayable');
+});
+test('an empty ledger before, and a first deal after, does not crash', () => {
+  /* report() returns null for an empty list, which is the state every first-time
+     operator is in one action before their first crossing. */
+  const one = [done(10, 11)];
+  assert.doesNotThrow(() => H.crossed(null, reportOf(one)));
+  assert.deepStrictEqual(H.crossed(null, reportOf(one)), [],
+    'nothing can have become sayable when there was no list to leave');
+});
+test('the crossing carries the label the panel itself uses', () => {
+  /* So the announcement and the panel name the same thing. A trigger that says
+     "a finding is ready" and a panel headed differently is two products. */
+  const before = reportOf(Array.from({ length: 4 }, () => done(10, 11)));
+  const gained = H.crossed(before, reportOf(Array.from({ length: 5 }, () => done(10, 11))));
+  gained.forEach(g => assert.ok(
+    before.unknowns.some(u => u.what === g),
+    'announced "' + g + '", which was never on the cannot-say list'));
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

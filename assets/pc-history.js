@@ -504,9 +504,33 @@
     };
   }
 
+  /* What became sayable between two reports.
+
+     The product has no server, so nothing can be pushed — but a threshold
+     crossing is CAUSED by an action inside the tool (an outcome recorded, a past
+     deal entered), which means the tool is already open at the moment it happens.
+     The trigger is to say it, once, there. No channel, no permission, and no
+     third-party attention to spend.
+
+     It needs no new vocabulary either. unknowns() is already the list of what
+     cannot yet be said, so a crossing is an item LEAVING that list. Defined as a
+     set difference over that list, the announcement and the panel can never name
+     different findings — the alternative was a second table of thresholds, which
+     is how the two would drift.
+
+     Strictly one direction. A restored backup or a deleted deal moves the ledger
+     backwards, and announcing a regression as news would be worse than silence.
+     A null `before` yields nothing: an empty ledger had no list to leave, which is
+     the state every operator is in one action before their first crossing. */
+  function crossed(before, after) {
+    const was = ((before && before.unknowns) || []).map(u => u.what);
+    const now = ((after && after.unknowns) || []).map(u => u.what);
+    return was.filter(w => now.indexOf(w) === -1);
+  }
+
   root.PC = root.PC || {};
   root.PC.history = {
-    deliveries, accuracy, methods, provenance, trend, ceiling, unknowns, report,
+    deliveries, accuracy, methods, provenance, trend, ceiling, crossed, unknowns, report,
     MIN_DELIVERIES, MIN_PER_METHOD, MIN_FOR_TREND, MIN_FOR_CEILING, CLOSE_ENOUGH
   };
 
