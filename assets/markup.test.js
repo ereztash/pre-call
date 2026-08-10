@@ -232,19 +232,29 @@ for (const f of PAGES) {
 }
 
 console.log('\nresponsive tables');
-/* PRE-CALL's two comparison tables carry full Hebrew sentences across 3-4
-   columns — there is no narrow layout for that content, only a choice of what
-   scrolls. Found by a UI-team review, not a test: at 320px, an unwrapped
-   table either blows out the page's horizontal extent or gets compressed
-   into an unreadable column. The fix is a wrapper that scrolls in place of
-   the page; this is what stops it from silently losing that wrapper again. */
+/* This block used to assert the opposite conclusion, and it said so: PRE-CALL's
+   two comparison tables carry full Hebrew sentences across 3-4 columns, so "there
+   is no narrow layout for that content, only a choice of what scrolls" — and the
+   choice made was a wrapper that scrolls in place of the page.
+
+   Retuned on measurement, which the old comment invited. On a 390x844 phone the
+   tables paint 480px wide, so the reading card — the artefact that decides what
+   you are allowed to offer — sits behind a horizontal scroll during a live call.
+   Guidance for cards used while talking treats that as disqualifying, and it is
+   the one artefact here that is genuinely used mid-conversation.
+
+   So there IS a narrow layout: below 600px each row becomes a block and each
+   cell carries its own column heading. The wrapper stays, because between 600px
+   and the table's natural width scrolling in place of the page is still right.
+   What is asserted now is both halves, plus the two things that can silently
+   break the narrow one. */
 test('every table.read in pre-call.js is wrapped for horizontal scroll', () => {
   const src = read('assets/pre-call.js');
-  const tables = (src.match(/<table class="read">/g) || []).length;
+  const tables = (src.match(/<table class="read"/g) || []).length;
   const wraps = (src.match(/<div class="tbl-wrap">/g) || []).length;
   assert.ok(tables > 0, 'the tables this test protects are gone — retune or remove it');
   assert.strictEqual(wraps, tables,
-    'a table.read with no matching .tbl-wrap has no scroll container at 320px');
+    'a table.read with no matching .tbl-wrap has no scroll container between 600px and 480px');
 });
 test('pre-call.css gives .tbl-wrap something to actually scroll', () => {
   const css = read('assets/pre-call.css');
@@ -254,6 +264,103 @@ test('pre-call.css gives .tbl-wrap something to actually scroll', () => {
   assert.ok(/min-width/.test(css.match(/table\.read\{[^}]*\}/)?.[0] || ''),
     'table.read needs a min-width or there is nothing for the wrapper to scroll — ' +
     'the table just shrinks its columns into unreadable slivers instead');
+});
+test('the narrow layout exists, and drops the min-width that would defeat it', () => {
+  const css = read('assets/pre-call.css');
+  const q = css.match(/@media screen and \(max-width:600px\)\{[\s\S]*?\n  \}/);
+  assert.ok(q, 'no narrow-table media query — the card is back behind a horizontal scroll at 390px');
+  const rules = q[0];
+  assert.ok(/table\.read\{min-width:0\}/.test(rules),
+    'the 480px floor survives into the narrow layout, so the wrapper still scrolls there');
+  assert.ok(/table\.read tr:first-child\{display:none\}/.test(rules),
+    'the heading row must be hidden once each cell carries its own heading');
+  assert.ok(/content:attr\(data-l\)/.test(rules),
+    'hiding the heading row without printing data-l leaves cells with no column name at all');
+});
+test('every generated cell carries the heading it will lose at 390px', () => {
+  /* The reason the tables are generated from arrays rather than written as
+     markup. Hand-written data-l attributes drift from the <th> above them the
+     first time a column is renamed, and nothing on screen says so — the wrong
+     label simply appears under the right cell. */
+  const src = read('assets/pre-call.js');
+  const cells = (src.match(/<td[ >]/g) || []).length;
+  assert.strictEqual(cells, 1,
+    'a <td> is built in ' + cells + ' places — every one beyond the shared helper ' +
+    'carries a data-l that can drift from its own column heading');
+  assert.ok(/data-l="\$\{esc\(heads\[i\]\)\}"/.test(src),
+    'the one place a cell is built must take its label from the heading array itself');
+});
+test('display:block on a table does not take its semantics with it', () => {
+  /* display:block strips table roles in assistive technology. The narrow
+     layout is exactly that, so the markup names every role explicitly. */
+  const src = read('assets/pre-call.js');
+  ['role="table"', 'role="rowgroup"', 'role="row"', 'role="columnheader"', 'role="cell"']
+    .forEach(r => assert.ok(src.includes(r),
+      'missing ' + r + ' — the stacked layout would read as plain text to a screen reader'));
+});
+
+console.log('\ncall mode — the print sheet, applied to the screen');
+/* Measured on a 390x844 phone: the finished script is 5,923px and 1,605px of
+   that, 27%, is not the script at all. The print sheet already names exactly
+   that list, and has since printing produced a blank page. Call mode reuses it
+   rather than restating it, so these tests are about the two lists not drifting
+   and about the reuse not damaging the original. */
+const preCss = read('assets/pre-call.css');
+const printBlock = (() => {
+  const b = preCss.slice(preCss.indexOf('@media print'));
+  return b.slice(0, b.indexOf('\n  }'));
+})();
+const callBlock = (() => {
+  const i = preCss.indexOf('@media screen{');
+  assert.ok(i > 0, 'call mode must live in an @media screen block');
+  const b = preCss.slice(i);
+  return b.slice(0, b.indexOf('\n  }'));
+})();
+
+test('call mode hides on screen the same chrome the print sheet hides on paper', () => {
+  ['header', '.steps', '.backupbox', 'footer', '.next-tool', '#p4 .box:first-of-type']
+    .forEach(sel => {
+      assert.ok(printBlock.includes(sel), 'setup: ' + sel + ' is no longer in the print sheet');
+      assert.ok(callBlock.includes('body.callmode ' + sel),
+        sel + ' prints away but stays on screen in call mode — the two lists have drifted');
+    });
+});
+test('call mode is screen-only, so printing from inside it still prints everything', () => {
+  /* It also hides the twelve `why` lines and the post-call reading card. If
+     those rules were not inside @media screen, hitting print while in call mode
+     would emit a script with its reasoning and its reading card missing, with
+     nothing to say so — the blank-PDF failure again, one layer in. */
+  assert.ok(/body\.callmode #outArea \.why/.test(callBlock),
+    'the why lines must come off in the room');
+  assert.ok(/body\.callmode #outArea \.blk-post/.test(callBlock),
+    'the post-call card must come off in the room');
+  assert.ok(!/@media print/.test(callBlock),
+    'the call-mode rules must not reach the print sheet');
+  assert.ok(!/callmode/.test(printBlock),
+    'the print sheet must not know about call mode at all');
+});
+test('the control box stays the first div in #p4, or the print sheet loses its target', () => {
+  /* `#p4 .box:first-of-type` is first-of-ELEMENT-type: it matches the first div
+     child of #p4 only if that div also carries .box. .callbar is a div, so
+     inserting it above the control box would silently start printing the button
+     row. This pins the order the selector depends on. */
+  const open = '<div class="panel" id="p4">';
+  const p4 = html['pre-call.html'].slice(html['pre-call.html'].indexOf(open) + open.length);
+  const firstDiv = p4.match(/<div class="([^"]+)"/);
+  assert.ok(/\bbox\b/.test(firstDiv[1]),
+    'the first div inside #p4 is now class="' + firstDiv[1] + '" — the print sheet targets .box:first-of-type');
+});
+test('copy reads the script with call mode off, or it emits a truncated one', () => {
+  /* innerText excludes anything CSS has hidden, so copying from inside call
+     mode would produce a shorter document than the page shows — silently. */
+  const src = stripComments(read('assets/pre-call.js'));
+  const fn = src.slice(src.indexOf('function cpText'), src.indexOf('async function copyText'));
+  assert.ok(/classList\.remove\('callmode'\)/.test(fn),
+    'cpText must drop call mode before reading innerText');
+  assert.ok(fn.indexOf("classList.remove('callmode')") < fn.indexOf('.innerText'),
+    'the class has to come off before the read, not after it');
+  assert.ok(/classList\.add\('callmode'\)/.test(fn),
+    'and go back on afterwards, or copying ejects the operator mid-call');
 });
 
 console.log('\na way out for a stuck user');
