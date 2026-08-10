@@ -15,6 +15,10 @@ const EVENTS = new Set([
   'opened', 'seeded', 'template_used', 'example_loaded',
   'transcript_parsed', 'transcript_applied', 'proposal_rendered', 'scope_changed',
   'export_attempted', 'unlocked', 'deal_saved', 'deal_sent', 'outcome_recorded',
+  // asked for a key BEFORE hitting the gate. Worth counting separately from
+  // export_attempted: the two together say whether surfacing the requirement
+  // early actually moves anyone, or only adds a line to the page.
+  'key_requested',
   'followup_added'
 ]);
 

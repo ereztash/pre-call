@@ -429,6 +429,16 @@
                font-variant-numeric:tabular-nums;direction:ltr}
   .docacts{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
   .docacts button{margin:0}
+  /* The "you will need a key" note, in the same continuous-card treatment as
+     .guardrails below it: side borders only, no radius of its own, so the seam
+     from the price header down into the document stays one card whether this is
+     on screen or not. Quiet on purpose — it is a fact stated once next to the
+     buttons it applies to, and the moment it reads as an advert it has become
+     the noise it was meant to prevent. */
+  .keyahead{background:var(--charcoal-2);border:1px solid var(--line);border-top:0;border-bottom:0;
+            padding:var(--sp-4) var(--sp-5);display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+  .keyahead p{font-size:var(--fs-sm);color:#abb4bf;max-width:var(--measure);margin:0;flex:1 1 260px}
+  .keyahead button{margin:0}
   .out{border-radius:0 0 var(--r-lg) var(--r-lg);margin-top:0}
 
   /* Sits between .docbar and .out as one continuous card — no radius of its

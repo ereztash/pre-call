@@ -356,6 +356,88 @@ test('with neither configured the wall stops implying a purchase, and keeps the 
     'someone who already paid still has to be able to use their key');
 });
 
+section('asking for a key before the gate asks');
+/* The gate stops three actions and all three happen at one moment: the proposal
+   is finished and about to go to the client. With a manual sale the answer to
+   "I need a key" is "in a few hours", so the gate lands at the worst possible
+   point to introduce a wait. This note moves the requirement earlier — and the
+   whole risk of it is becoming a standing advert next to the work, which is why
+   most of what follows tests when it stays HIDDEN. */
+test('it appears once there is a real price and somewhere to ask', () => {
+  const p = page({ contact: 'mailto:sales@example.org' });
+  p.run('renderKeyAhead(true)');
+  assert.strictEqual(p.shown.keyAhead, true);
+  assert.ok(/מפתח/.test(p.els.keyAheadText.textContent), 'the note has to say what is needed');
+  assert.ok(/ביד/.test(p.els.keyAheadText.textContent),
+    'the reason to ask early is that a person sends it — say so, or the ask has no motive');
+});
+test('an empty form is never told it will need a key', () => {
+  const p = page({ contact: 'mailto:sales@example.org' });
+  p.run('renderKeyAhead(false)');
+  assert.strictEqual(p.shown.keyAhead, false,
+    'with nothing worth exporting yet, this is an advert rather than information');
+});
+test('nothing to sell means nothing to ask for', () => {
+  const p = page();                       // no PAYMENT_URL, no contact
+  p.run('renderKeyAhead(true)');
+  assert.strictEqual(p.shown.keyAhead, false, 'asking for a key nobody can issue is a dead end');
+});
+test('a key already held removes it', () => {
+  const p = page({ contact: 'mailto:sales@example.org' });
+  p.run('unlocked = true; renderKeyAhead(true)');
+  assert.strictEqual(p.shown.keyAhead, false);
+});
+test('"אחר כך" means for the rest of the session, not until the next keystroke', () => {
+  /* Every edit runs the recompute chain, which calls renderKeyAhead again. A
+     dismissal that did not survive that would reappear on the next character
+     typed, which is worse than never offering it. */
+  const p = page({ contact: 'mailto:sales@example.org' });
+  p.run('renderKeyAhead(true)');
+  p.run('dismissKeyAhead()');
+  assert.strictEqual(p.shown.keyAhead, false);
+  p.run('renderKeyAhead(true)');
+  assert.strictEqual(p.shown.keyAhead, false, 'the dismissal did not survive one recompute');
+});
+test('the dismissal is not persisted — a buyer weeks later must be warned again', () => {
+  const store = {};
+  const p = page({ contact: 'mailto:sales@example.org', store });
+  p.run('renderKeyAhead(true); dismissKeyAhead()');
+  assert.deepStrictEqual(Object.keys(store), [],
+    'a stored dismissal spends the one warning forever and the next session meets the wall cold');
+});
+test('unlocking hides it without waiting for a recompute', () => {
+  /* The unlock happens in the wall, and nothing about the price changed, so no
+     recompute is coming. A note asking for the thing that just arrived is the
+     obvious way for this to look broken. */
+  const p = page({ contact: 'mailto:sales@example.org', typed: GOOD, remote: null });
+  p.run('renderKeyAhead(true)');
+  assert.strictEqual(p.shown.keyAhead, true, 'setup');
+  return p.run('tryUnlock()').then(() => {
+    assert.strictEqual(p.read('unlocked'), true, 'setup: the key should have been accepted');
+    assert.strictEqual(p.shown.keyAhead, false);
+  });
+});
+test('a revoked key brings the note back on the daily recheck', () => {
+  const p = page({ contact: 'mailto:sales@example.org',
+                   store: { postcall_key: GOOD, postcall_key_ok_at: stamp(2 * DAY) },
+                   remote: false });
+  p.run('renderKeyAhead(true)');
+  p.run('rehydrateKey()');
+  return settle().then(() => {
+    assert.strictEqual(p.read('unlocked'), false, 'setup: the key should have been revoked');
+    assert.strictEqual(p.shown.keyAhead, true,
+      'the key is gone, so the requirement is live again and has to be said again');
+  });
+});
+test('asking early and asking at the wall go to the same place', () => {
+  const p = page({ contact: 'mailto:sales@example.org' });
+  p.run('askForKeyAhead()');
+  assert.strictEqual(p.navigated, 'mailto:sales@example.org',
+    'two routes to buy is two conversations to run by hand');
+  assert.ok(p.tracked.includes('key_requested'),
+    'without its own event there is no way to tell whether moving the ask earlier did anything');
+});
+
 test('the wall never tells a buyer to edit a source file', () => {
   const src = fs.readFileSync(path.join(__dirname, 'pc-gate.js'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');

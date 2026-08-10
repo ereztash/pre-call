@@ -188,6 +188,24 @@
       <span class="copied" id="cpFlag">הועתק</span>
     </div>
   </div>
+  <!-- ============ asking for a key before it is needed ============
+       The gate stops three actions, and all three happen at the same moment:
+       the proposal is finished and the operator is about to send it to their
+       client. With a manual sale the answer to "I need a key" is "I will
+       email you one within a few hours", and that is the worst possible
+       moment in the whole flow to ask somebody to wait.
+
+       So the requirement is surfaced while there is still slack, next to the
+       buttons it will apply to. Written by renderKeyAhead() in
+       assets/pc-gate.js, and shown only when all of it is true: there is
+       somewhere to ask, no key is held yet, a real price exists, and it has
+       not been dismissed. Otherwise it is a nag next to the work, which is
+       the kind of noise this project removes rather than adds. -->
+  <div class="keyahead hidden" id="keyAhead">
+    <p id="keyAheadText"></p>
+    <button class="ghost" data-act="askkey">בקשו מפתח מראש</button>
+    <button class="ghost" data-act="laterkey">אחר כך</button>
+  </div>
   <!-- The three sanity checks the chain and the verdict box already compute,
        as a row that reads in one glance instead of a paragraph — see the
        comment on PC.flow.guardrails() for why this exists and why it is

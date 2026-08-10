@@ -115,6 +115,7 @@ async function tryUnlock(){
 
   unlocked = true;
   show('wall', false);
+  renderKeyAhead(); // the note asks for the thing that just arrived
   try {
     localStorage.setItem(KEY_STORE, raw);
     // only stamp a confirmation the server actually gave, so a fallback
@@ -178,6 +179,7 @@ function rehydrateKey(){
         unlocked = true;
         try { localStorage.setItem(KEY_OK_AT, new Date().toISOString()); } catch(e){}
       }
+      renderKeyAhead(); // in both directions: a revoked key brings the note back
       // 'throttled' or null: no verdict, leave it as it was
     });
   } catch(e){}
@@ -232,6 +234,53 @@ function renderBuyRoute(){
   setText('buyHow', 'הכלי עוד לא נמכר, ואין כרגע דרך לקנות מפתח. אם כבר יש לכם מפתח, הפעילו אותו כאן.');
   setText('buyContact', '');
   show('buyRoute', true);
+}
+
+/* ---- asking for a key before the gate asks for it ----
+   The three gated actions all happen at one moment: the proposal is finished
+   and about to go to the client. With a manual sale, the answer to "I need a
+   key" is "I will send you one within a few hours" — so the gate lands at the
+   single worst point in the flow to introduce a wait.
+
+   This is the fix, and the whole design is about not becoming noise. It says
+   the requirement once, next to the buttons it applies to, while there is
+   still slack, and it disappears for good on any of three grounds: a key
+   arrives, there is nowhere to ask, or the operator says not now.
+
+   Dismissal is in memory and not persisted, deliberately. A stored dismissal
+   would mean the one warning is spent forever on the first session, and the
+   buyer who comes back in three weeks meets the wall cold — which is the
+   situation this exists to prevent. A session here is one call. */
+let keyAheadDismissed = false, keyAheadPriced = false;
+
+/* Called from the recompute chain with whether a real price exists, and called
+   with nothing from the two places that can make it obsolete without a
+   recompute — an unlock, and a stored key confirmed after load. Remembering
+   the last answer is what lets both callers use one function; asking the two
+   of them to know about the price would be the way the note survives the key
+   that made it pointless. */
+function renderKeyAhead(hasRealPrice){
+  if (hasRealPrice !== undefined) keyAheadPriced = !!hasRealPrice;
+  const worth = keyAheadPriced && !unlocked && !keyAheadDismissed && salesRoute() !== 'none';
+  if (!worth) { show('keyAhead', false); return; }
+  setText('keyAheadText', salesRoute() === 'manual'
+    ? 'שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח, והוא נשלח ביד. ' +
+      'בקשו אותו עכשיו, בזמן שאתם עוד עובדים, כדי לא לחכות לו כשההצעה מוכנה לשליחה.'
+    : 'שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח. אפשר לסדר את זה עכשיו.');
+  show('keyAhead', true);
+}
+
+/* Same destination as the wall's button. One route, so a buyer who asks early
+   and a buyer who asks late end up in the same conversation. */
+function askForKeyAhead(){
+  track('key_requested');
+  if (salesRoute() === 'manual') return openContact();
+  window.open(PAYMENT_URL, '_blank', 'noopener');
+}
+
+function dismissKeyAhead(){
+  keyAheadDismissed = true;
+  show('keyAhead', false);
 }
 
 function mountGate(){
