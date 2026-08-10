@@ -22,6 +22,24 @@
     lost: 'נדחתה', no_answer: 'ללא מענה'
   };
 
+  /* Where the annual-value figure came from. The form has asked this since the
+     transcript step existed, and dealSnapshot() has been storing the whole form
+     with every deal — so this value has been on every saved record all along
+     and nothing has ever read it. Promoting it to a field of its own is what
+     lets the track record group by it, the way it already groups by pricedBy.
+
+     Four values, not three. 'none' is an answer: the client never named a
+     figure at all. That is a different fact from a deal saved before anyone
+     was asked, and folding the two together would hide the first inside the
+     second. */
+  const PROVENANCE = ['unprompted', 'prompted', 'mine', 'none'];
+  const PROVENANCE_LABEL = {
+    unprompted: 'הוא נקב מעצמו',
+    prompted:   'הוא נקב אחרי שאלה',
+    mine:       'אתה הערכת',
+    none:       'לא היה מספר'
+  };
+
   function make(storage) {
     const read = () => {
       try { return JSON.parse(storage.getItem(KEY)) || []; }
@@ -48,6 +66,13 @@
       save(deal) {
         const list = read();
         deal = defined(deal);
+        /* Promoted here rather than at the call site so every caller gets it —
+           the form dump is already in `deal.form`, and a value that has to be
+           lifted out by hand is a value the next caller forgets to lift. An
+           explicit `provenance` from the caller is left alone: it is more
+           specific than a form dump, not less. */
+        if (deal.provenance === undefined && deal.form && valid(deal.form.q_provenance))
+          deal.provenance = deal.form.q_provenance;
         const i = deal.id ? list.findIndex(d => d.id === deal.id) : -1;
         if (i >= 0) {
           // update: merge only what was actually supplied. Applying the blank
@@ -66,6 +91,7 @@
           estimatedHours: null,
           priceQuoted: null,
           method: null,
+          provenance: null,
           outcome: null
         }, deal);
         list.push(rec);
@@ -91,6 +117,23 @@
           at: new Date().toISOString()
         };
         return api.save(d);
+      },
+
+      /* save() can only promote what passes through it, and a deal sitting in
+         storage from before the field existed never passes through it again.
+         So the read side reaches into the form itself. Nothing rewrites
+         storage to backfill: silently editing the operator's saved records to
+         make a new panel look populated is the wrong trade, and an unreadable
+         old record is supposed to show up as unattributed anyway.
+
+         Anything that is not one of the four known values reads as null. A
+         hand-edited store or a future form option would otherwise become its
+         own bucket in the track record, which is a claim assembled from a
+         string nobody defined. */
+      provenanceOf(d) {
+        if (!d) return null;
+        if (valid(d.provenance)) return d.provenance;
+        return d.form && valid(d.form.q_provenance) ? d.form.q_provenance : null;
       },
 
       remove(id) { return write(read().filter(d => d.id !== id)); },
@@ -167,13 +210,16 @@
   }
 
   const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
+  const valid = v => PROVENANCE.indexOf(v) !== -1;
 
   root.PC = root.PC || {};
   root.PC.dealsFactory = make;
   root.PC.STATUS_LABEL = STATUS_LABEL;
   root.PC.STATUS = STATUS;
+  root.PC.PROVENANCE = PROVENANCE;
+  root.PC.PROVENANCE_LABEL = PROVENANCE_LABEL;
   if (typeof localStorage !== 'undefined') root.PC.deals = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, STATUS, STATUS_LABEL };
+    module.exports = { make, STATUS, STATUS_LABEL, PROVENANCE, PROVENANCE_LABEL };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -161,5 +161,66 @@ test('zero and junk numbers are stored as null, not as values', () => {
   assert.strictEqual(d.calibration(1).n, 0, 'junk does not enter the ratio');
 });
 
+console.log('\nwhere the number came from, kept on the record');
+/* The form already carries q_provenance and dealSnapshot() already stores the
+   whole form with the deal, so every saved deal has held this value all along.
+   Nothing read it. Promoting it to a first-class field is what lets the track
+   record group by it the same way it groups by pricedBy. */
+test('a saved deal carries the provenance the form recorded', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'א', priceQuoted: 5000, form: { q_provenance: 'unprompted' } });
+  assert.strictEqual(a.provenance, 'unprompted');
+  assert.strictEqual(d.get(a.id).provenance, 'unprompted', 'and it survives the round trip');
+});
+test('an explicitly supplied provenance is not overwritten by the form', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'א', provenance: 'mine', form: { q_provenance: 'prompted' } });
+  assert.strictEqual(a.provenance, 'mine', 'the caller is more specific than the form dump');
+});
+test('a deal with neither is unattributed, never guessed', () => {
+  /* The rule pc-history.js already applies to pricedBy: a record saved before
+     the field existed is counted as unattributable rather than assigned a
+     value. Defaulting to 'mine' here would invent the most damning reading of
+     a deal nobody recorded anything about. */
+  const d = make(mem());
+  const a = d.save({ client: 'א', priceQuoted: 5000 });
+  assert.strictEqual(a.provenance, null);
+  assert.strictEqual(d.provenanceOf(d.get(a.id)), null);
+});
+test('the four values the form can produce all survive, including "no number"', () => {
+  /* The select has four options, not three. 'none' is an answer — the client
+     never named a figure — and it is not the same thing as a record that was
+     saved before anyone asked. Folding them together would hide the first
+     inside the second. */
+  ['unprompted', 'prompted', 'mine', 'none'].forEach(v => {
+    const d = make(mem());
+    const a = d.save({ client: 'א', priceQuoted: 5000, form: { q_provenance: v } });
+    assert.strictEqual(a.provenance, v, v + ' did not survive the save');
+  });
+});
+test('a value nobody defined reads as unattributed, not as its own group', () => {
+  /* A hand-edited store, or a fifth option added to the form later without
+     anyone teaching the track record about it. Either way the panel must not
+     grow a bucket named after a string it cannot explain. */
+  const d = make(mem());
+  const a = d.save({ client: 'א', priceQuoted: 5000, form: { q_provenance: 'לא-קיים' } });
+  assert.strictEqual(a.provenance, null);
+  assert.strictEqual(d.provenanceOf({ provenance: 'banana' }), null);
+});
+test('a record already in storage is read through the fallback, not rewritten', () => {
+  /* save() can only promote what passes through it. Deals sitting in
+     localStorage from before this existed never pass through it again, so the
+     read side has to reach into form itself or they stay invisible. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([{
+    id: 'old1', client: 'עתיק', status: 'won', priceQuoted: 4000,
+    form: { q_provenance: 'prompted' }
+  }]));
+  const d = make(st);
+  const rec = d.get('old1');
+  assert.strictEqual(rec.provenance, undefined, 'storage is not rewritten behind the operator');
+  assert.strictEqual(d.provenanceOf(rec), 'prompted', 'but it is readable');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
