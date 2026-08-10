@@ -147,9 +147,15 @@ function removeDeal(id){
 }
 
 function saveOutcome(id){
+  /* The concession control only exists once a lower closing price has been
+     saved, so on the first save there is nothing to read. recordOutcome keeps
+     the previous answer when none is sent, so reading it as absent here is
+     safe rather than destructive. */
+  const conc = el('oc_conc_' + id);
   PC.deals.recordOutcome(id, {
     closedPrice: el('oc_price_' + id).value,
-    actualHours: el('oc_hours_' + id).value
+    actualHours: el('oc_hours_' + id).value,
+    concession: conc ? conc.value : undefined
   });
   renderLedger(); recompute(); track('outcome_recorded');
 }
@@ -214,6 +220,13 @@ const renderLedger = guard('ledger', function (){
             <input type="number" id="oc_price_${d.id}" value="${o.closedPrice || ''}" placeholder="${d.priceQuoted || ''}"></div>
           <div><label for="oc_hours_${d.id}">שעות עבודה בפועל</label>
             <input type="number" id="oc_hours_${d.id}" value="${o.actualHours || ''}" placeholder="${d.estimatedHours || ''}"></div>
+          ${o.closedPrice > 0 && d.priceQuoted > 0 && o.closedPrice < d.priceQuoted ? `
+          <div><label for="oc_conc_${d.id}">המחיר ירד. מי ביקש?</label>
+            <select id="oc_conc_${d.id}">
+              <option value="unknown"${(o.concession || 'unknown') === 'unknown' ? ' selected' : ''}>לא נרשם</option>
+              <option value="client_asked"${o.concession === 'client_asked' ? ' selected' : ''}>הלקוח ביקש</option>
+              <option value="i_offered"${o.concession === 'i_offered' ? ' selected' : ''}>הצעתי מעצמי</option>
+            </select></div>` : ''}
           <button type="button" class="ghost" data-deal="${d.id}" data-status="__outcome">שמור תוצאה</button>
         </div>` : ''}
     </div>`;
@@ -265,6 +278,23 @@ const renderHistory = guard('history', function (list) {
           : ''}</span>
     </div>` : '';
 
+  /* The split, on its own line, whenever at least one side is attributed. One
+     side alone is still worth saying: the line above already reports that a
+     discount happened and how big, so what this adds is who moved the price,
+     which is the only new fact here. What it does not do is appear for a set
+     where nothing but 'unknown' has entries — "one was not recorded" is not a
+     finding, and the countdown says that instead. */
+  const bc = hold.byConcession || {};
+  const sides = ['client_asked', 'i_offered'].filter(k => bc[k] && bc[k].n);
+  const concLine = sides.length ? `<div class="hist-row">
+      <span class="hist-k">מי הזיז את המחיר</span>
+      <span class="hist-v">${sides.map(k =>
+        `${esc(PC.CONCESSION_LABEL[k])}: ${bc[k].n === 1 ? 'אחת' : bc[k].n} · −${bc[k].avgDiscount}%`
+      ).join(' · ')}${bc.unknown && bc.unknown.n
+        ? ` · ${bc.unknown.n === 1 ? 'אחת לא נרשמה' : bc.unknown.n + ' לא נרשמו'}`
+        : ''}</span>
+    </div>` : '';
+
   const accLine = acc.n ? `<div class="hist-row">
       <span class="hist-k">האומדן שלך מול המציאות</span>
       <span class="hist-v">${acc.n === 1 ? 'מסירה אחת' : acc.n + ' מסירות'} · ${
@@ -305,7 +335,7 @@ const renderHistory = guard('history', function (list) {
     </div>` : '';
 
   box.innerHTML = (accLine || holdLine
-      ? `<div class="hist-rows">${accLine}${holdLine}</div>` : '') +
+      ? `<div class="hist-rows">${accLine}${holdLine}${concLine}</div>` : '') +
     verdict + trendLine + methodTable + missing;
 });
 

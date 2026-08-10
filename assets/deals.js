@@ -22,6 +22,22 @@
     lost: 'נדחתה', no_answer: 'ללא מענה'
   };
 
+  /* Who moved the price, when the closing price came in under the quote.
+     Recorded after delivery rather than asked before it, and only when the
+     number actually dropped — if the price held there is nothing to attribute.
+
+     Three values because two of them are answers and the third is the honest
+     absence of one. 'unknown' is the default and is never inferred: a discount
+     the client asked for and a discount the operator offered unasked call for
+     opposite corrections, and guessing which one happened would manufacture
+     exactly the finding this field exists to record. */
+  const CONCESSION = ['client_asked', 'i_offered', 'unknown'];
+  const CONCESSION_LABEL = {
+    client_asked: 'הלקוח ביקש',
+    i_offered:    'הצעת מעצמך',
+    unknown:      'לא נרשם'
+  };
+
   function make(storage) {
     const read = () => {
       try { return JSON.parse(storage.getItem(KEY)) || []; }
@@ -82,12 +98,19 @@
 
       /* actualHours is the only field that can decalcify the effort model.
          closedPrice tells you whether the price survived contact. */
-      recordOutcome(id, { closedPrice, actualHours, note } = {}) {
+      recordOutcome(id, { closedPrice, actualHours, note, concession } = {}) {
         const d = api.get(id); if (!d) return null;
+        const prev = d.outcome || {};
         d.outcome = {
           closedPrice: num(closedPrice),
           actualHours: num(actualHours),
           note: note || '',
+          /* Carried over when the caller does not send one. The outcome form
+             re-renders after every save and the hours field is the one an
+             operator comes back to — dropping the answer they already gave,
+             because that one control was not re-sent, would lose the only
+             field here nobody can reconstruct later. */
+          concession: conc(concession) || prev.concession || 'unknown',
           at: new Date().toISOString()
         };
         return api.save(d);
@@ -152,14 +175,33 @@
           d.status === 'won' && d.priceQuoted > 0 && d.outcome && d.outcome.closedPrice > 0);
         if (!won.length) return { n: 0, held: null, discounted: 0, avgDiscount: null };
         const cut = won.filter(d => d.outcome.closedPrice < d.priceQuoted);
-        const disc = cut.length
-          ? cut.reduce((s, d) => s + (1 - d.outcome.closedPrice / d.priceQuoted), 0) / cut.length
-          : 0;
+        const off = d => 1 - d.outcome.closedPrice / d.priceQuoted;
+        const mean = rows => rows.length
+          ? +(rows.reduce((s, d) => s + off(d), 0) / rows.length * 100).toFixed(1)
+          : null;
+
+        /* The same argument this function already makes about the zeros, one
+           level in. A mean over every discount cannot tell "the client
+           negotiated" from "you moved first", and those two demand opposite
+           corrections: the first says the price was too high for this buyer,
+           the second says nothing about the buyer at all. Reported apart, and
+           the deals nobody answered for stay in their own column rather than
+           being distributed across the two that mean something.
+
+           Only discounted deals appear here. A deal that held its price was
+           not conceded by anyone, whatever its field happens to say. */
+        const byConcession = {};
+        CONCESSION.forEach(k => {
+          const rows = cut.filter(d => (d.outcome.concession || 'unknown') === k);
+          byConcession[k] = { n: rows.length, avgDiscount: mean(rows) };
+        });
+
         return {
           n: won.length,
           held: won.length - cut.length,
           discounted: cut.length,
-          avgDiscount: cut.length ? +(disc * 100).toFixed(1) : null
+          avgDiscount: mean(cut),
+          byConcession
         };
       }
     };
@@ -167,13 +209,17 @@
   }
 
   const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
+  // anything outside the three reads as no answer, never as one of the two
+  const conc = v => CONCESSION.indexOf(v) !== -1 ? v : null;
 
   root.PC = root.PC || {};
   root.PC.dealsFactory = make;
   root.PC.STATUS_LABEL = STATUS_LABEL;
   root.PC.STATUS = STATUS;
+  root.PC.CONCESSION = CONCESSION;
+  root.PC.CONCESSION_LABEL = CONCESSION_LABEL;
   if (typeof localStorage !== 'undefined') root.PC.deals = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, STATUS, STATUS_LABEL };
+    module.exports = { make, STATUS, STATUS_LABEL, CONCESSION, CONCESSION_LABEL };
 })(typeof window !== 'undefined' ? window : globalThis);

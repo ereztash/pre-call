@@ -161,5 +161,86 @@ test('zero and junk numbers are stored as null, not as values', () => {
   assert.strictEqual(d.calibration(1).n, 0, 'junk does not enter the ratio');
 });
 
+console.log('\nwho moved the price');
+/* A discount the client asked for and a discount the operator offered without
+   being asked call for opposite corrections — one says the price was too high
+   for this buyer, the other says nothing about the buyer at all. A single mean
+   across both cannot tell them apart, which is the same argument this module
+   already makes about averaging the zeros into avgDiscount. */
+test('a concession defaults to unknown rather than to either side', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 8000 });
+  assert.strictEqual(d.get(a.id).outcome.concession, 'unknown',
+    'guessing who asked would invent the finding this field exists to record');
+});
+test('the two answers are stored as given', () => {
+  ['client_asked', 'i_offered'].forEach(v => {
+    const d = make(mem());
+    const a = d.save({ client: 'a', priceQuoted: 10000 });
+    d.setStatus(a.id, 'won');
+    d.recordOutcome(a.id, { closedPrice: 8000, concession: v });
+    assert.strictEqual(d.get(a.id).outcome.concession, v);
+  });
+});
+test('a value outside the three falls back to unknown', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 8000, concession: 'maybe' });
+  assert.strictEqual(d.get(a.id).outcome.concession, 'unknown');
+});
+test('priceHold splits the average by who moved it, and reports the two apart', () => {
+  const d = make(mem());
+  const mk = (price, closed, conc) => {
+    const x = d.save({ client: 'c', priceQuoted: price });
+    d.setStatus(x.id, 'won');
+    d.recordOutcome(x.id, { closedPrice: closed, concession: conc });
+  };
+  mk(10000, 8000, 'client_asked');    // 20%
+  mk(10000, 9000, 'client_asked');    // 10%
+  mk(10000, 5000, 'i_offered');       // 50%
+  mk(10000, 10000, 'client_asked');   // held, must not enter any average
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 3);
+  assert.strictEqual(p.byConcession.client_asked.n, 2);
+  assert.strictEqual(p.byConcession.client_asked.avgDiscount, 15);
+  assert.strictEqual(p.byConcession.i_offered.n, 1);
+  assert.strictEqual(p.byConcession.i_offered.avgDiscount, 50);
+  assert.strictEqual(p.byConcession.unknown.n, 0);
+  assert.strictEqual(p.byConcession.unknown.avgDiscount, null,
+    'a side with no deals has no average, not an average of zero');
+});
+test('a deal that held its price is in no concession group at all', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 10000, concession: 'i_offered' });
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 0);
+  assert.strictEqual(p.byConcession.i_offered.n, 0,
+    'the price did not move, so nobody moved it — whatever the field says');
+});
+test('an unanswered concession is counted on its own, not folded into either side', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won'); d.recordOutcome(a.id, { closedPrice: 7000 });
+  const p = d.priceHold();
+  assert.strictEqual(p.byConcession.unknown.n, 1);
+  assert.strictEqual(p.byConcession.unknown.avgDiscount, 30);
+  assert.strictEqual(p.byConcession.client_asked.n, 0);
+  assert.strictEqual(p.byConcession.i_offered.n, 0);
+});
+test('recording an outcome again does not silently reset the answer', () => {
+  /* The outcome form re-renders after every save, and the hours field is the
+     one an operator comes back to. Wiping the concession on a second save
+     because that dropdown was not re-sent would lose the answer they gave. */
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 8000, concession: 'i_offered' });
+  d.recordOutcome(a.id, { closedPrice: 8000, actualHours: 12 });
+  assert.strictEqual(d.get(a.id).outcome.concession, 'i_offered');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
