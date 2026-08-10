@@ -108,6 +108,41 @@ const withKeys = async (csv, fn) => {
     }
   });
 
+  console.log('\ndoes the usage counter keep anything');
+  /* The same question this file already asks about licenseEnforced, on the other
+     endpoint: could the flag drift and lie. It is reported as a flat false
+     rather than derived from an environment variable, and a hand-written false
+     is exactly the kind of thing that stays false for a year after somebody
+     wires a store — or, worse, gets flipped to true while the sink is unchanged.
+     So the flag is tied to the code it describes: this reads event.js and fails
+     the moment the two disagree. */
+  await test('telemetryDurable is reported at all', async () => {
+    const r = res();
+    await handler(req({ ip: nextIp() }), r);
+    assert.strictEqual(typeof r.payload.telemetryDurable, 'boolean',
+      'a deployment has to be able to see this from outside, not by reading the source');
+  });
+  await test('and it agrees with what event.js actually does with an event', async () => {
+    const fs = await import('node:fs');
+    const url = await import('node:url');
+    const src = fs.readFileSync(
+      url.fileURLToPath(new URL('./event.js', import.meta.url)), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+    /* The sink, as opposed to any other logging: the line that writes the event
+       row itself. If that is still all there is, nothing is retained past the
+       host's log window and the flag must be false. */
+    const onlyLogs = /console\.log\('POSTCALL_EVENT/.test(src) &&
+      !/(fetch|createClient|INSERT|redis|kv\.|s3|putItem|prisma)/i.test(src);
+
+    const r = res();
+    await handler(req({ ip: nextIp() }), r);
+    assert.strictEqual(r.payload.telemetryDurable, !onlyLogs,
+      onlyLogs
+        ? 'event.js still only writes a log line, so telemetryDurable must be false'
+        : 'event.js now writes somewhere durable — flip TELEMETRY_DURABLE in health.js');
+  });
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);
 })();
