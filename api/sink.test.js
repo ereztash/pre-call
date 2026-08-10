@@ -87,6 +87,48 @@ await test('a value that is not a URL at all does not turn the flag on', async (
     await withEnv(v, async () => assert.strictEqual(SINK.durable, false, v));
   }
 });
+await test('a value that only looks like https is refused, not reported as durable', async () => {
+  /* Raised in review, and the objection goes to the point of the flag. The first
+     check here was /^https:\/\/\S+$/, which these all satisfy — and every one of
+     them either throws inside fetch or sends somewhere nobody meant:
+
+       https://?        new URL() throws
+       https://#x       new URL() throws
+       https:///path    parses, and "path" silently becomes the HOSTNAME
+       https://.        parses, with a hostname that cannot resolve
+
+     In each case /api/health reported telemetryDurable:true while every row went
+     to short-lived stdout — the flag reading green exactly when it exists to show
+     a deployment is misconfigured. Shape is all this can check; whether a
+     well-formed host answers is what the fallback and the log are for. */
+  for (const v of ['https://?', 'https://#x', 'https:///path', 'https://.', 'https://..']) {
+    await withEnv(v, async () => {
+      assert.strictEqual(SINK.durable, false, v + ' was accepted');
+      assert.strictEqual(SINK.target, 'stdout', v + ' reported a webhook');
+    });
+  }
+});
+await test('a host with no dot in it is still allowed — that is how anyone tests this', () => {
+  /* The pair to the test above, and the reason `https:///path` is rejected as an
+     empty authority rather than by demanding a dot in the hostname. Demanding
+     one would also have refused localhost, which is the first thing a person
+     points this at before pointing it at anything real. Pinned so a later
+     tightening has to argue with it. */
+  return withEnv('https://localhost:8443/hook', async () => {
+    assert.strictEqual(SINK.durable, true, 'localhost was refused');
+    assert.strictEqual(SINK.target, 'webhook');
+  });
+});
+await test('a URL with no path is accepted, and normalised the way fetch would', async () => {
+  // the counterpart to the above: rejecting these would be validation theatre
+  await withEnv('https://hooks.example.com', async () => {
+    assert.strictEqual(SINK.durable, true);
+    await withFetch(okResponse, async calls => {
+      await quiet(() => SINK.write(ROW));
+      assert.strictEqual(calls[0].url, 'https://hooks.example.com/');
+    });
+  });
+});
 await test('the target name never contains the URL', async () => {
   /* api/health prints target verbatim. A webhook URL is a credential — anyone
      holding it can write to the feed — and health is an unauthenticated GET. */
@@ -138,6 +180,44 @@ await test('a successful delivery does not also write the row to the log', async
       const lines = await quiet(() => SINK.write(ROW));
       assert.deepStrictEqual(lines, []);
     });
+  });
+});
+
+console.log('\nwhen the target answers, but not by accepting the row');
+await test('the request refuses to follow a redirect', async () => {
+  /* Raised in review, and confirmed against a real https server before fixing:
+     with fetch's default redirect:'follow', a webhook answering 302 gets the
+     POST, and then fetch reissues the request to the Location as a GET with no
+     body. If that page answers 200 — and a redirect usually points at something
+     that does — r.ok is true, write() reports delivered, the stdout fallback is
+     skipped, and the row is gone. Every event, silently, with health reporting
+     durable:true throughout. Measured: POST /hook then GET /landed, bodyLen 0,
+     status 200.
+
+     'manual' rather than 'error' because undici then hands back the real 3xx
+     status instead of an opaque failure, so the log can name what is wrong with
+     the URL rather than saying "fetch failed". */
+  await withEnv('https://hooks.example.com/abc', async () => {
+    await withFetch(okResponse, async calls => {
+      await quiet(() => SINK.write(ROW));
+      assert.strictEqual(calls[0].opts.redirect, 'manual',
+        'fetch follows redirects by default, which turns this POST into a GET');
+    });
+  });
+});
+await test('a redirect is a failure with a reason, not a delivery', async () => {
+  await withEnv('https://hooks.example.com/abc', async () => {
+    for (const status of [301, 302, 303, 307, 308]) {
+      await withFetch(() => ({ ok: false, status }), async () => {
+        let r;
+        const lines = await quiet(async () => { r = await SINK.write(ROW); });
+        assert.strictEqual(r.delivered, false, status + ' counted as delivered');
+        assert.strictEqual(lines.length, 1, status + ' dropped the row instead of logging it');
+        assert.match(r.error, /redirect/i,
+          status + ' reported as a generic failure — an operator reading the log needs to ' +
+          'know the URL redirects, not that something went wrong: ' + r.error);
+      });
+    }
   });
 });
 

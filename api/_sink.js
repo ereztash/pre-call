@@ -38,10 +38,38 @@
 /* Only https. These rows are anonymous, but a live feed of when somebody is
    pricing work and roughly for how much is still worth not handing to every hop
    on the way. A refused value reports as telemetryDurable:false, which is
-   visible from outside; silently downgrading to cleartext would not be. */
+   visible from outside; silently downgrading to cleartext would not be.
+
+   Parsed rather than pattern-matched. The first version was /^https:\/\/\S+$/,
+   and `https://?` satisfies it — as do `https://#x`, which also throws inside
+   fetch, and `https:///path`, which parses with "path" silently promoted to the
+   hostname. Each one left /api/health reporting telemetryDurable:true while
+   every row went to short-lived stdout, which is the flag reading green in
+   precisely the case it exists to expose. Raised in review.
+
+   Two clauses beyond that, both for values `new URL` accepts rather than throws
+   on. `https://.` and `https://..` parse with a hostname no resolver can answer.
+   And `https:///path` has an EMPTY authority, so the parser promotes the first
+   path segment: it becomes a request to a host named "path". One keystroke too
+   many, and nothing downstream would have said a word.
+
+   That second one is checked as an empty authority rather than by requiring a
+   dot in the hostname, which was the other obvious rule and is worse: it also
+   outlaws `https://localhost/…` and single-label internal hosts, which are how
+   anyone would test this before pointing it at anything real.
+
+   Shape is the limit of what can be checked here. Whether a well-formed host
+   actually accepts a POST is what the fallback and the log are for, and the flag
+   says as much out loud. */
 const url = () => {
   const v = (process.env.POSTCALL_EVENT_URL || '').trim();
-  return /^https:\/\/\S+$/.test(v) ? v : '';
+  if (!v) return '';
+  if (/^https:\/\/\//i.test(v)) return '';     // empty authority
+  try {
+    const u = new URL(v);
+    if (u.protocol !== 'https:' || !/[^.]/.test(u.hostname)) return '';
+    return u.href;
+  } catch (e) { return ''; }
 };
 
 /* A target that accepts the connection and then never answers is the case that
@@ -50,6 +78,14 @@ const url = () => {
 const DEADLINE_MS = 2000;
 
 const toLog = row => { console.log('POSTCALL_EVENT ' + JSON.stringify(row)); };
+
+/* The reason is built here rather than passed through from fetch, so that a
+   message like "request to https://… failed" can never carry the URL into a
+   return value. Status codes and error class names only. */
+const fallback = (row, error) => {
+  toLog(row);
+  return { delivered: false, sink: 'stdout', error };
+};
 
 export const SINK = {
   /* Does anything survive past the host's log window. */
@@ -75,13 +111,28 @@ export const SINK = {
         // here would undo that a layer below where anyone reviewing event.js
         // would think to look.
         body: JSON.stringify(row),
+        /* fetch follows redirects by default, and a redirect is where this goes
+           wrong quietly rather than loudly. Measured against a real server: the
+           POST reaches the webhook, fetch then reissues the request to the
+           Location as a GET with no body, and a 200 from that page made r.ok
+           true — so the row was never posted, the fallback was skipped, and
+           write() reported delivered. Every event, silently, with health saying
+           durable throughout. Raised in review.
+
+           'manual' rather than 'error' because undici then returns the real 3xx
+           status instead of an opaque failure, so the log can say the URL
+           redirects instead of "fetch failed". */
+        redirect: 'manual',
         signal: AbortSignal.timeout(DEADLINE_MS)
       });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      /* Named separately from the generic non-2xx case: a redirect is a fixable
+         mistake in one environment variable, and an operator reading the log
+         should be told that rather than left with a status code. */
+      if (r.status >= 300 && r.status < 400) return fallback(row, 'redirect ' + r.status);
+      if (!r.ok) return fallback(row, 'HTTP ' + r.status);
       return { delivered: true, sink: 'webhook' };
     } catch (e) {
-      toLog(row);
-      return { delivered: false, sink: 'stdout', error: e.name || 'error' };
+      return fallback(row, e.name || 'error');
     }
   }
 };
