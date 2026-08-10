@@ -490,6 +490,14 @@ function provenanceWarning(m){
   if (!m.annualValue) return '';
   const p = el('q_provenance').value;
   if (p === 'unprompted') return '';
+  /* The case that used to fall off the end of this function and return ''. The
+     form's default was one of the answers, so an untouched question produced
+     the 'prompted' warning — wrong, but at least a warning. With an explicit
+     unanswered default it would have produced silence on the one field that
+     decides whether the number may be quoted, which is worse than either. */
+  if (p === 'unset') return '<div class="tri-warn"><b>לא סימנת מאיפה הגיע המספר.</b> ' +
+    'זו השאלה שקובעת אם אפשר לצטט אותו ללקוח כמספר שלו, ועד שתסמן פסקת ההחזר לא נכנסת למסמך. ' +
+    'העדר הסימון לא שינה את המחיר — רק את מה שנכנס למסמך.</div>';
   if (p === 'prompted') return '<div class="tri-warn">המספר הגיע אחרי ששאלת. ' +
     'ייתכן שהוא אמיתי, וייתכן שהוא נבנה בשבילך בזמן השיחה. לפני שאתה שולח מחיר שנשען עליו, ' +
     'שאל אותו שאלה אחת: "איך אתה יודע את זה?" — אם אין תשובה, זה אומדן ולא מדידה.</div>';
@@ -650,6 +658,10 @@ function guideState(){
     errFreq: num('q_err_freq'),
     errCost: num('q_err_cost'),
     numbersAreMine: el('q_provenance').value === 'mine',
+    /* Separate from numbersAreMine on purpose. That flag decides the pricing
+       METHOD in pc-guide.js, and an unanswered question must never change the
+       price — only what the tool is willing to claim. */
+    numbersUnset: el('q_provenance').value === 'unset',
     comparableLast: num('c_last'),
     scopeConfirmed,
     client: txt('q_client'),
@@ -968,7 +980,9 @@ const renderFlow = guard('flow', function (){
    what is deliberately absent and why. */
 const renderViz = guard('viz', function (){
   const box = el('vizBox'); if (!box) return;
-  const v = PC.viz.forModel(model(), { numbersAreMine: el('q_provenance').value === 'mine' });
+  const v = PC.viz.forModel(model(), {
+    numbersAreMine: el('q_provenance').value === 'mine',
+    numbersUnset:   el('q_provenance').value === 'unset' });
   if (!v.payback && !v.share && !v.waiting) { show('vizBox', false); box.innerHTML = ''; return; }
 
   let html = '';

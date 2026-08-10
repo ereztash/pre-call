@@ -96,9 +96,12 @@
      instead, on exactly the rule that keeps the invented figure out of the
      document: you cannot press someone with arithmetic on a number you made
      up for them. */
-  function costOfWaiting(annual, numbersAreMine) {
+  /* `notHis` covers both "the operator estimated it" and "nobody has said yet".
+     The note under this line claims the figure is a division of a number the
+     client gave, so it may only appear when somebody has confirmed he did. */
+  function costOfWaiting(annual, notHis) {
     const a = +annual;
-    if (numbersAreMine || !isFinite(a) || a <= 0) return null;
+    if (notHis || !isFinite(a) || a <= 0) return null;
     return {
       perWeek: Math.round(a / 52),
       label: 'כל שבוע שהוא לא מחליט עולה לו כ-' +
@@ -115,7 +118,7 @@
     return {
       payback: payback(m && m.payback),
       share: share(m && m.price, m && m.annualValue),
-      waiting: costOfWaiting(m && m.annualValue, o.numbersAreMine)
+      waiting: costOfWaiting(m && m.annualValue, o.numbersAreMine || o.numbersUnset)
     };
   }
 

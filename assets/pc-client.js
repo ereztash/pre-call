@@ -48,7 +48,11 @@
     if (decider) decision = MANY.test(decider) ? 'committee'
                           : ALONE.test(decider) ? 'single' : 'shared';
 
-    const numbers = s.provenance || 'none';
+    /* 'unset', not 'none'. 'none' is an answer — the client named no figure —
+       and defaulting to it meant an absent value was read as somebody having
+       said so. Nothing recorded is its own state, and it is the one the form
+       now starts in. */
+    const numbers = s.provenance || 'unset';
     const burned = !!(s.prev || '').trim();
     const urgency = (s.trigger || '').trim() ? 'event'
                   : (s.deadline || '').trim() ? 'deadline' : 'none';
@@ -133,6 +137,26 @@
         'ולצטט אותו ללקוח כאילו הוא אמר אותו זו שאלה אחת ("מאיפה המספר?") שאין עליה תשובה. ' +
         'המחיר נשאר; ההצדקה עוברת להיקף. המספר עדיין מוצג לך על המסך.');
       focus.push('q_err_cost', 'q_provenance');
+    /* The same rule, on the case that used to slip through it. The form's
+       default was 'prompted', so a question nobody had answered arrived here
+       looking answered and the paragraph went out on the strength of it. An
+       unanswered question is not a claim that the number is the operator's —
+       it is the absence of any claim — and the tool cannot attribute a figure
+       to the client on the absence of one. Fail closed, and say which of the
+       two reasons it is, because "you estimated it" and "nobody said" call for
+       different next moves: the first is a decision, the second is a click. */
+    } else if (p.numbers === 'unset') {
+      suppressRoi = true;
+      /* Suppressing is unconditional; explaining is not. The paragraph only
+         exists in the document when there is an annual value (see
+         pc-proposal.js), so on a form nobody has filled in there is nothing
+         being withheld and a line saying so would be noise on an empty page.
+         Once the client has said how often the process runs, there is. */
+      if (p.runs > 0) changes.push(
+        'פסקת ההחזר לא נכנסה למסמך, כי לא סימנת מאיפה הגיע המספר השנתי. ' +
+        'זה לא אומר שהמספר לא טוב — זה אומר שהכלי לא יכול לייחס אותו ללקוח בלי שמישהו אמר לו. ' +
+        'סמן, והפסקה חוזרת. אי-הסימון לא שינה את המחיר, רק את מה שנכנס למסמך.');
+      focus.push('q_provenance');
     } else if (p.numbers === 'prompted') {
       focus.push('q_provenance');
     }

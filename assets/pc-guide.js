@@ -144,6 +144,14 @@
               ' ₪ לכל תקלה. זה מספר גדול, והמחיר כולו יישען עליו. ' +
               'לפני השליחה שווה לבקש ממנו דוגמה אחת ספציפית לתקלה כזאת.' });
     }
+    /* Not a method change and not an error — a click that is worth one line,
+       because the alternative is a section quietly missing from the document
+       with the reason two panels away. */
+    if (s.numbersUnset && (+s.freq > 0 || +s.errCost > 0)) {
+      out.push({ id: 'unset', field: 'q_provenance',
+        text: 'לא סומן מאיפה הגיע המספר השנתי, ולכן פסקת ההחזר לא נכנסת למסמך שנשלח. ' +
+              'סימון אחד מחזיר אותה. אי-הסימון לא שינה את המחיר.' });
+    }
     if (s.numbersAreMine && (+s.errCost > 0 || +s.freq > 0)) {
       out.push({ id: 'mine', field: 'q_provenance',
         text: 'סומן שהמספרים הם הערכה שלכם ולא של הלקוח. זה בסדר גמור, אבל אז הם לא נכנסים למסמך ' +

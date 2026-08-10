@@ -374,7 +374,7 @@ function newDeal(){
      inherited it silently. One deal's answer became the next deal's record.
      Reported in review on the pull request that started reading this field. */
   const prov = el('q_provenance');
-  if (prov) prov.value = 'prompted';
+  if (prov) prov.value = 'unset';
   clearSystems();
   resetScope();
   clearTemplateChoice();

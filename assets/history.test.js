@@ -324,23 +324,27 @@ test('a deal with no recorded source is disclosed, not just dropped', () => {
   assert.ok(u.some(x => /בלי שנרשם מאיפה|בלי מקור/.test(x.what + x.text)),
     'the excluded deal is invisible: ' + JSON.stringify(u.map(x => x.what)));
 });
-test('the group that doubles as the form default says so', () => {
-  /* Raised in review: 'prompted' is the option the markup marks selected, so a
-     deal where nobody touched the question is stored as if it were answered.
-     The arithmetic cannot separate them, so the panel says which group is
-     affected instead of presenting all four as equally chosen. */
-  const u = H.unknowns([
-    prov('prompted', 'won', 4000, 4000),
-    prov('prompted', 'won', 4000, 4000),
+test('the form default never becomes a group, so every row is a real choice', () => {
+  /* This replaces a test that asserted the opposite arrangement. The form used
+     to default to 'prompted', so that group mixed deals somebody had marked with
+     deals nobody had touched, and the panel had to disclaim it. The default is
+     'unset' now, which deliberately has no label — and the label map is what
+     defines the buckets — so it can be stored and can never be claimed about.
+     The disclaimer is gone with the ambiguity, and this is what keeps it gone. */
+  const r = H.provenance([
+    prov('unset', 'won', 4000, 4000),
+    prov('unset', 'won', 4000, 4000),
+    prov('unset', 'won', 4000, 4000),
     prov('prompted', 'won', 4000, 4000)
-  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
-  assert.ok(u.some(x => /ברירת המחדל של הטופס/.test(x.text)),
-    'a group that is partly a default and looks measured is worse than no group');
-  const clean = H.unknowns([
-    prov('unprompted', 'won', 4000, 4000)
-  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
-  assert.ok(!clean.some(x => /ברירת המחדל של הטופס/.test(x.text)),
-    'the caveat belongs to that one group, not to the panel');
+  ], P.PROVENANCE_LABEL);
+  assert.deepStrictEqual(r.rows.map(x => x.provenance), ['prompted'],
+    'the unanswered ones became a group: ' + JSON.stringify(r.rows.map(x => x.provenance)));
+  assert.strictEqual(r.unattributed, 3, 'and they are counted as unattributed instead');
+
+  const u = H.unknowns([prov('prompted', 'won', 4000, 4000)],
+                       M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(!u.some(x => /ברירת המחדל של הטופס/.test(x.text)),
+    'a disclaimer that no longer describes the code teaches the reader to discount the ones that do');
 });
 test('report() carries the breakdown, and unknowns() counts down to it', () => {
   const rep = H.report([prov('mine', 'won', 5000, 5000)], M.METHOD_LABEL);
