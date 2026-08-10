@@ -365,6 +365,90 @@ test('the share image exists and is the size every platform expects', () => {
   assert.strictEqual(buf.readUInt32BE(20), 630, 'og image height must be 630');
 });
 
+console.log('\nreachable from outside');
+/* Same AARRR pass, next hole along: a link pasted into WhatsApp renders
+   properly now, but nothing else could ever find this. No robots.txt and no
+   sitemap, so the only address that resolves is one somebody was handed. That
+   is a defensible choice for a private tool and not for a sold one, and either
+   way nothing here recorded which it was.
+
+   A sitemap is the one SEO artefact that can be wrong in a way that costs
+   something: it asks a crawler to index an address. If that address is not the
+   one the page names as canonical, the crawler is being pointed at a duplicate
+   of a page that disowns it. So the sitemap is not checked for existence, it is
+   checked for agreement — against the canonical tags, which are what the pages
+   themselves claim. */
+const SITE_PAGES = { 'index.html': '/', 'post-call.html': '/post-call',
+                     'pre-call.html': '/pre-call', 'privacy.html': '/privacy' };
+/* Read defensively, and not out of politeness. The first version of this block
+   called read() at the top level, and with the files absent the suite died on
+   require with a stack trace instead of reporting a failure — taking every
+   later test in this file down with it, unrun and unmentioned. A file that is
+   missing is a failing test, not a crashing one. */
+const readOr = f => { try { return read(f); } catch (e) { return ''; } };
+const sitemap = readOr('sitemap.xml');
+const robots = readOr('robots.txt');
+const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+
+test('both files exist at the root, where they are the only place they work', () => {
+  assert.ok(sitemap, 'sitemap.xml is missing — robots.txt promises a file that 404s');
+  assert.ok(robots, 'robots.txt is missing');
+});
+test('the sitemap is a sitemap — the namespace is the one crawlers look for', () => {
+  /* Caught in this file rather than in production: the first draft wrote
+     www.sitemap.org, singular. It is well-formed XML with a plausible URL and
+     no crawler recognises it, which is the failure mode a sitemap has — it does
+     not error, it is simply ignored, and nothing downstream ever says so. */
+  assert.ok(sitemap.includes('http://www.sitemaps.org/schemas/sitemap/0.9'),
+    'wrong urlset namespace — the file parses and is then discarded: ' +
+    ((sitemap.match(/xmlns="[^"]*"/) || [])[0] || 'no xmlns at all'));
+});
+test('every address in the sitemap is the address its page calls canonical', () => {
+  const canonical = Object.keys(SITE_PAGES).map(f =>
+    ((f === 'privacy.html' ? read(f) : html[f])
+      .match(/<link rel="canonical" href="([^"]+)"/) || [])[1] || f + ': no canonical');
+  assert.deepStrictEqual([...locs].sort(), [...canonical].sort(),
+    'the sitemap and the canonical tags name different addresses — a crawler is ' +
+    'being sent to a URL the page itself disowns');
+});
+test('every page that can be shared is in the sitemap', () => {
+  const missing = Object.values(SITE_PAGES).filter(p => !locs.some(l => l.endsWith(p) ||
+    (p === '/' && /\/$/.test(l))));
+  assert.deepStrictEqual(missing, [],
+    'a page with og tags and a canonical tag, that nothing can discover');
+});
+test('the sitemap lists clean URLs, matching how the host serves them', () => {
+  /* vercel.json sets cleanUrls, so /post-call.html redirects to /post-call.
+     Listing the .html form asks a crawler to index a redirect. */
+  assert.deepStrictEqual(locs.filter(l => /\.html$/.test(l)), []);
+});
+test('robots.txt points at the sitemap and blocks nothing', () => {
+  assert.ok(/Sitemap:\s*https:\/\/\S+\/sitemap\.xml/.test(robots),
+    'a sitemap nothing references is a file only a direct fetch finds');
+  assert.deepStrictEqual((robots.match(/^Disallow:\s*\S+/gm) || []), [],
+    'nothing here is private, so a Disallow line is a mistake, not a policy');
+});
+test('the attribution link is styled, not left at the browser default', () => {
+  /* Measured in Chromium, not guessed: the link computed to rgb(0, 0, 238)
+     inside an attribution line that is rgb(90, 103, 119). Stock blue underlined
+     is what an unstyled page looks like, and this line sits at the foot of a
+     document with a price on it — the one element of the whole product a
+     stranger sees first. It is the only <a> anywhere inside .out, so no
+     existing rule was ever going to cover it. */
+  const css = read('assets/post-call.css');
+  assert.ok(/\.out\s+\.madewith\s+a\s*\{[^}]*color:/.test(css),
+    'the only link in the document inherits the UA stylesheet');
+});
+test('neither file is excluded from the deploy', () => {
+  /* .vercelignore is the only thing between what is written and what is served
+     here, and a sitemap that 404s is worse than no sitemap: robots.txt promises
+     it. */
+  const ignore = read('.vercelignore').split('\n')
+    .map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  ['sitemap.xml', 'robots.txt'].forEach(f => assert.ok(!ignore.includes(f),
+    f + ' is referenced publicly and excluded from the deploy'));
+});
+
 console.log('\nthe document says who it is from');
 /* The single most obviously unprofessional thing the product did, and it
    survived every automated check for the same reason: a missing sender is
