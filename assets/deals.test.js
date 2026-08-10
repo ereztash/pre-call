@@ -340,5 +340,112 @@ test('recording an outcome again does not silently reset the answer', () => {
   assert.strictEqual(d.get(a.id).outcome.concession, 'i_offered');
 });
 
+console.log('\nthe concession that never shows up as one');
+/* priceHold() answers "did the price hold" by comparing closedPrice to
+   priceQuoted. So the one form of giving that leaves both numbers untouched is
+   invisible to it: adding work to the scope after the quote has gone out. The
+   client pays what was quoted, the panel records a clean full-price win, and the
+   operator delivered more for it.
+
+   This is worse than an unmeasured concession, because the instrument reports
+   the opposite of what happened — and it is plausibly the most common form of
+   giving, precisely because it does not feel like a discount while you do it. */
+const withScope = (state) => ({ fields: {}, systems: ['וואטסאפ'], scope: state });
+const SCOPE_A = { build: 'in', train: 'in', docs: 'out' };
+
+test('the in-scope set is locked when the quote goes out, like the estimate', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  assert.strictEqual(d.get(a.id).scopeAtQuote, undefined,
+    'a draft has not been quoted yet — nothing to lock against');
+  d.setStatus(a.id, 'sent');
+  assert.deepStrictEqual([...d.get(a.id).scopeAtQuote].sort(), ['build', 'train'],
+    'only the in-scope rows, locked at the moment the price left');
+});
+test('the lock is not overwritten by a later send', () => {
+  // re-marking sent must not move the baseline to whatever the scope is now
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  d.save({ id: a.id, form: withScope({ build: 'in', train: 'in', docs: 'in' }) });
+  d.setStatus(a.id, 'sent');
+  assert.deepStrictEqual([...d.get(a.id).scopeAtQuote].sort(), ['build', 'train'],
+    'a moved baseline measures nothing');
+});
+test('scopeDrift reports what was added after the quote, and what was dropped', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  d.save({ id: a.id, form: withScope({ build: 'in', train: 'out', docs: 'in' }) });
+  const drift = d.scopeDrift(d.get(a.id));
+  assert.deepStrictEqual(drift.added, ['docs']);
+  assert.deepStrictEqual(drift.removed, ['train']);
+  assert.strictEqual(drift.widened, true, 'something was added at the same price');
+});
+test('a deal whose scope never moved reports no drift', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  const drift = d.scopeDrift(d.get(a.id));
+  assert.deepStrictEqual(drift.added, []);
+  assert.strictEqual(drift.widened, false);
+});
+test('a deal with no lock reports unmeasurable, never "no drift"', () => {
+  /* Every deal saved before this shipped has no baseline. Reporting those as
+     zero drift would state a finding the ledger cannot support — the same rule
+     provenanceOf() follows by refusing to backfill, and calibration() follows by
+     refusing to report under five deliveries. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'old', status: 'won', priceQuoted: 10000,
+      form: withScope({ build: 'in', docs: 'in' }), outcome: { closedPrice: 10000 } }
+  ]));
+  const d = make(st);
+  assert.strictEqual(d.scopeDrift(d.get('old')).widened, null,
+    'no baseline is not the same as no movement');
+});
+test('priceHold separates a clean hold from one that delivered more', () => {
+  const d = make(mem());
+  const clean = d.save({ client: 'clean', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(clean.id, 'sent'); d.setStatus(clean.id, 'won');
+  d.recordOutcome(clean.id, { closedPrice: 10000 });
+
+  const wider = d.save({ client: 'wider', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(wider.id, 'sent');
+  d.save({ id: wider.id, form: withScope({ build: 'in', train: 'in', docs: 'in' }) });
+  d.setStatus(wider.id, 'won');
+  d.recordOutcome(wider.id, { closedPrice: 10000 });
+
+  const p = d.priceHold();
+  assert.strictEqual(p.held, 2, 'factually the price did not drop in either');
+  assert.strictEqual(p.widened, 1);
+  assert.strictEqual(p.heldClean, 1,
+    'only one of these two is a win the panel may call full price');
+});
+test('widened is null when no won deal carries a baseline', () => {
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'old', status: 'won', priceQuoted: 10000, outcome: { closedPrice: 10000 } }
+  ]));
+  const p = make(st).priceHold();
+  assert.strictEqual(p.held, 1);
+  assert.strictEqual(p.widened, null, '0 would read as "this never happens here"');
+  assert.strictEqual(p.heldClean, null);
+  assert.strictEqual(p.scopeTracked, 0, 'say how many deals could be checked at all');
+});
+test('a deal that was discounted AND widened is counted in both', () => {
+  // the worst case, and the one an operator most needs to see
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  d.save({ id: a.id, form: withScope({ build: 'in', train: 'in', docs: 'in' }) });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 8000, concession: 'i_offered' });
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 1);
+  assert.strictEqual(p.widened, 1, 'the scope moved too, and that is not cancelled by the discount');
+  assert.strictEqual(p.heldClean, 0);
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

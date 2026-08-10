@@ -472,6 +472,28 @@ test('the share image exists and is the size every platform expects', () => {
   assert.strictEqual(buf.readUInt32BE(20), 630, 'og image height must be 630');
 });
 
+console.log('\nthe ledger reads what the ledger computes');
+/* The precedent for this test is written into deals.js itself: priceHold() sat
+   there "written, commented, tested, and called from nowhere" — the one question
+   the operator most wants answered, computed and thrown away on every render.
+   Scope drift is the same shape of statistic and would rot the same way, so the
+   wiring is asserted rather than assumed. Same instrument as the senderMissing()
+   test further down. */
+test('scope drift reaches the panel instead of being computed and discarded', () => {
+  const ledger = read('assets/pc-ledger.js');
+  assert.ok(/hold\.widened/.test(ledger),
+    'deals.js reports widened and nothing renders it — dead code shaped like a finding');
+});
+test('the full-price claim is qualified where the scope moved', () => {
+  /* "נסגרו במחיר המלא" is true of the two numbers and false of the deal when work
+     was added after the quote. Whatever renders the drift has to say it is
+     outside the discount figure, or the operator reads the discount rate as the
+     whole of what they gave. */
+  const ledger = read('assets/pc-ledger.js');
+  assert.ok(/לא נכנס לאחוז ההנחה/.test(ledger),
+    'the panel reports a discount rate that understates, without saying so');
+});
+
 console.log('\nthe document says who it is from');
 /* The single most obviously unprofessional thing the product did, and it
    survived every automated check for the same reason: a missing sender is

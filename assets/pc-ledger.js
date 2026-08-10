@@ -278,6 +278,25 @@ const renderHistory = guard('history', function (list) {
           : ''}</span>
     </div>` : '';
 
+  /* The concession the line above cannot see.
+
+     "נסגרו במחיר המלא" is computed from two numbers, so a deal that gained work
+     after the quote went out counts as a clean win in it — the client paid the
+     quote, and more was delivered for it. Left alone, the row above states the
+     opposite of what happened on those deals.
+
+     So this appears whenever the ledger can see it happen, and says the part
+     that matters most: it is not in the discount figure. `widened` is null for a
+     ledger with no baselines, and null is not a number greater than zero, so
+     nothing is claimed about deals saved before the baseline existed. */
+  const widenLine = hold.widened > 0 ? `<div class="hist-row">
+      <span class="hist-k">נמסר יותר באותו מחיר</span>
+      <span class="hist-v">${hold.widened === 1
+        ? 'עסקה אחת קיבלה סעיף שלא היה בהצעה'
+        : hold.widened + ' עסקאות קיבלו סעיפים שלא היו בהצעה'}, והמחיר לא עלה${
+        hold.discounted ? ' · לא נכנס לאחוז ההנחה' : ''}</span>
+    </div>` : '';
+
   /* The split, on its own line, whenever at least one side is attributed. One
      side alone is still worth saying: the line above already reports that a
      discount happened and how big, so what this adds is who moved the price,
@@ -358,7 +377,7 @@ const renderHistory = guard('history', function (list) {
     </div>` : '';
 
   box.innerHTML = (accLine || holdLine
-      ? `<div class="hist-rows">${accLine}${holdLine}${concLine}</div>` : '') +
+      ? `<div class="hist-rows">${accLine}${holdLine}${widenLine}${concLine}</div>` : '') +
     verdict + trendLine + methodTable + provTable + missing;
 });
 

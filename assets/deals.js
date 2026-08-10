@@ -126,7 +126,42 @@
         const d = api.get(id); if (!d) return null;
         d.status = status;
         if (status === 'sent' && !d.sentAt) d.sentAt = new Date().toISOString();
+        /* Locked here for the same reason estimatedHours is locked at save: a
+           baseline that moves measures nothing. The moment the price left is
+           the only moment the scope it was quoted for is knowable, and
+           `!d.scopeAtQuote` means a second send never moves it. */
+        if (status === 'sent' && !d.scopeAtQuote) {
+          const at = inScope(d.form);
+          if (at) d.scopeAtQuote = at;
+        }
         return api.save(d);
+      },
+
+      /* What the scope did after the quote went out.
+
+         priceHold() answers "did the price hold" from two numbers, so the one
+         form of giving that leaves both untouched is invisible to it: adding
+         work to the scope after the price is out. The client pays the quote, the
+         panel records a clean full-price win, and more was delivered for it.
+         That is worse than an unmeasured concession — the instrument reports the
+         opposite of what happened — and it is plausibly the commonest form of
+         giving, precisely because it does not feel like a discount while you do
+         it.
+
+         `widened: null` for a deal with no baseline, never false. Every deal
+         saved before this existed has none, and reporting those as "no drift"
+         would state a finding the ledger cannot support. Same rule
+         provenanceOf() follows by refusing to backfill. */
+      scopeDrift(d) {
+        const base = d && Array.isArray(d.scopeAtQuote) ? d.scopeAtQuote : null;
+        const now = d ? inScope(d.form) : null;
+        if (!base || !now) return { added: [], removed: [], widened: null, measurable: false };
+        return {
+          added: now.filter(k => base.indexOf(k) === -1),
+          removed: base.filter(k => now.indexOf(k) === -1),
+          widened: now.some(k => base.indexOf(k) === -1),
+          measurable: true
+        };
       },
 
       /* actualHours is the only field that can decalcify the effort model.
@@ -229,7 +264,8 @@
       priceHold() {
         const won = read().filter(d =>
           d.status === 'won' && d.priceQuoted > 0 && d.outcome && d.outcome.closedPrice > 0);
-        if (!won.length) return { n: 0, held: null, discounted: 0, avgDiscount: null };
+        if (!won.length) return { n: 0, held: null, discounted: 0, avgDiscount: null,
+                                  widened: null, heldClean: null, scopeTracked: 0 };
         const cut = won.filter(d => d.outcome.closedPrice < d.priceQuoted);
         const off = d => 1 - d.outcome.closedPrice / d.priceQuoted;
         const mean = rows => rows.length
@@ -259,17 +295,49 @@
           byConcession[k] = { n: rows.length, avgDiscount: mean(rows) };
         });
 
+        /* `held` is left exactly as it was — the price did not drop, which is
+           factually true and is what it has always meant. What is added is the
+           part it cannot see: of the deals that have a baseline to check,
+           how many grew, and how many held the price WITHOUT growing.
+
+           A deal that was discounted and also widened is counted in both. The
+           two are not alternatives and one does not excuse the other.
+
+           heldClean and widened are null rather than 0 when nothing is
+           trackable, so a ledger that predates the baseline cannot read as a
+           ledger where this never happens. scopeTracked says how many could be
+           checked at all. */
+        const drift = won.map(d => api.scopeDrift(d));
+        const tracked = drift.filter(x => x.measurable).length;
         return {
           n: won.length,
           held: won.length - cut.length,
           discounted: cut.length,
           avgDiscount: mean(cut),
-          byConcession
+          byConcession,
+          scopeTracked: tracked,
+          widened: tracked ? drift.filter(x => x.widened).length : null,
+          heldClean: tracked
+            ? won.filter((d, i) => drift[i].measurable && !drift[i].widened &&
+                                   d.outcome.closedPrice >= d.priceQuoted).length
+            : null
         };
       }
     };
     return api;
   }
+
+  /* The in-scope rows of a saved form, as a stable sorted set.
+
+     An empty map returns null rather than an empty set. `scope: {}` means no
+     scope state was captured, not that nothing is included — and locking an
+     empty baseline would make every row added later read as scope the operator
+     gave away. Unmeasurable is the honest answer there. */
+  const inScope = form => {
+    const s = form && form.scope;
+    if (!s || typeof s !== 'object' || !Object.keys(s).length) return null;
+    return Object.keys(s).filter(k => s[k] === 'in').sort();
+  };
 
   const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
   const valid = v => PROVENANCE.indexOf(v) !== -1;
