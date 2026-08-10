@@ -305,6 +305,14 @@
      discreet, and a line the client's eye slides off is also a line a
      screen reader still reads out. 4.93:1 here: subdued and legible. */
   .out .madewith{margin-top:var(--sp-5);color:#5a6777;font-size:var(--fs-xs);letter-spacing:.2px}
+  /* The only <a> inside the document, so nothing else here reaches it and it
+     computed to the UA default — rgb(0, 0, 238), stock blue, at the foot of a
+     page with a price on it. `inherit` takes the 4.93:1 grey above rather than
+     naming a second colour, which also means it prints in ink instead of
+     coming out as the one blue mark on a black-and-white sheet. The underline
+     stays: it is what tells the reader the text is an address, and it is the
+     only cue left once this has been pasted somewhere as plain text. */
+  .out .madewith a{color:inherit;text-decoration:underline}
 
   .out h3{color:#14171a;font-size:var(--fs-2xl);margin:0 0 var(--sp-2);font-weight:700}
   .out .meta{color:#5a6777;font-size:var(--fs-sm);margin-bottom:var(--sp-6);

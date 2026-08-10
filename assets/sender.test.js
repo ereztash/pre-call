@@ -105,6 +105,28 @@ test('the attribution line is present by default and removable', () => {
   assert.ok(!proposal.build(ctxFor(Object.assign({}, FULL, { attribution: false })))
     .includes('madewith'), 'the operator must be able to take it off');
 });
+test('the attribution says where to find the tool, not only that it exists', () => {
+  /* The line read "נבנה עם PRE-CALL · מהשיחה להצעה מתומחרת" — a name and a
+     tagline, and no way to act on either. Somebody who receives a proposal and
+     wants the tool has a product name and a search box. That is the whole of
+     this product's referral path, and it terminated in a dead end. */
+  const line = (proposal.build(ctxFor(FULL))
+    .match(/<div class="madewith">([\s\S]*?)<\/div>/) || [])[1] || '';
+  assert.ok(/pre-call-swart\.vercel\.app/.test(line),
+    'the attribution names the tool and gives no address for it: ' + line);
+});
+test('the address survives the two ways this document actually leaves', () => {
+  /* Both exits drop markup. copyProposal() reads el('proposal').innerText and
+     the operator pastes that into WhatsApp; print puts ink on paper. An <a>
+     whose href is the only copy of the URL is invisible on both paths — the
+     link works exactly once, in a browser nobody but the operator is using.
+     So the address has to be text, and the href is the convenience on top. */
+  const line = (proposal.build(ctxFor(FULL))
+    .match(/<div class="madewith">([\s\S]*?)<\/div>/) || [])[1] || '';
+  const asText = line.replace(/<[^>]*>/g, '');           // what innerText keeps
+  assert.ok(/pre-call-swart\.vercel\.app/.test(asText),
+    'the address lives only in an attribute — a paste into WhatsApp loses it: ' + line);
+});
 test('a sender name containing markup is escaped, not injected', () => {
   const html = proposal.build(ctxFor({ s_name: '<script>alert(1)</script>' }));
   assert.ok(!html.includes('<script>alert'), 'unescaped sender name reached the document');

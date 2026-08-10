@@ -140,8 +140,24 @@
        has, and it carried nothing. Discreet by intent, and switchable
        off, because a line the operator resents is a line they will paste
        the document somewhere else to remove. */
+    /* The URL is visible text, not only an href, and that is the whole point of
+       this edit. This document travels two ways: copyProposal() emits
+       el('proposal').innerText, and the print sheet makes a PDF. An anchor
+       carries its target in neither — innerText drops the href, and a reader of
+       a printed page cannot see one. So the line said a product name to every
+       client who ever received a proposal and gave them no way to reach it.
+
+       It is also an anchor, for the on-screen document and because PDF
+       generators preserve links, but the text is what makes it work.
+
+       Named POST-CALL because that is what builds this document. The line used
+       to say PRE-CALL, which is the other tool — the one this project's own
+       README describes as structurally empty for somebody who has not closed a
+       deal yet, i.e. exactly the reader most likely to follow it. The link goes
+       to the entry page rather than to either tool, because that page asks one
+       question and routes, which is what a stranger needs. */
     const attribution = (ctx.sender && ctx.sender.attribution === false) ? '' : `
-<div class="madewith">נבנה עם PRE-CALL · מהשיחה להצעה מתומחרת</div>`;
+<div class="madewith">נבנה עם POST-CALL · <a href="https://pre-call-swart.vercel.app/">pre-call-swart.vercel.app</a></div>`;
 
     return `
 ${from}
