@@ -11,11 +11,13 @@
    It reports whether keys exist and how many. It never reports what they are.
 
    telemetryDurable is the same shape of question about the other endpoint, and
-   the answer is currently no. Events go to stdout and nothing else, and hosted
-   log retention runs from an hour to a day — so an event is discarded faster
-   than it accumulates and no month of them exists to read. That is the state,
-   not a bug, and a deployment should be able to see it from outside rather than
-   by reading the source.
+   it has the same shape of answer: it tracks a variable. Unset POSTCALL_EVENT_URL
+   and events go to stdout and nothing else, where hosted log retention of an
+   hour to a day discards them faster than they accumulate — so no month of them
+   exists to read. Set it and they go somewhere that keeps them. Either way a
+   deployment can see which it is from outside rather than by reading the source,
+   which is the whole point: the state this reports is not a bug, but silently
+   reporting the wrong one would be.
 
    Read from api/_sink.js rather than decided here. An earlier version kept its
    own constant and a test that inferred the truth from the tokens in event.js,
