@@ -185,10 +185,30 @@ function rehydrateKey(){
   } catch(e){}
 }
 
+/* The automated route needs a URL that actually goes somewhere, and "is not the
+   placeholder" is not that test. Found in review, and the failing case is the
+   likeliest way anyone configures this: the README says to fill SALES.contact,
+   so a tidy operator also clears the payment URL they are not using. Then
+   ''.includes('example.com') is false, the sale is classified automated, the
+   manual contact is ignored, and the button calls window.open('') — the exact
+   dead-end blank tab this whole change exists to remove.
+
+   So it is asked positively: what is the configured payment URL, if any.
+   https is required rather than assumed — a payment page reached over http is
+   worse than no link, and the scheme check also means nothing but a URL can
+   ever reach window.open() from here. example.com is a reserved documentation
+   domain and never a real payment page, so it stays excluded whatever path it
+   is wearing. */
+function configuredPayment(){
+  const u = (PAYMENT_URL || '').trim();
+  if (!u || u.includes('example.com') || !/^https:\/\/\S/i.test(u)) return '';
+  return u;
+}
+
 /* Which of the three states we are in. Kept as one function so the wall cannot
    end up describing one route while its button goes to another. */
 function salesRoute(){
-  if (!PAYMENT_URL.includes('example.com')) return 'automated';
+  if (configuredPayment()) return 'automated';
   if (SALES.contact) return 'manual';
   return 'none';
 }
@@ -210,7 +230,7 @@ function renderBuyRoute(){
 
   if (route === 'automated') {
     show('buyRoute', false);
-    if (pay) pay.onclick = () => window.open(PAYMENT_URL, '_blank', 'noopener');
+    if (pay) pay.onclick = () => window.open(configuredPayment(), '_blank', 'noopener');
     return;
   }
 
@@ -275,7 +295,7 @@ function renderKeyAhead(hasRealPrice){
 function askForKeyAhead(){
   track('key_requested');
   if (salesRoute() === 'manual') return openContact();
-  window.open(PAYMENT_URL, '_blank', 'noopener');
+  window.open(configuredPayment(), '_blank', 'noopener');
 }
 
 function dismissKeyAhead(){

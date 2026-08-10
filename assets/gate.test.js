@@ -312,6 +312,42 @@ test('an automated sale opens the payment page in a new tab, and says nothing ex
   assert.strictEqual(p.navigated, undefined, 'the buyer must not lose an unsaved proposal to a redirect');
 });
 
+test('clearing the payment URL does not count as configuring one', () => {
+  /* Found in review, and it is the likeliest way anyone configures this: the
+     documentation says to fill SALES.contact, so an operator also clears the
+     payment URL they are not using. ''.includes('example.com') is false, so
+     the old check called that an automated sale, ignored the manual contact,
+     and wired the button to window.open('') — the dead-end blank tab this
+     whole change exists to remove. */
+  const p = page({ paymentUrl: '', contact: 'mailto:sales@example.org' });
+  assert.strictEqual(p.read('salesRoute()'), 'manual');
+  p.run('renderBuyRoute()');
+  p.els.payBtn.onclick();
+  assert.strictEqual(p.opened, undefined, 'window.open was called with no URL');
+  assert.strictEqual(p.navigated, 'mailto:sales@example.org', 'the manual route was ignored');
+});
+test('an empty payment URL with nothing else configured is "not on sale", not "automated"', () => {
+  const p = page({ paymentUrl: '' });
+  assert.strictEqual(p.read('salesRoute()'), 'none');
+});
+test('whitespace, a bare domain, and http are all not a payment link', () => {
+  /* https is required rather than assumed: a payment page reached over http is
+     worse than no link at all, and the scheme check is also what stops
+     anything that is not a URL from reaching window.open() from here. */
+  ['   ', 'buy.example.org/x', 'http://buy.example.org/x', 'javascript:alert(1)', 'https://']
+    .forEach(u => assert.strictEqual(page({ paymentUrl: u }).read('salesRoute()'), 'none',
+      JSON.stringify(u) + ' was treated as a working payment link'));
+});
+test('a real https payment link is still the automated route', () => {
+  const p = page({ paymentUrl: 'https://buy.example.org/postcall' });
+  assert.strictEqual(p.read('salesRoute()'), 'automated');
+});
+test('asking early with an automated sale opens the payment page, not an empty tab', () => {
+  const p = page({ paymentUrl: 'https://buy.example.org/postcall' });
+  p.run('askForKeyAhead()');
+  assert.strictEqual(p.opened, 'https://buy.example.org/postcall');
+});
+
 test('a manual sale says a person sends the key, and never says "buy"', () => {
   const p = page({ contact: 'mailto:sales@example.org' });
   p.run('renderBuyRoute()');
