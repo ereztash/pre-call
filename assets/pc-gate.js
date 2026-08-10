@@ -17,7 +17,37 @@
    a key past the server.
    ============================================================ */
 
+/* ---- how the money actually arrives ----
+   Three states, and the wall says which one it is in rather than showing a buy
+   button that leads nowhere. Before this there were only two, and the second
+   was an alert() addressed to whoever wrote the code: "replace PAYMENT_URL in
+   assets/pc-gate.js". A buyer who clicked "קנה וקבל מפתח" was told to edit a
+   source file. That is the wall's whole job failing at the only moment it
+   matters.
+
+     PAYMENT_URL set      → a payment page opens, a key follows from it
+     SALES.contact set    → a manual sale. The button opens the route, the wall
+                            says how long a key takes and what to write, and the
+                            address is also on screen as text
+     neither              → not on sale. Said plainly, in the buyer's language,
+                            with the price hidden — a price above "not for sale
+                            yet" is a contradiction — and the key field still
+                            working for anyone who already has one
+
+   The manual state is the one this product is actually in, and it is not a
+   placeholder: taking money by hand for the first handful of buyers is a
+   decision, not a gap. What it needs is a wall that says so. */
 const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
+
+/* Fill in ONE of these to start selling. `contact` is where a buyer asks for a
+   key: 'mailto:you@example.com' or 'https://wa.me/9725...'. It is deliberately
+   empty in the repository — whatever goes here is published on a page anyone
+   can read and a crawler can scrape, so which address to expose is the
+   operator's call, not a default somebody inherits. */
+const SALES = {
+  contact: '',
+  turnaround: 'בדרך כלל תוך כמה שעות, ולא יותר מיום עסקים אחד'
+};
 const KEY_SHAPE = /^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const KEY_STORE = 'postcall_key';
 const KEY_OK_AT = 'postcall_key_ok_at';
@@ -153,14 +183,58 @@ function rehydrateKey(){
   } catch(e){}
 }
 
-function mountGate(){
+/* Which of the three states we are in. Kept as one function so the wall cannot
+   end up describing one route while its button goes to another. */
+function salesRoute(){
+  if (!PAYMENT_URL.includes('example.com')) return 'automated';
+  if (SALES.contact) return 'manual';
+  return 'none';
+}
+
+const setText = (id, s) => { const n = el(id); if (n) n.textContent = s; };
+
+/* A mailto has to replace the location — window.open leaves an orphaned blank
+   tab behind in most browsers. An https route (wa.me, a form) must NOT replace
+   it: the buyer is mid-proposal, and navigating away from an unsaved document
+   to a chat window is losing their work to open a shop. */
+function openContact(){
+  if (/^mailto:/i.test(SALES.contact)) window.location.href = SALES.contact;
+  else window.open(SALES.contact, '_blank', 'noopener');
+}
+
+function renderBuyRoute(){
   const pay = el('payBtn');
-  if (pay) pay.onclick = () => {
-    if (PAYMENT_URL.includes('example.com')) {
-      alert('עוד לא חובר קישור תשלום.\n\nהחלף את PAYMENT_URL בקובץ assets/pc-gate.js בקישור מ-Stripe / Lemon Squeezy / Paddle,\nושלח לקונה מפתח בפורמט PC-XXXX-XXXX.');
-      return;
-    }
-    window.open(PAYMENT_URL, '_blank', 'noopener');
-  };
+  const route = salesRoute();
+
+  if (route === 'automated') {
+    show('buyRoute', false);
+    if (pay) pay.onclick = () => window.open(PAYMENT_URL, '_blank', 'noopener');
+    return;
+  }
+
+  if (route === 'manual') {
+    // never "קנה" here: that promises a key on the spot, and this one arrives
+    // when a person sends it
+    setText('payBtn', 'בקשו מפתח בהודעה');
+    setText('buyHow', 'התשלום נסגר איתי ישירות, והמפתח נשלח ביד — ' + SALES.turnaround +
+      '. בהודעה כתבו שם, ואת המייל שאליו לשלוח את המפתח.');
+    // strip the scheme: mailto:a@b reads as an address, wa.me/972... as a link
+    setText('buyContact', SALES.contact.replace(/^mailto:/i, ''));
+    show('buyRoute', true);
+    if (pay) pay.onclick = openContact;
+    return;
+  }
+
+  // Not on sale. Everything that implies a purchase comes off, and the one
+  // thing that still works — a key somebody already holds — stays.
+  show('wallPrice', false);
+  show('payBtn', false);
+  setText('buyHow', 'הכלי עוד לא נמכר, ואין כרגע דרך לקנות מפתח. אם כבר יש לכם מפתח, הפעילו אותו כאן.');
+  setText('buyContact', '');
+  show('buyRoute', true);
+}
+
+function mountGate(){
+  renderBuyRoute();
   rehydrateKey();
 }

@@ -45,7 +45,27 @@ const ISSUED = 'PC-ABCD-EFGH';         // right shape, fails the checksum —
 
 /* The fake page. `remote` is what /api/license will answer: true, false, null
    (not configured), 'throttle' (429), or 'offline' (fetch rejects). */
-function page({ store = {}, remote = null, typed = '' } = {}) {
+/* PAYMENT_URL and SALES.contact are the two things that decide which sale the
+   wall describes, and both are top-level consts — SALES is an object so its
+   fields can be set from a test, but the URL cannot be reassigned. So the
+   source is varied instead, and the substitution is asserted: a renamed
+   constant has to fail this file rather than quietly leave every
+   automated-route test evaluating the default. */
+function withConfig(src, { paymentUrl, contact }) {
+  if (paymentUrl !== undefined) {
+    const before = src;
+    src = src.replace("'https://example.com/replace-with-your-payment-link'", JSON.stringify(paymentUrl));
+    assert.notStrictEqual(src, before, 'the PAYMENT_URL placeholder moved — this test now proves nothing');
+  }
+  if (contact !== undefined) {
+    const before = src;
+    src = src.replace("contact: ''", 'contact: ' + JSON.stringify(contact));
+    assert.notStrictEqual(src, before, 'SALES.contact moved — this test now proves nothing');
+  }
+  return src;
+}
+
+function page({ store = {}, remote = null, typed = '', paymentUrl, contact } = {}) {
   const env = {
     calls: 0, shown: {}, tracked: [], store,
     els: { keyIn: { value: typed }, keyErr: { textContent: '' },
@@ -78,11 +98,16 @@ function page({ store = {}, remote = null, typed = '' } = {}) {
     scrollPageTop: () => { env.scrolled = { target: 'top' }; },
     track: name => env.tracked.push(name),
     alert: () => {},
-    window: { open: () => {} },
+    // location as well as open: a mailto route replaces the location, an https
+    // route opens a tab, and the difference is the point of one of the tests
+    window: {
+      open: (url) => { env.opened = url; },
+      location: { set href(u){ env.navigated = u; }, get href(){ return env.navigated; } }
+    },
     setTimeout, clearTimeout, Date, JSON, Promise
   };
   vm.createContext(ctx);
-  vm.runInContext(SRC, ctx);
+  vm.runInContext(withConfig(SRC, { paymentUrl, contact }), ctx);
   env.read = expr => vm.runInContext(expr, ctx);
   env.run = expr => vm.runInContext(expr, ctx);
   return env;
@@ -271,6 +296,71 @@ test('an unlocked session exports without seeing the wall again', () => {
   p.run('unlocked = true; globalThis.__ran = 0; requireKey(function(){ globalThis.__ran++; })');
   assert.strictEqual(p.read('globalThis.__ran'), 1);
   assert.strictEqual(p.shown.wall, undefined);
+});
+
+section('what the wall says about how to pay');
+/* The state this replaced: the buy button called alert() and told whoever
+   clicked it to replace PAYMENT_URL in assets/pc-gate.js. That message was
+   addressed to the person who wrote the code, and it was shown to the person
+   trying to give them money. */
+test('an automated sale opens the payment page in a new tab, and says nothing extra', () => {
+  const p = page({ paymentUrl: 'https://buy.example.org/postcall' });
+  p.run('renderBuyRoute()');
+  p.els.payBtn.onclick();
+  assert.strictEqual(p.opened, 'https://buy.example.org/postcall');
+  assert.strictEqual(p.shown.buyRoute, false, 'there is nothing manual to explain');
+  assert.strictEqual(p.navigated, undefined, 'the buyer must not lose an unsaved proposal to a redirect');
+});
+
+test('a manual sale says a person sends the key, and never says "buy"', () => {
+  const p = page({ contact: 'mailto:sales@example.org' });
+  p.run('renderBuyRoute()');
+  assert.ok(!/קנה/.test(p.els.payBtn.textContent),
+    'the label still promises a purchase on the spot: "' + p.els.payBtn.textContent + '"');
+  assert.strictEqual(p.shown.buyRoute, true);
+  assert.ok(/ביד/.test(p.els.buyHow.textContent), 'the wall must say the key is sent by hand');
+  assert.ok(/יום עסקים|שעות/.test(p.els.buyHow.textContent),
+    'an unstated wait is what makes a manual sale feel broken');
+});
+
+test('the address is on screen as text, not only behind the button', () => {
+  /* A mailto with no mail client configured is a click that does nothing at
+     all, and this project has shipped that failure before. */
+  const p = page({ contact: 'mailto:sales@example.org' });
+  p.run('renderBuyRoute()');
+  assert.strictEqual(p.els.buyContact.textContent, 'sales@example.org',
+    'the scheme is machine syntax — what is shown should read as an address');
+});
+
+test('a mailto replaces the location; an https route opens a tab instead', () => {
+  const mail = page({ contact: 'mailto:sales@example.org' });
+  mail.run('renderBuyRoute()');
+  mail.els.payBtn.onclick();
+  assert.strictEqual(mail.navigated, 'mailto:sales@example.org');
+  assert.strictEqual(mail.opened, undefined, 'window.open on a mailto leaves an orphaned blank tab');
+
+  const chat = page({ contact: 'https://wa.me/972000000' });
+  chat.run('renderBuyRoute()');
+  chat.els.payBtn.onclick();
+  assert.strictEqual(chat.opened, 'https://wa.me/972000000');
+  assert.strictEqual(chat.navigated, undefined,
+    'navigating away mid-proposal loses the document the buyer is paying to export');
+});
+
+test('with neither configured the wall stops implying a purchase, and keeps the key field', () => {
+  const p = page();                       // the repository default: both empty
+  p.run('renderBuyRoute()');
+  assert.strictEqual(p.shown.payBtn, false, 'a buy button with nowhere to go is the old alert() again');
+  assert.strictEqual(p.shown.wallPrice, false, 'a price above "not on sale yet" is a contradiction');
+  assert.ok(/כבר יש לכם מפתח/.test(p.els.buyHow.textContent),
+    'someone who already paid still has to be able to use their key');
+});
+
+test('the wall never tells a buyer to edit a source file', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'pc-gate.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  assert.ok(!/alert\(/.test(src), 'an alert() in the gate is addressed to the wrong person');
+  assert.ok(!/PAYMENT_URL[^\n]*assets\/pc-gate/.test(src), 'instructions for the developer are on the buyer’s screen');
 });
 
 (async () => {
