@@ -242,7 +242,7 @@ const renderLedger = guard('ledger', function (){
    the finding: silence here must never read as agreement. */
 const renderHistory = guard('history', function (list) {
   const box = el('historyBox'); if (!box) return;
-  const rep = PC.history.report(list, PC.model.METHOD_LABEL);
+  const rep = PC.history.report(list, PC.model.METHOD_LABEL, PC.PROVENANCE_LABEL);
   if (!rep) { box.innerHTML = ''; show('historySec', false); return; }
   show('historySec', true);
 
@@ -294,6 +294,29 @@ const renderHistory = guard('history', function (list) {
       </tr>`).join('')}</tbody>
     </table>` : '';
 
+  /* Second table, same shape and the same threshold as the one above it. It
+     answers a question the operator could not previously ask of his own book:
+     the figure the whole price hangs on — did the client name it, or did you.
+     Every saved deal has carried the answer since the form started asking;
+     nothing read it until now.
+
+     Built from the same row fields as the method table, so if one of them ever
+     learns to show something more it is one change and not two. */
+  const provReady = rep.provenance.rows.filter(r => r.enough);
+  const provTable = provReady.length ? `
+    <table class="hist-t">
+      <caption>לפי מאיפה הגיע המספר שעליו נבנה המחיר</caption>
+      <thead><tr><th scope="col">המספר</th><th scope="col">הצעות</th>
+        <th scope="col">נסגרו</th><th scope="col">במחיר מלא</th></tr></thead>
+      <tbody>${provReady.map(r => `<tr>
+        <th scope="row">${esc(r.label)}</th>
+        <td>${r.quoted}</td>
+        <td>${r.decided ? `${r.won}/${r.decided}` : '—'}</td>
+        <td>${r.pricedN ? `${r.heldFull}/${r.pricedN}${
+          r.avgDiscount > 0 ? ` · −${r.avgDiscount}%` : ''}` : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : '';
+
   /* The countdown, always, even once there are findings — because the
      questions this panel still cannot answer do not stop existing when
      one of them gets answered. */
@@ -306,7 +329,7 @@ const renderHistory = guard('history', function (list) {
 
   box.innerHTML = (accLine || holdLine
       ? `<div class="hist-rows">${accLine}${holdLine}</div>` : '') +
-    verdict + trendLine + methodTable + missing;
+    verdict + trendLine + methodTable + provTable + missing;
 });
 
 function newDeal(){
