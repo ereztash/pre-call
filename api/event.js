@@ -1,6 +1,14 @@
-/* Anonymous usage counter. Deliberately the smallest thing that unblocks
-   measurement, because measurement was structurally impossible without a
-   server and everything else about this product is still unproven.
+/* Anonymous usage counter. Deliberately the smallest thing that can receive an
+   event — and receiving is not the same as measuring, which the first version of
+   this comment ran together.
+
+   What it does NOT do, stated here because the sentence it replaces implied
+   otherwise: it does not accumulate anything. The sink below is one line to
+   stdout, and hosted log retention runs from an hour to a day depending on the
+   plan, so a thirty-day question about usage has nothing to read. Nothing here
+   is broken; the counter is simply not a record yet, and /api/health reports
+   telemetryDurable:false so a deployment can see that from outside. Wiring a
+   real store is a decision for whoever runs this, not a gap to fill quietly.
 
    What it accepts: an event name from a fixed list, and coarse buckets.
    What it refuses: client names, process descriptions, proposal text, exact
@@ -29,6 +37,7 @@ const bucketPrice = n => {
 };
 
 import { preflight, parseBody } from './_guard.js';
+import { SINK } from './_sink.js';
 
 export default async function handler(req, res) {
   // A session that fills in a deal, edits the scope and exports fires on the
@@ -51,7 +60,9 @@ export default async function handler(req, res) {
   };
 
   // One line per event. Swap for a real store when there is traffic worth storing;
-  // until then this answers the only question that matters — does anyone use it.
-  console.log('POSTCALL_EVENT ' + JSON.stringify(row));
+  /* Through the declared sink rather than logging here, so that what happens to
+     an event and what /api/health says happens to it are one fact in one file.
+     See api/_sink.js. */
+  SINK.write(row);
   return res.status(204).end();
 }

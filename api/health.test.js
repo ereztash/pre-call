@@ -108,6 +108,53 @@ const withKeys = async (csv, fn) => {
     }
   });
 
+  console.log('\ndoes the usage counter keep anything');
+  /* The same question this file already asks about licenseEnforced, on the other
+     endpoint: could the flag drift and lie.
+
+     The first version of this section answered it by reading event.js and
+     inferring from the tokens in it. Raised in review, and the objection was
+     right in both directions: any unrelated `fetch` would have forced the flag
+     true, and a real store written through an API the list had not heard of —
+     `pool.query`, `PutCommand` — would have forced it false. A check that can
+     certify a false health response is worse than no check, which is the same
+     standard this project already applies to a skip that looks like a pass.
+
+     So nothing is inferred. api/_sink.js declares what happens to an event;
+     event.js writes through it and this endpoint repeats what it says. What is
+     left to test is that the declaration is actually the one in force. */
+  const { SINK } = await import('./_sink.js');
+
+  await test('health repeats what the sink declares, rather than its own copy', async () => {
+    const r = res();
+    await handler(req({ ip: nextIp() }), r);
+    assert.strictEqual(typeof r.payload.telemetryDurable, 'boolean',
+      'a deployment has to see this from outside, not by reading the source');
+    assert.strictEqual(r.payload.telemetryDurable, SINK.durable);
+    assert.strictEqual(r.payload.telemetrySink, SINK.target);
+  });
+  await test('the event endpoint writes through that same sink and nowhere else', async () => {
+    /* This one is sound where the token scan was not, because it is not asking
+       whether something persists — it is asking whether event.js still routes
+       through the single declaration. A second write path added beside it is
+       exactly how the flag and the behaviour would come apart again. */
+    const fs = await import('node:fs');
+    const url = await import('node:url');
+    const src = fs.readFileSync(
+      url.fileURLToPath(new URL('./event.js', import.meta.url)), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    assert.ok(/SINK\.write\(/.test(src), 'event.js must write through api/_sink.js');
+    assert.ok(!/console\.log\(/.test(src),
+      'a write beside the sink is how the declaration stops describing reality');
+  });
+  await test('the sink says where events go without leaking how to reach it', async () => {
+    const r = res();
+    await handler(req({ ip: nextIp() }), r);
+    const dump = JSON.stringify(r.payload);
+    assert.ok(!/(https?:\/\/|postgres:|redis:|@|password|secret|token)/i.test(dump),
+      'a health check is not the place a connection string should ever appear');
+  });
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
   process.exit(fail ? 1 : 0);
 })();
