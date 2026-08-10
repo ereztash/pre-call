@@ -146,6 +146,40 @@ function removeDeal(id){
   PC.deals.remove(id); renderLedger();
 }
 
+/* Entering a deal that already happened. `lost` is a separate button rather than
+   a status dropdown, because a lost deal has no closing price and a form that
+   asks for one and then ignores it teaches the operator that the fields are
+   decoration.
+
+   Reports refusals in words. addPast() returns null for a missing quote and for a
+   closing price above it, and a button that silently does nothing is how somebody
+   concludes the feature is broken and stops. */
+function addPastDeal(lost){
+  const flag = el('retroFlag');
+  const say = m => { if (flag) flag.textContent = m; };
+  const rec = PC.deals.addPast({
+    client: txt('rp_client'),
+    quoted: el('rp_quoted').value,
+    closed: el('rp_closed').value,
+    lost: !!lost,
+    concession: el('rp_conc').value
+  });
+  if (!rec) {
+    const q = parseFloat(el('rp_quoted').value), c = parseFloat(el('rp_closed').value);
+    say(!(q > 0) ? 'צריך את המחיר שנקבת'
+      : (!lost && c > q) ? 'המחיר שנסגר גבוה מהמחיר שנקבת — שווה לבדוק את המספרים'
+      : !lost ? 'צריך את המחיר שנסגר, או ללחוץ "לא נסגרה"'
+      : 'לא הצלחתי לשמור — ייתכן שאחסון הדפדפן חסום');
+    return;
+  }
+  ['rp_client', 'rp_quoted', 'rp_closed'].forEach(id => { el(id).value = ''; });
+  el('rp_conc').value = 'unknown';
+  say('נוספה: ' + rec.client + ' · ' + (lost ? 'לא נסגרה' : ils(rec.outcome.closedPrice)));
+  el('rp_client').focus();
+  renderLedger(); recompute();
+  track('past_deal_added');
+}
+
 function saveOutcome(id){
   /* The concession control only exists once a lower closing price has been
      saved, so on the first save there is nothing to read. recordOutcome keeps
@@ -255,12 +289,17 @@ const renderLedger = guard('ledger', function (){
    the finding: silence here must never read as agreement. */
 const renderHistory = guard('history', function (list) {
   const box = el('historyBox'); if (!box) return;
-  const rep = PC.history.report(list, PC.model.METHOD_LABEL, PC.PROVENANCE_LABEL);
+  /* Computed before the report rather than after it, because the ceiling finding
+     needs to know whether the price was ever tested — and a discount or a scope
+     that widened is exactly that test. Passing it in keeps the question of
+     whether the scope moved in deals.js, where scopeDrift() defines it, instead
+     of growing a second implementation inside the track record. */
+  const hold = PC.deals.priceHold();
+  const rep = PC.history.report(list, PC.model.METHOD_LABEL, PC.PROVENANCE_LABEL, hold);
   if (!rep) { box.innerHTML = ''; show('historySec', false); return; }
   show('historySec', true);
 
   const acc = rep.accuracy;
-  const hold = PC.deals.priceHold();
 
   /* Quoted versus closed across everything, at any n. priceHold() has
      been written, commented and tested in deals.js since the ledger
@@ -276,6 +315,25 @@ const renderHistory = guard('history', function (list) {
               ? `אחת ירדה ב-${hold.avgDiscount}%`
               : `${hold.discounted} ירדו, בממוצע ${hold.avgDiscount}%`}`
           : ''}</span>
+    </div>` : '';
+
+  /* The concession the line above cannot see.
+
+     "נסגרו במחיר המלא" is computed from two numbers, so a deal that gained work
+     after the quote went out counts as a clean win in it — the client paid the
+     quote, and more was delivered for it. Left alone, the row above states the
+     opposite of what happened on those deals.
+
+     So this appears whenever the ledger can see it happen, and says the part
+     that matters most: it is not in the discount figure. `widened` is null for a
+     ledger with no baselines, and null is not a number greater than zero, so
+     nothing is claimed about deals saved before the baseline existed. */
+  const widenLine = hold.widened > 0 ? `<div class="hist-row">
+      <span class="hist-k">נמסר יותר באותו מחיר</span>
+      <span class="hist-v">${hold.widened === 1
+        ? 'עסקה אחת קיבלה סעיף שלא היה בהצעה'
+        : hold.widened + ' עסקאות קיבלו סעיפים שלא היו בהצעה'}, והמחיר לא עלה${
+        hold.discounted ? ' · לא נכנס לאחוז ההנחה' : ''}</span>
     </div>` : '';
 
   /* The split, on its own line, whenever at least one side is attributed. One
@@ -308,6 +366,13 @@ const renderHistory = guard('history', function (list) {
     ? `<div class="hist-find hist-${acc.verdict.kind}">${esc(acc.verdict.text)}</div>` : '';
   const trendLine = rep.trend
     ? `<div class="hist-find hist-${rep.trend.improving ? 'holds' : 'low'}">${esc(rep.trend.text)}</div>` : '';
+  /* Rendered as a finding rather than a row, because it is an argument and not a
+     count — and marked `low` rather than `holds`, since a price nobody has ever
+     tested is the same shape of problem as one that keeps sliding: in both cases
+     the operator does not know where their ceiling is. Reading it as good news is
+     exactly the mistake a win rate printed as a score invites. */
+  const ceilingLine = rep.ceiling && rep.ceiling.untested && rep.ceiling.text
+    ? `<div class="hist-find hist-low">${esc(rep.ceiling.text)}</div>` : '';
 
   const ready = rep.methods.rows.filter(r => r.enough);
   const methodTable = ready.length ? `
@@ -358,8 +423,8 @@ const renderHistory = guard('history', function (list) {
     </div>` : '';
 
   box.innerHTML = (accLine || holdLine
-      ? `<div class="hist-rows">${accLine}${holdLine}${concLine}</div>` : '') +
-    verdict + trendLine + methodTable + provTable + missing;
+      ? `<div class="hist-rows">${accLine}${holdLine}${widenLine}${concLine}</div>` : '') +
+    verdict + trendLine + ceilingLine + methodTable + provTable + missing;
 });
 
 function newDeal(){

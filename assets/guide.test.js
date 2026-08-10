@@ -231,5 +231,66 @@ test('every reason is a sentence, never a label', () => {
     });
 });
 
+console.log('\nan anchor you cannot hold');
+/* The tool will happily put a number on screen that is many times anything this
+   operator has ever actually closed. Two things follow from that and only one of
+   them is good: they do not send it, or they send it and fold at the first push.
+   An anchor you cannot defend is worse than a lower one you can.
+
+   So this is not "your price is too high" — the price is not the problem and
+   nothing here lowers it. It is "you have never held a number like this, so make
+   sure it is the client's number before it goes out", and it points at the
+   question that decides whether a defence exists. */
+const stretchOf = over => G.sanity(Object.assign(
+  { freq: 40, freqUnit: 365, minutes: 8, price: 30000 }, over));
+const hasStretch = s => stretchOf(s).some(w => w.id === 'stretch');
+
+test('a price far above anything closed before is flagged', () => {
+  assert.ok(hasStretch({ bestClosed: 6000, closedCount: 4 }),
+    '30,000 against a best-ever 6,000 and nothing said');
+});
+test('a price in line with the operator\'s history is not flagged', () => {
+  assert.ok(!hasStretch({ price: 12000, bestClosed: 9000, closedCount: 4 }),
+    'ordinary growth is not a warning');
+});
+test('nothing is said to an operator with no history at all', () => {
+  /* The whole point. A tool that lectures the beginner it has no data about is
+     the inversion this work exists to fix: guidance was arriving only for the
+     operator who least needed it. With no closed deals there is no ceiling to
+     compare against, and inventing one would be worse than silence. */
+  assert.ok(!hasStretch({ bestClosed: null, closedCount: 0 }),
+    'no evidence about their ceiling means no claim about it');
+  assert.ok(!hasStretch({ bestClosed: 6000, closedCount: 1 }),
+    'one closed deal is not a ceiling');
+});
+test('the warning names the number\'s source as the thing to check', () => {
+  const w = stretchOf({ bestClosed: 6000, closedCount: 4 }).find(x => x.id === 'stretch');
+  assert.strictEqual(w.field, 'q_provenance',
+    'the lever is whether the number is his, not what the number is');
+  assert.ok(!/הורד|תוריד|נמוך יותר|יקר מדי/.test(w.text),
+    'this must not read as "charge less": ' + w.text);
+});
+test('the text says what the operator has actually held, in shekels', () => {
+  const w = stretchOf({ bestClosed: 6000, closedCount: 4 }).find(x => x.id === 'stretch');
+  assert.ok(/6,000|6000/.test(w.text), 'the evidence has to be in the sentence: ' + w.text);
+});
+test('a client-sourced number changes what the warning says, not whether it fires', () => {
+  /* A big price with the client's own numbers behind it is defensible, and the
+     line should say so — the risk there is a hard negotiation, not an
+     indefensible one. Suppressing it entirely would drop the one fact the
+     operator cannot get anywhere else: they have never held this number.
+
+     Uses the boolean flags this module's state already carries rather than a raw
+     provenance value. The first draft of this test invented a `provenance` key,
+     which would have been a second shape for a fact the state already has. */
+  const his  = stretchOf({ bestClosed: 6000, closedCount: 4 })
+    .find(x => x.id === 'stretch');
+  const mine = stretchOf({ bestClosed: 6000, closedCount: 4, numbersAreMine: true })
+    .find(x => x.id === 'stretch');
+  assert.ok(his, 'still fires when the numbers are his');
+  assert.notStrictEqual(his.text, mine.text,
+    'the same sentence for a defensible and an indefensible number teaches nothing');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

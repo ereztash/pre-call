@@ -1,5 +1,5 @@
 /* node assets/deals.test.js — no browser, no deps. */
-const { make } = require('./deals.js');
+const { make, priceMoved } = require('./deals.js');
 const assert = require('assert');
 
 let pass = 0, fail = 0;
@@ -338,6 +338,232 @@ test('recording an outcome again does not silently reset the answer', () => {
   d.recordOutcome(a.id, { closedPrice: 8000, concession: 'i_offered' });
   d.recordOutcome(a.id, { closedPrice: 8000, actualHours: 12 });
   assert.strictEqual(d.get(a.id).outcome.concession, 'i_offered');
+});
+
+console.log('\nthe concession that never shows up as one');
+/* priceHold() answers "did the price hold" by comparing closedPrice to
+   priceQuoted. So the one form of giving that leaves both numbers untouched is
+   invisible to it: adding work to the scope after the quote has gone out. The
+   client pays what was quoted, the panel records a clean full-price win, and the
+   operator delivered more for it.
+
+   This is worse than an unmeasured concession, because the instrument reports
+   the opposite of what happened — and it is plausibly the most common form of
+   giving, precisely because it does not feel like a discount while you do it. */
+const withScope = (state) => ({ fields: {}, systems: ['וואטסאפ'], scope: state });
+const SCOPE_A = { build: 'in', train: 'in', docs: 'out' };
+
+test('the in-scope set is locked when the quote goes out, like the estimate', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  assert.strictEqual(d.get(a.id).scopeAtQuote, undefined,
+    'a draft has not been quoted yet — nothing to lock against');
+  d.setStatus(a.id, 'sent');
+  assert.deepStrictEqual([...d.get(a.id).scopeAtQuote].sort(), ['build', 'train'],
+    'only the in-scope rows, locked at the moment the price left');
+});
+test('the lock is not overwritten by a later send', () => {
+  // re-marking sent must not move the baseline to whatever the scope is now
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  d.save({ id: a.id, form: withScope({ build: 'in', train: 'in', docs: 'in' }) });
+  d.setStatus(a.id, 'sent');
+  assert.deepStrictEqual([...d.get(a.id).scopeAtQuote].sort(), ['build', 'train'],
+    'a moved baseline measures nothing');
+});
+test('scopeDrift reports what was added after the quote, and what was dropped', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  d.save({ id: a.id, form: withScope({ build: 'in', train: 'out', docs: 'in' }) });
+  const drift = d.scopeDrift(d.get(a.id));
+  assert.deepStrictEqual(drift.added, ['docs']);
+  assert.deepStrictEqual(drift.removed, ['train']);
+  assert.strictEqual(drift.widened, true, 'something was added at the same price');
+});
+test('a deal whose scope never moved reports no drift', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  const drift = d.scopeDrift(d.get(a.id));
+  assert.deepStrictEqual(drift.added, []);
+  assert.strictEqual(drift.widened, false);
+});
+test('a deal with no lock reports unmeasurable, never "no drift"', () => {
+  /* Every deal saved before this shipped has no baseline. Reporting those as
+     zero drift would state a finding the ledger cannot support — the same rule
+     provenanceOf() follows by refusing to backfill, and calibration() follows by
+     refusing to report under five deliveries. */
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'old', status: 'won', priceQuoted: 10000,
+      form: withScope({ build: 'in', docs: 'in' }), outcome: { closedPrice: 10000 } }
+  ]));
+  const d = make(st);
+  assert.strictEqual(d.scopeDrift(d.get('old')).widened, null,
+    'no baseline is not the same as no movement');
+});
+test('priceHold separates a clean hold from one that delivered more', () => {
+  const d = make(mem());
+  const clean = d.save({ client: 'clean', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(clean.id, 'sent'); d.setStatus(clean.id, 'won');
+  d.recordOutcome(clean.id, { closedPrice: 10000 });
+
+  const wider = d.save({ client: 'wider', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(wider.id, 'sent');
+  d.save({ id: wider.id, form: withScope({ build: 'in', train: 'in', docs: 'in' }) });
+  d.setStatus(wider.id, 'won');
+  d.recordOutcome(wider.id, { closedPrice: 10000 });
+
+  const p = d.priceHold();
+  assert.strictEqual(p.held, 2, 'factually the price did not drop in either');
+  assert.strictEqual(p.widened, 1);
+  assert.strictEqual(p.heldClean, 1,
+    'only one of these two is a win the panel may call full price');
+});
+test('widened is null when no won deal carries a baseline', () => {
+  const st = mem();
+  st.setItem('postcall_deals_v1', JSON.stringify([
+    { id: 'old', status: 'won', priceQuoted: 10000, outcome: { closedPrice: 10000 } }
+  ]));
+  const p = make(st).priceHold();
+  assert.strictEqual(p.held, 1);
+  assert.strictEqual(p.widened, null, '0 would read as "this never happens here"');
+  assert.strictEqual(p.heldClean, null);
+  assert.strictEqual(p.scopeTracked, 0, 'say how many deals could be checked at all');
+});
+test('a deal that was discounted AND widened is counted in both', () => {
+  // the worst case, and the one an operator most needs to see
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000, form: withScope(SCOPE_A) });
+  d.setStatus(a.id, 'sent');
+  d.save({ id: a.id, form: withScope({ build: 'in', train: 'in', docs: 'in' }) });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 8000, concession: 'i_offered' });
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 1);
+  assert.strictEqual(p.widened, 1, 'the scope moved too, and that is not cancelled by the discount');
+  assert.strictEqual(p.heldClean, 0);
+});
+
+console.log('\ndeals that happened before the tool existed');
+/* The advantage this product offers is an accumulation, so it is worth nothing on
+   deal one — which is exactly when people leave. And every threshold in here
+   sensibly refuses to speak without evidence, so guidance arrives inversely to
+   need: the operator who has priced fifteen jobs gets the findings, and the one
+   who has priced none gets a blank panel.
+
+   Entering deals that already happened is the only fix that needs no server, no
+   account and no second side. What it must not do is let a remembered number
+   pass itself off as a measured one. */
+test('a past deal that closed is stored as a win with both prices', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'מאפייה', quoted: 8000, closed: 7000 });
+  assert.strictEqual(r.status, 'won');
+  assert.strictEqual(r.priceQuoted, 8000);
+  assert.strictEqual(r.outcome.closedPrice, 7000);
+});
+test('a past deal that did not close is stored as lost, not as a zero-price win', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'יבואן', quoted: 12000, lost: true });
+  assert.strictEqual(r.status, 'lost');
+  assert.strictEqual(r.outcome, null, 'there is no closing price to record');
+  assert.strictEqual(d.winRate().lost, 1);
+});
+test('it carries no estimate, so it can never enter the calibration figures', () => {
+  /* The whole reason calibration() exists is estimate-versus-actual on a number
+     locked at quote time. Nobody can reconstruct that from memory, and letting a
+     remembered figure in would corrupt the one statistic the effort table depends
+     on to stop being fitted backwards. */
+  const d = make(mem());
+  d.addPast({ client: 'a', quoted: 8000, closed: 8000, hours: 40 });
+  const r = d.list()[0];
+  assert.strictEqual(r.estimatedHours, null, 'an estimate nobody locked is not an estimate');
+  assert.strictEqual(d.calibration().n, 0, 'a remembered deal must not calibrate anything');
+});
+test('provenance is unset, because it cannot be remembered honestly', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'a', quoted: 8000, closed: 8000, provenance: 'unprompted' });
+  assert.strictEqual(d.provenanceOf(r), null,
+    'whether the client volunteered a figure months ago is not recoverable, and a ' +
+    'caller claiming it does not make it so');
+});
+test('scope drift is unmeasurable on a past deal rather than absent', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'a', quoted: 8000, closed: 8000 });
+  assert.strictEqual(d.scopeDrift(r).measurable, false);
+});
+test('it is marked as entered rather than measured', () => {
+  const d = make(mem());
+  const r = d.addPast({ client: 'a', quoted: 8000, closed: 8000 });
+  assert.strictEqual(r.retro, true,
+    'nothing may present a remembered deal as one the tool watched happen');
+});
+test('who asked for the discount is recorded when there was one', () => {
+  const d = make(mem());
+  d.addPast({ client: 'a', quoted: 10000, closed: 8000, concession: 'i_offered' });
+  assert.strictEqual(d.priceHold().byConcession.i_offered.n, 1);
+});
+test('a concession on a deal that held its price is not recorded as one', () => {
+  const d = make(mem());
+  d.addPast({ client: 'a', quoted: 10000, closed: 10000, concession: 'i_offered' });
+  const p = d.priceHold();
+  assert.strictEqual(p.discounted, 0, 'nothing was conceded, whatever the field says');
+  assert.strictEqual(p.byConcession.i_offered.n, 0);
+});
+test('a closing price above the quote is refused rather than stored', () => {
+  const d = make(mem());
+  assert.strictEqual(d.addPast({ client: 'a', quoted: 8000, closed: 9000 }), null,
+    'that is not a discount and not a hold — it is a typo, and it would report as a hold');
+});
+test('a missing or junk quote is refused', () => {
+  const d = make(mem());
+  [{}, { quoted: 0 }, { quoted: -5 }, { quoted: 'הרבה' }].forEach(row =>
+    assert.strictEqual(d.addPast(row), null, JSON.stringify(row)));
+  assert.strictEqual(d.list().length, 0);
+});
+test('six entered deals are enough for the ceiling finding to speak', () => {
+  /* The point of the whole exercise: the beginner enters what already happened
+     and the panel starts working the same afternoon. Six wins, none discounted,
+     none lost — and the tool can now say the thing it could never say before,
+     that the price has never actually been tested. */
+  const d = make(mem());
+  for (let i = 0; i < 6; i++) d.addPast({ client: 'c' + i, quoted: 6000, closed: 6000 });
+  const w = d.winRate();
+  assert.strictEqual(w.won, 6);
+  assert.strictEqual(w.rate, 1);
+  assert.strictEqual(d.priceHold().discounted, 0);
+});
+
+console.log('\nthe two places that ask "was the price ever tested" agree');
+/* Review found these two apart: ceiling() in pc-history.js requires lost === 0
+   before calling a price untested, and PRE-CALL's line checked only for discounts
+   — so one ledger read "untested" in the call script and "tested" in the panel.
+   The rule now lives once, in priceMoved(), and this pins the agreement rather
+   than trusting two call sites to stay in step. Same instrument the project uses
+   between the key minter and the gate, and between the client's event names and
+   the server allowlist. */
+const H = require('./pc-history.js');
+test('priceMoved and the ceiling verdict never disagree', () => {
+  const wins = n => Array.from({ length: n }, (_, i) => ({
+    id: 'w' + i, status: 'won', priceQuoted: 10000,
+    outcome: { closedPrice: 10000, concession: 'unknown' } }));
+  const cases = [
+    { label: 'clean six',        deals: wins(6), hold: { n: 6, discounted: 0, widened: 0, scopeTracked: 6 } },
+    { label: 'one lost',         deals: wins(5).concat([{ id: 'l', status: 'lost', priceQuoted: 10000 }]),
+                                 hold: { n: 5, discounted: 0, widened: 0, scopeTracked: 5 } },
+    { label: 'one discounted',   deals: wins(6), hold: { n: 6, discounted: 1, widened: 0, scopeTracked: 6 } },
+    { label: 'one widened',      deals: wins(6), hold: { n: 6, discounted: 0, widened: 1, scopeTracked: 6 } },
+    { label: 'scope unknown',    deals: wins(6), hold: { n: 6, discounted: 0, widened: null, scopeTracked: 0 } }
+  ];
+  cases.forEach(c => {
+    const lost = c.deals.filter(d => d.status === 'lost').length;
+    const moved = priceMoved({ lost, discounted: c.hold.discounted, widened: c.hold.widened });
+    const verdict = H.ceiling(c.deals, c.hold);
+    assert.strictEqual(verdict.untested, !moved,
+      c.label + ': priceMoved says ' + moved + ' and ceiling says untested=' + verdict.untested);
+  });
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

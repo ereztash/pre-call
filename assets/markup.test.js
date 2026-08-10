@@ -472,6 +472,49 @@ test('the share image exists and is the size every platform expects', () => {
   assert.strictEqual(buf.readUInt32BE(20), 630, 'og image height must be 630');
 });
 
+console.log('\nthe ledger reads what the ledger computes');
+/* The precedent for this test is written into deals.js itself: priceHold() sat
+   there "written, commented, tested, and called from nowhere" — the one question
+   the operator most wants answered, computed and thrown away on every render.
+   Scope drift is the same shape of statistic and would rot the same way, so the
+   wiring is asserted rather than assumed. Same instrument as the senderMissing()
+   test further down. */
+test('scope drift reaches the panel instead of being computed and discarded', () => {
+  const ledger = read('assets/pc-ledger.js');
+  assert.ok(/hold\.widened/.test(ledger),
+    'deals.js reports widened and nothing renders it — dead code shaped like a finding');
+});
+test('the ceiling finding reaches the panel', () => {
+  /* winRate() was computed in deals.js and printed as a score from the day the
+     ledger existed, and nothing ever interpreted it. ceiling() is the
+     interpretation, and it would rot the same way. */
+  const ledger = read('assets/pc-ledger.js');
+  assert.ok(/rep\.ceiling/.test(ledger), 'ceiling() is computed and never rendered');
+  assert.ok(/report\([^)]*hold\)/.test(ledger),
+    'report() must be given priceHold(), or the ceiling cannot tell a tested ' +
+    'price from an untested one');
+});
+test('the guide is told what the operator has actually closed', () => {
+  /* pc-guide.js is pure and cannot read storage, so the stretch warning is dead
+     unless the shell passes these three in. It is the one warning in that module
+     that depends on anything outside the form. */
+  const shell = read('assets/post-call.js');
+  ['price:', 'bestClosed:', 'closedCount:'].forEach(k =>
+    assert.ok(shell.includes(k),
+      'guideState() is missing ' + k + ' — the stretch warning can never fire'));
+  assert.ok(/closedPrice > 0/.test(shell),
+    'the ceiling must come from what closed, not from what was quoted');
+});
+test('the full-price claim is qualified where the scope moved', () => {
+  /* "נסגרו במחיר המלא" is true of the two numbers and false of the deal when work
+     was added after the quote. Whatever renders the drift has to say it is
+     outside the discount figure, or the operator reads the discount rate as the
+     whole of what they gave. */
+  const ledger = read('assets/pc-ledger.js');
+  assert.ok(/לא נכנס לאחוז ההנחה/.test(ledger),
+    'the panel reports a discount rate that understates, without saying so');
+});
+
 console.log('\nreachable from outside');
 /* Same AARRR pass, next hole along: a link pasted into WhatsApp renders
    properly now, but nothing else could ever find this. No robots.txt and no

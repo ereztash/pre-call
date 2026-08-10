@@ -669,9 +669,35 @@ function guideState(){
     comparableLast: num('c_last'),
     scopeConfirmed,
     client: txt('q_client'),
-    sent: false
+    sent: false,
+    /* What this operator has actually held, so the guide can notice a price far
+       above anything they have ever closed. Read here rather than inside
+       pc-guide.js, which is pure and has no storage — the same arrangement the
+       whole module already uses.
+
+       `price` is the model's current number. bestClosed is the largest closing
+       price on record, not the largest quote: the question the warning asks is
+       "have you held a number like this", and a quote nobody accepted is not
+       evidence that you have. */
+    price: model().price,
+    bestClosed: bestClosedPrice(),
+    closedCount: closedDealCount()
   };
 }
+
+/* The two figures above, kept together because they answer one question and must
+   agree about which deals count. A won deal with a recorded closing price is the
+   only kind that proves anything here — a win with no outcome recorded says the
+   client agreed, not what they paid. */
+function closedDeals(){
+  return PC.deals.list().filter(d =>
+    d.status === 'won' && d.outcome && d.outcome.closedPrice > 0);
+}
+function bestClosedPrice(){
+  const xs = closedDeals().map(d => +d.outcome.closedPrice);
+  return xs.length ? Math.max.apply(null, xs) : null;
+}
+function closedDealCount(){ return closedDeals().length; }
 
 /* Takes you there, opens what is closed, and puts the cursor in the field.
    Every one of those three is a thing a first-time user would otherwise have
@@ -1350,6 +1376,8 @@ const ACTIONS = {
   trlocal:  localExtraction,
   trdemo:   loadDemo,
   trapply:  applyExtraction,
+  retroadd:  () => addPastDeal(false),
+  retrolost: () => addPastDeal(true),
   'backup-export': downloadBackup,
   'backup-import': pickBackupFile
 };

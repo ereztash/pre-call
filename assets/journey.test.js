@@ -534,12 +534,36 @@ async function journey(engineName, base) {
     assert.strictEqual(shape.controls, shape.rows * 2,
       'expected two moves per row, got ' + shape.controls + ' across ' + shape.rows + ' rows');
 
-    /* And the whole page, because this section is where it concentrates. */
+    /* And the whole page, because this section is where it concentrates.
+
+       The filter was a non-zero bounding rect, and it was counting controls that
+       are not painted. Chromium renders a closed <details> with
+       content-visibility on the slot, which PRESERVES the layout boxes of the
+       contents — so every closed drawer on this page contributed its controls to
+       a number whose own message says "paints". Measured while chasing an
+       overrun: "שאר השאלות" alone was handing over 21, and the controls in a
+       closed drawer were confirmed neither focusable (focus() did not take) nor
+       hit-testable (elementFromPoint returned nothing).
+
+       That made the ceiling self-consistent but its advice false: "move something
+       behind a disclosure", the remedy this message suggests, could not reduce the
+       number by one. checkVisibility() knows about content-visibility, so the
+       count now means what the sentence claims, and a disclosure is worth
+       something again.
+
+       Re-baselined on the corrected filter rather than carried over: the old
+       numbers (137, then 125) counted a different population and comparing across
+       the change would be meaningless. */
     const total = await fresh.evaluate(() =>
       [...document.querySelectorAll('button,a,input,select,textarea,[tabindex]')]
-        .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }).length);
-    assert.ok(total <= 125,
-      'POST-CALL paints ' + total + ' controls (ceiling 125, was 137 before the scope regroup). ' +
+        .filter(e => e.checkVisibility
+          ? e.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true,
+                                visibilityProperty: true })
+          : (() => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })())
+        .length);
+    assert.ok(total <= 95,
+      'POST-CALL paints ' + total + ' controls (ceiling 95, measured 92 on the corrected ' +
+      'filter, where the same page measured 128 on the old one). ' +
       'Raise this deliberately or move something behind a disclosure.');
 
     /* What the grouping cost, and had to give back. Moving an item is now

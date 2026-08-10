@@ -121,12 +121,108 @@
         return write(list) ? rec : null;
       },
 
+      /* A deal that happened before this tool did.
+
+         The advantage this product offers is an accumulation, which means it is
+         worth nothing on deal one — exactly when people leave. And because every
+         threshold here refuses to speak without evidence, guidance arrives
+         inversely to need: fifteen priced jobs gets you the findings, none gets
+         you a blank panel. Entering what already happened is the only fix that
+         needs no server, no account and no second party.
+
+         What it must not do is let a remembered number pass as a measured one, so
+         three fields are deliberately refused no matter what the caller sends:
+
+           estimatedHours — nobody can reconstruct an estimate locked at quote
+             time, and calibration() exists precisely to stop the effort table
+             being fitted backwards. A remembered figure would corrupt the one
+             statistic that can decalcify it.
+           provenance — whether the client volunteered the annual figure months
+             ago is not recoverable. It stays unattributed, which the track record
+             already reports honestly.
+           scopeAtQuote — no baseline, so scopeDrift() reads unmeasurable rather
+             than "nothing moved".
+
+         What it does feed is everything that only needs the two prices and the
+         outcome: winRate(), priceHold(), byConcession, and through them the
+         ceiling finding and the guide's stretch warning. Which is the whole
+         point — six remembered deals and the panel starts working this
+         afternoon. */
+      addPast(row) {
+        const r = row || {};
+        const quoted = num(r.quoted);
+        if (!quoted) return null;
+        const lost = !!r.lost;
+        const closed = lost ? null : num(r.closed);
+        if (!lost && !closed) return null;
+        /* Above the quote is neither a discount nor a hold. It is a typo, and
+           stored it would report as a clean full-price win — the instrument
+           saying the opposite of what happened, which is the defect this whole
+           area was just fixed for. */
+        if (closed && closed > quoted) return null;
+        return api.save({
+          client: (r.client || '').trim() || 'ללא שם',
+          status: lost ? 'lost' : 'won',
+          priceQuoted: quoted,
+          estimatedHours: null,
+          method: null,
+          pricedBy: null,
+          provenance: 'unset',
+          retro: true,          // nothing may present this as a deal the tool watched
+          outcome: lost ? null : {
+            closedPrice: closed,
+            actualHours: null,
+            note: '',
+            /* Only meaningful when the price actually dropped. priceHold() already
+               ignores the field on a deal that held, and recording an answer there
+               would put a concession in the record of a deal nobody conceded. */
+            concession: closed < quoted ? (conc(r.concession) || 'unknown') : 'unknown',
+            at: new Date().toISOString()
+          }
+        });
+      },
+
       setStatus(id, status) {
         if (!STATUS.includes(status)) return null;
         const d = api.get(id); if (!d) return null;
         d.status = status;
         if (status === 'sent' && !d.sentAt) d.sentAt = new Date().toISOString();
+        /* Locked here for the same reason estimatedHours is locked at save: a
+           baseline that moves measures nothing. The moment the price left is
+           the only moment the scope it was quoted for is knowable, and
+           `!d.scopeAtQuote` means a second send never moves it. */
+        if (status === 'sent' && !d.scopeAtQuote) {
+          const at = inScope(d.form);
+          if (at) d.scopeAtQuote = at;
+        }
         return api.save(d);
+      },
+
+      /* What the scope did after the quote went out.
+
+         priceHold() answers "did the price hold" from two numbers, so the one
+         form of giving that leaves both untouched is invisible to it: adding
+         work to the scope after the price is out. The client pays the quote, the
+         panel records a clean full-price win, and more was delivered for it.
+         That is worse than an unmeasured concession — the instrument reports the
+         opposite of what happened — and it is plausibly the commonest form of
+         giving, precisely because it does not feel like a discount while you do
+         it.
+
+         `widened: null` for a deal with no baseline, never false. Every deal
+         saved before this existed has none, and reporting those as "no drift"
+         would state a finding the ledger cannot support. Same rule
+         provenanceOf() follows by refusing to backfill. */
+      scopeDrift(d) {
+        const base = d && Array.isArray(d.scopeAtQuote) ? d.scopeAtQuote : null;
+        const now = d ? inScope(d.form) : null;
+        if (!base || !now) return { added: [], removed: [], widened: null, measurable: false };
+        return {
+          added: now.filter(k => base.indexOf(k) === -1),
+          removed: base.filter(k => now.indexOf(k) === -1),
+          widened: now.some(k => base.indexOf(k) === -1),
+          measurable: true
+        };
       },
 
       /* actualHours is the only field that can decalcify the effort model.
@@ -174,6 +270,45 @@
 
       remove(id) { return write(read().filter(d => d.id !== id)); },
       clear() { try { storage.removeItem(KEY); return true; } catch (e) { return false; } },
+
+      /* What this operator has actually done, for a caller that needs the facts
+         without the whole track record. PRE-CALL reads it: the emphasis in a call
+         script should depend on whether the person can hold a price, and years in
+         business say nothing about that while the ledger says it exactly.
+
+         Facts only — no verdict. `untested` deliberately does not live here even
+         though the inputs do, because pc-history.js ceiling() already owns that
+         judgement together with its threshold and its wording, and a second copy
+         is how the two would come to disagree. A caller with a simpler question
+         ("has a price ever moved at all") can read `discounted` and answer it
+         without borrowing a verdict calibrated for something else. */
+      tenure() {
+        const all = read();
+        const won = all.filter(d =>
+          d.status === 'won' && d.outcome && d.outcome.closedPrice > 0);
+        const h = api.priceHold();
+        const bc = h.byConcession || {};
+        const lost = all.filter(d => d.status === 'lost').length;
+        return {
+          /* Reported so a caller can tell "no ledger" from "a ledger with nothing
+             closed in it". PRE-CALL needs the difference: somebody who has never
+             opened POST-CALL should not be told what their ledger does not
+             contain, and somebody with three sent proposals and no close should. */
+          total: all.length,
+          lost,
+          /* The one boolean, so a caller cannot assemble its own version of the
+             rule out of the parts. Raised in review: PRE-CALL had checked only for
+             discounts, so a ledger with three full-price wins and one rejection
+             read "you have not tested your ceiling" in the call script while the
+             panel, which requires lost === 0, read it as tested. */
+          priceEverMoved: priceMoved({ lost, discounted: h.discounted, widened: h.widened }),
+          closed: won.length,
+          bestClosed: won.length
+            ? won.reduce((m, d) => Math.max(m, +d.outcome.closedPrice), 0) : null,
+          discounted: h.discounted,
+          selfOffered: bc.i_offered ? bc.i_offered.n : 0
+        };
+      },
 
       /* Estimate-versus-actual. Deliberately refuses to report anything under
          five deliveries: a ratio from two jobs is noise wearing a number, and
@@ -229,7 +364,8 @@
       priceHold() {
         const won = read().filter(d =>
           d.status === 'won' && d.priceQuoted > 0 && d.outcome && d.outcome.closedPrice > 0);
-        if (!won.length) return { n: 0, held: null, discounted: 0, avgDiscount: null };
+        if (!won.length) return { n: 0, held: null, discounted: 0, avgDiscount: null,
+                                  widened: null, heldClean: null, scopeTracked: 0 };
         const cut = won.filter(d => d.outcome.closedPrice < d.priceQuoted);
         const off = d => 1 - d.outcome.closedPrice / d.priceQuoted;
         const mean = rows => rows.length
@@ -259,17 +395,61 @@
           byConcession[k] = { n: rows.length, avgDiscount: mean(rows) };
         });
 
+        /* `held` is left exactly as it was — the price did not drop, which is
+           factually true and is what it has always meant. What is added is the
+           part it cannot see: of the deals that have a baseline to check,
+           how many grew, and how many held the price WITHOUT growing.
+
+           A deal that was discounted and also widened is counted in both. The
+           two are not alternatives and one does not excuse the other.
+
+           heldClean and widened are null rather than 0 when nothing is
+           trackable, so a ledger that predates the baseline cannot read as a
+           ledger where this never happens. scopeTracked says how many could be
+           checked at all. */
+        const drift = won.map(d => api.scopeDrift(d));
+        const tracked = drift.filter(x => x.measurable).length;
         return {
           n: won.length,
           held: won.length - cut.length,
           discounted: cut.length,
           avgDiscount: mean(cut),
-          byConcession
+          byConcession,
+          scopeTracked: tracked,
+          widened: tracked ? drift.filter(x => x.widened).length : null,
+          heldClean: tracked
+            ? won.filter((d, i) => drift[i].measurable && !drift[i].widened &&
+                                   d.outcome.closedPrice >= d.priceQuoted).length
+            : null
         };
       }
     };
     return api;
   }
+
+  /* The in-scope rows of a saved form, as a stable sorted set.
+
+     An empty map returns null rather than an empty set. `scope: {}` means no
+     scope state was captured, not that nothing is included — and locking an
+     empty baseline would make every row added later read as scope the operator
+     gave away. Unmeasurable is the honest answer there. */
+  const inScope = form => {
+    const s = form && form.scope;
+    if (!s || typeof s !== 'object' || !Object.keys(s).length) return null;
+    return Object.keys(s).filter(k => s[k] === 'in').sort();
+  };
+
+  /* Has the price ever actually been tested — one rule, one place.
+     A loss is the evidence: it is where the edge showed up. A discount is the
+     price moving. A scope that grew at the same price is the price moving
+     somewhere the discount figure cannot see. Any one of the three, and a run of
+     wins is no longer an untested price.
+
+     `widened === null` means unmeasurable, and unmeasurable is not evidence of
+     movement — so it does not set this true. What it must also never do is let a
+     caller go on to ASSERT that no scope moved; see the text in ceiling(). */
+  const priceMoved = f => ((f.lost || 0) > 0) || ((f.discounted || 0) > 0) ||
+                          (f.widened !== null && (f.widened || 0) > 0);
 
   const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
   const valid = v => PROVENANCE.indexOf(v) !== -1;
@@ -278,6 +458,7 @@
 
   root.PC = root.PC || {};
   root.PC.dealsFactory = make;
+  root.PC.priceMoved = priceMoved;
   root.PC.STATUS_LABEL = STATUS_LABEL;
   root.PC.STATUS = STATUS;
   root.PC.PROVENANCE = PROVENANCE;
@@ -287,6 +468,6 @@
   if (typeof localStorage !== 'undefined') root.PC.deals = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, STATUS, STATUS_LABEL,
+    module.exports = { make, priceMoved, STATUS, STATUS_LABEL,
                        PROVENANCE, PROVENANCE_LABEL, CONCESSION, CONCESSION_LABEL };
 })(typeof window !== 'undefined' ? window : globalThis);
