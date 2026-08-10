@@ -503,6 +503,12 @@
   .deal-st.st-lost{background:var(--red);color:#fff;font-weight:600}
   .deal-st.st-sent{background:var(--copper);color:#14171a;font-weight:600}
   .deal-p{font-size:var(--fs-sm);color:var(--muted);margin:var(--sp-2) 0 var(--sp-3)}
+  /* What moved. Bordered on the leading edge rather than boxed: it is a fact
+     about this deal, not a warning about it, and a full box would compete with
+     the outcome panel below for the same attention. */
+  .deal-mv{font-size:var(--fs-sm);color:var(--ink);margin:var(--sp-3) 0 0;
+           border-inline-start:2px solid var(--copper);padding-inline-start:var(--sp-3)}
+  .deal-mv b{color:#f0f2f4}
   .deal-acts{display:flex;flex-wrap:wrap;gap:var(--sp-3);margin-top:var(--sp-3)}
   .deal-out{display:flex;flex-wrap:wrap;gap:var(--sp-4);align-items:flex-end;margin-top:var(--sp-4);
             background:#14171a;border-radius:var(--r-md);padding:var(--sp-4)}

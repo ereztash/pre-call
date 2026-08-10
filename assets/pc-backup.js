@@ -30,7 +30,14 @@
   const VERSION = 1;
 
   const DATA_KEYS = ['precall_profile_v1', 'postcall_deals_v1', 'postcall_draft_v1',
-                     'postcall_sender_v1'];
+                     'postcall_sender_v1',
+                     /* The transition log. Included because losing it on a cache
+                        clear would defeat what it is for — a history you can only
+                        rebuild by living through it again is not a history. It is
+                        safe to hand over precisely because it carries no free
+                        text: statuses, counts and generated ids only, enforced in
+                        pc-journal.js rather than promised here. */
+                     'postcall_journal_v1'];
   // Documented, not enforced by a check — see the header. Listed so the
   // omission is a decision on record, not something to rediscover later.
   const EXCLUDED_KEYS = ['postcall_key', 'postcall_key_ok_at'];

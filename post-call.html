@@ -583,6 +583,10 @@
      and this tool has to open by double-clicking the file. Order matters —
      the shell at the end assumes everything above it has run. -->
 <script src="assets/model.js"></script>
+<!-- Before deals.js, which takes the journal as its second constructor argument.
+     The order is load-bearing: later, and the ledger is built with no journal and
+     every transition is silently unrecorded. assets/markup.test.js asserts it. -->
+<script src="assets/pc-journal.js"></script>
 <script src="assets/deals.js"></script>
 <script src="assets/pc-backup.js"></script>
 <script src="assets/pc-dom.js"></script>

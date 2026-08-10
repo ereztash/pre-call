@@ -63,7 +63,24 @@
     unknown:      'לא נרשם'
   };
 
-  function make(storage) {
+  /* `journal` is optional and injected, for the same reason storage is: this
+     module stays pure and Node-testable with and without it, and given none
+     nothing about the ledger's behaviour changes.
+
+     It is wired HERE rather than at the call sites because save() and setStatus()
+     are the choke point every mutation passes through. Review already caught the
+     other arrangement once — the crossing trigger was wired to two of four paths,
+     because a caller has to remember and a choke point does not. */
+  function make(storage, journal) {
+    /* An observation must never be able to fail the thing observed. deals.js
+       reports a failed write to the operator as a real failure, so a journal that
+       throws — a full quota, a hostile stub — is swallowed here rather than
+       allowed to turn a successful save into a reported one. */
+    const note = entry => {
+      if (!journal || !journal.append) return;
+      try { journal.append(entry); } catch (e) { /* observation, not the event */ }
+    };
+
     const read = () => {
       try { return JSON.parse(storage.getItem(KEY)) || []; }
       catch (e) { return []; }
@@ -97,13 +114,29 @@
         if (deal.provenance === undefined && deal.form && valid(deal.form.q_provenance))
           deal.provenance = deal.form.q_provenance;
         const i = deal.id ? list.findIndex(d => d.id === deal.id) : -1;
+        /* The price is read BEFORE the merge, because the merge is what destroys
+           it. priceQuoted is overwritten on every re-save, so a price that moved
+           while the deal was still a draft leaves no trace in the ledger at all —
+           it is the clearest case of a transition this product could not see. */
+        const wasPrice = i >= 0 ? list[i].priceQuoted : null;
+        /* null, not zero, when the scope question was never answered — the rule
+           priceMoved() already states about `widened`. A deal saved before the
+           scope was filled in has no scope, and the save that fills it in is the
+           scope being established, not moving. Counted as 0 → 2 it would report
+           every such deal as having widened. */
+        const wasScope = i >= 0 ? scopeCount(list[i].form) : null;
         if (i >= 0) {
           // update: merge only what was actually supplied. Applying the blank
           // defaults here would wipe fields the caller never mentioned — which
           // is exactly how a locked estimate would quietly become null.
           const merged = Object.assign({}, list[i], deal);
           list[i] = merged;
-          return write(list) ? merged : null;
+          if (!write(list)) return null;
+          note({ what: 'deal.price', from: wasPrice, to: merged.priceQuoted, ref: merged.id });
+          const nowScope = scopeCount(merged.form);
+          if (wasScope !== null && nowScope !== null)
+            note({ what: 'deal.scope', from: wasScope, to: nowScope, ref: merged.id });
+          return merged;
         }
         const now = deal.created || new Date().toISOString();
         const rec = Object.assign({
@@ -118,7 +151,10 @@
           outcome: null
         }, deal);
         list.push(rec);
-        return write(list) ? rec : null;
+        if (!write(list)) return null;
+        note({ what: 'deal.status', to: rec.status, ref: rec.id });
+        note({ what: 'deal.price', from: null, to: rec.priceQuoted, ref: rec.id });
+        return rec;
       },
 
       /* A deal that happened before this tool did.
@@ -185,6 +221,7 @@
       setStatus(id, status) {
         if (!STATUS.includes(status)) return null;
         const d = api.get(id); if (!d) return null;
+        const was = d.status;
         d.status = status;
         if (status === 'sent' && !d.sentAt) d.sentAt = new Date().toISOString();
         /* Locked here for the same reason estimatedHours is locked at save: a
@@ -195,7 +232,13 @@
           const at = inScope(d.form);
           if (at) d.scopeAtQuote = at;
         }
-        return api.save(d);
+        const out = api.save(d);
+        /* The transition the ledger has no state for. STATUS goes straight from
+           'sent' to an outcome, and the gap between them is where the money is
+           lost — so the path through it is worth keeping even though no field
+           holds it. */
+        if (out) note({ what: 'deal.status', from: was, to: status, ref: id });
+        return out;
       },
 
       /* What the scope did after the quote went out.
@@ -439,6 +482,10 @@
     return Object.keys(s).filter(k => s[k] === 'in').sort();
   };
 
+  // how many items are in, or null when the question was never answered. The
+  // distinction matters wherever a count gets compared to an earlier one.
+  const scopeCount = form => { const s = inScope(form); return s ? s.length : null; };
+
   /* Has the price ever actually been tested — one rule, one place.
      A loss is the evidence: it is where the edge showed up. A discount is the
      price moving. A scope that grew at the same price is the price moving
@@ -465,7 +512,8 @@
   root.PC.PROVENANCE_LABEL = PROVENANCE_LABEL;
   root.PC.CONCESSION = CONCESSION;
   root.PC.CONCESSION_LABEL = CONCESSION_LABEL;
-  if (typeof localStorage !== 'undefined') root.PC.deals = make(localStorage);
+  if (typeof localStorage !== 'undefined')
+    root.PC.deals = make(localStorage, root.PC.journal);
 
   if (typeof module !== 'undefined' && module.exports)
     module.exports = { make, priceMoved, STATUS, STATUS_LABEL,

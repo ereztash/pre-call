@@ -404,6 +404,7 @@ node tools/mint-key.js --check PC-AB23-CD4F  מה יקרה למפתח הזה, ו
 |---|---|---|
 | הטיוטה שבעבודה | `localStorage` · `postcall_draft_v1` | ב"התחל מחדש" או ב"הצעה חדשה" |
 | פנקס העסקאות | `localStorage` · `postcall_deals_v1` | ידנית, לכל עסקה |
+| יומן השינויים | `localStorage` · `postcall_journal_v1` | ידנית · 500 שורות אחרונות |
 | מפתח הייצוא | `localStorage` · `postcall_key` | ידנית |
 | התמלול | בזיכרון הטאב בלבד | בסגירת הדף |
 | פרופיל העסק (PRE-CALL) | `localStorage` · `precall_profile_v1` | בכפתור מחיקה |
@@ -428,6 +429,7 @@ assets/entry.css      הפתיחה — אותם טוקנים, צפיפות אח�
 
 assets/model.js       מנוע התמחור, טהור, ללא DOM
 assets/deals.js       פנקס העסקאות והכיול, טהור
+assets/pc-journal.js  יומן שינויים append-only — מה זז ובאיזה סדר, טהור
 assets/pc-catalog.js  מערכות, שורות סקופ, תבניות — תוכן, טהור
 assets/pc-client.js   הקריאה על הלקוח הספציפי, טהור
 assets/pc-guide.js    המדריך — הוראה אחת בכל רגע, טהור
@@ -446,7 +448,7 @@ assets/pc-ledger.js   שלב 4 על המסך
 assets/pc-history.js  שיא הביצועים של הכלי עצמו — טהור, נבדק
 assets/post-call.js   הקליפה — קריאת DOM, מצב, חיווט
 
-assets/*.test.js      562 בדיקות שרצות ב-Node בלי דפדפן
+assets/*.test.js      671 בדיקות שרצות ב-Node בלי דפדפן
 assets/journey.test.js   המסע המלא, בדפדפן אמיתי, בשלושה מנועים
 assets/a11y.test.js      axe-core · WCAG 2.1 AA על כל דף בכל מצב
 assets/perf.test.js      Core Web Vitals על טלפון מווסת
@@ -468,7 +470,7 @@ api/                  ארבע פונקציות Vercel, אופציונליות
 node assets/model.test.js       # וכן הלאה, כל חבילה בנפרד
 ```
 
-**562 בדיקות ב-24 חבילות, רצות ב-Node בלי דפדפן ובלי תלויות** — ומעליהן שתי חבילות שכן דורשות דפדפן: המסע המלא בשלושה מנועים (Chromium, Firefox, WebKit) ו-axe-core מול WCAG 2.1 AA על כל דף בכל מצב, ומדידת Core Web Vitals על טלפון עם ויסות מעבד פי 4.
+**671 בדיקות ב-21 חבילות, רצות ב-Node בלי דפדפן ובלי תלויות** — ומעליהן שלוש חבילות שכן דורשות דפדפן: המסע המלא בשלושה מנועים (Chromium, Firefox, WebKit) ו-axe-core מול WCAG 2.1 AA על כל דף בכל מצב, ומדידת Core Web Vitals על טלפון עם ויסות מעבד פי 4.
 
 הבדיקות שרצות בלי דפדפן הן לא בודקות רק חישוב:
 

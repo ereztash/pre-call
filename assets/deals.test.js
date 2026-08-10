@@ -566,5 +566,92 @@ test('priceMoved and the ceiling verdict never disagree', () => {
   });
 });
 
+console.log('\nthe ledger writes its transitions to a journal, when given one');
+/* One choke point. save/setStatus are where every mutation goes through, so
+   journaling here means a caller cannot forget — which is the mistake review
+   already caught once, when the crossing trigger was wired to two of four paths.
+
+   Injected rather than reached for, so this module stays pure and Node-testable
+   with and without it. Given no journal, nothing changes at all. */
+const J = require('./pc-journal.js');
+const withJournal = () => { const st = mem(); return { d: make(st, J.make(st)), st }; };
+
+test('a status change is journalled, from and to', () => {
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 10000 });
+  d.setStatus(a.id, 'sent');
+  const j = J.make(st).forDeal(a.id).filter(l => l.what === 'deal.status');
+  assert.ok(j.some(l => l.from === 'draft' && l.to === 'sent'),
+    'the transition the ledger has no state for: ' + JSON.stringify(j));
+});
+test('a price that moved before sending is journalled — the ledger overwrites it', () => {
+  /* priceQuoted is overwritten on every re-save, so today a price that dropped
+     from 12,000 to 10,000 while still a draft leaves no trace anywhere in the
+     product. This is the whole point of the module. */
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 12000 });
+  d.save({ id: a.id, priceQuoted: 10000 });
+  const m = J.make(st).movement(a.id);
+  assert.strictEqual(m.priceMoves, 1);
+  assert.strictEqual(m.droppedBeforeSending, true);
+  assert.strictEqual(d.get(a.id).priceQuoted, 10000, 'the ledger still holds only the latest');
+});
+test('a re-save at the same price writes nothing', () => {
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 10000 });
+  d.save({ id: a.id, client: 'ב' });
+  assert.strictEqual(J.make(st).forDeal(a.id).filter(l => l.what === 'deal.price').length, 1,
+    'only the first, which moved from nothing to 10,000');
+});
+test('a scope that grew after the quote went out is journalled', () => {
+  /* The other half of the price moving. Same money, more work — and the ledger
+     holds only the current scope, so the growth is invisible in it by
+     construction, exactly like the price. */
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 10000,
+                     form: { scope: { x: 'in', y: 'in', z: 'out' } } });
+  d.setStatus(a.id, 'sent');
+  d.save({ id: a.id, form: { scope: { x: 'in', y: 'in', z: 'in' } } });
+  const m = J.make(st).movement(a.id);
+  assert.strictEqual(m.scopeMoves, 1);
+  assert.strictEqual(m.grewAfterSending, true, 'work was added at the sent price');
+});
+test('a scope nobody answered is not journalled as a scope of zero', () => {
+  /* The null-vs-zero rule this file already enforces on `widened`: unmeasurable
+     is not the same fact as measured-and-empty. A deal saved before the scope
+     question was answered has no scope, and the first save that answers it is
+     the scope being ESTABLISHED. Journal that as 0 → 2 and every such deal
+     reports its scope as having moved, which makes scopeMoves mean nothing —
+     the same mistake priceMoves already had to be corrected for. */
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 10000 });          // no scope at all
+  d.save({ id: a.id, form: { scope: { x: 'in', y: 'in' } } });    // now answered
+  assert.strictEqual(J.make(st).movement(a.id).scopeMoves, 0,
+    'answering the scope question for the first time is not the scope moving');
+});
+test('no journal means no change in behaviour at all', () => {
+  const d = make(mem());
+  const a = d.save({ client: 'א', priceQuoted: 10000 });
+  assert.ok(d.setStatus(a.id, 'sent'), 'the ledger must work exactly as before without one');
+  assert.strictEqual(d.get(a.id).status, 'sent');
+});
+test('a journal that throws never fails a save', () => {
+  /* The inversion this must never allow: an observation failing the thing
+     observed. deals.js reports a failed write to the operator as real. */
+  const angry = { append(){ throw new Error('boom'); } };
+  const d = make(mem(), angry);
+  let rec;
+  assert.doesNotThrow(() => { rec = d.save({ client: 'א', priceQuoted: 10000 }); });
+  assert.ok(rec, 'the save must succeed even when journalling explodes');
+  assert.doesNotThrow(() => d.setStatus(rec.id, 'sent'));
+});
+test('the journal never receives a client name', () => {
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'לקוח סודי בע"מ', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won');
+  assert.ok(!JSON.stringify(J.make(st).list()).includes('סודי'),
+    'a backup carries this file — it holds ids, statuses and numbers, never names');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

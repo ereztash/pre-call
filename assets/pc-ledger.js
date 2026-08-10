@@ -253,11 +253,42 @@ function saveOutcome(id){
   announceCrossings(before);
 }
 
+/* ---------- what moved, per deal ----------
+
+   The only thing in a deal row that the deal itself cannot supply. A saved
+   deal holds one price and one scope — the current ones — because every save
+   overwrites the record whole. So a price that was 12,000 last week and is
+   10,000 today looks, from the row, exactly like a price that was always
+   10,000, and those are different facts about how this operator sells.
+
+   Two of them are worth a line. A price that dropped before the quote was
+   ever sent is a discount nobody asked for. A scope that grew after it was
+   sent is work that was added at the old price.
+
+   Silent when nothing moved, and silent for every deal saved before the
+   journal existed. A row that says "the price did not move" under all of them
+   trains the eye to skip the line where it does. */
+function movementLine(id, rows){
+  if (!PC.journal || !PC.journal.movement) return '';
+  const m = PC.journal.movement(id, rows);
+  const bits = [];
+  if (m.droppedBeforeSending)
+    bits.push(`המחיר ירד מ־${ils(m.priceFrom)} ל־${ils(m.priceTo)} <b>לפני</b> שההצעה יצאה — הנחה שאף אחד לא ביקש`);
+  else if (m.priceMoves > 0)
+    bits.push(`המחיר זז ${m.priceMoves === 1 ? 'פעם אחת' : m.priceMoves + ' פעמים'}, מ־${ils(m.priceFrom)} ל־${ils(m.priceTo)}`);
+  if (m.grewAfterSending)
+    bits.push('ההיקף גדל אחרי שההצעה נשלחה, והמחיר לא');
+  return bits.length ? `<div class="deal-mv">${bits.join('. ')}.</div>` : '';
+}
+
 const renderLedger = guard('ledger', function (){
   const box = el('ledgerBox'); if (!box) return;
   const list = PC.deals.list();
   const cal = PC.deals.calibration();
   const win = PC.deals.winRate();
+  /* Read the log once for the whole render, not once per row: every row asks
+     what moved, and each ask would otherwise re-parse the entire log. */
+  const moves = PC.journal && PC.journal.list ? PC.journal.list() : null;
 
   /* What is actually waiting, above the counts. The counts describe the
      past; this is the only line here that asks for something. */
@@ -296,6 +327,7 @@ const renderLedger = guard('ledger', function (){
         ${due ? `<span class="deal-due due-${due.state}">${esc(due.label)}</span>` : ''}
         <span class="deal-meta">${d.priceQuoted ? ils(d.priceQuoted) : '—'} · אומדן ${d.estimatedHours || '—'} ש׳ · ${d.created.slice(0,10)}</span>
       </div>
+      ${movementLine(d.id, moves)}
       ${d.process ? `<div class="deal-p">${esc(d.process)}</div>` : ''}
       <div class="deal-acts">
         ${['sent','won','lost','no_answer'].map(s =>

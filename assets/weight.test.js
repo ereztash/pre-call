@@ -74,7 +74,15 @@ const BUDGETS = {
   'index.html':     16 * 1024,
   'privacy.html':   16 * 1024,
   'pre-call.html':  48 * 1024,
-  'post-call.html': 120 * 1024
+  /* 120 → 128KB, raised on purpose when the transition journal landed and cost
+     2.5KB over the wire. Nobody reaches this page cold: index.html and
+     pre-call.html are what a first visit pays for, and both keep their tight
+     ceilings. Raising a budget is the wrong move when the growth is accidental
+     — a duplicated block, a library, an unminified copy — and the right one
+     when a page genuinely does more than it did. Trimming 200 bytes of
+     comments to hold a round number would have bought nothing and cost the
+     reason the code is the way it is. */
+  'post-call.html': 128 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');
