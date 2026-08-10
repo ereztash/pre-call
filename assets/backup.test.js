@@ -23,6 +23,13 @@ const FULL_SEED = {
   postcall_deals_v1: JSON.stringify([{ id: '1', client: 'לקוח א' }]),
   postcall_draft_v1: JSON.stringify({ fields: { q_process: 'ידני' } }),
   postcall_sender_v1: JSON.stringify({ s_name: 'דנה לוי', s_phone: '052-1234567' }),
+  /* The transition log. Added to DATA_KEYS because a history you can only rebuild
+     by living through it again is not a history — and the anti-stale-fixture test
+     below is what made this line necessary rather than optional. */
+  postcall_journal_v1: JSON.stringify([
+    { at: '2026-08-01T09:00:00.000Z', what: 'deal.status', to: 'draft', ref: 'd_1' },
+    { at: '2026-08-01T09:05:00.000Z', what: 'deal.price', from: 12000, to: 10000, ref: 'd_1' }
+  ]),
   postcall_key: 'PC-AAAA-BBBB',
   postcall_key_ok_at: '2026-08-01T00:00:00.000Z'
 };

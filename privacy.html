@@ -59,12 +59,13 @@
 
 <div class="box">
   <h3>מה נשמר, ואיפה בדיוק</h3>
-  <p class="body-p">שישה מפתחות, כולם ב-localStorage של הדפדפן — לא בענן, לא בשרת, לא מסונכרן בין מכשירים:</p>
+  <p class="body-p">שבעה מפתחות, כולם ב-localStorage של הדפדפן — לא בענן, לא בשרת, לא מסונכרן בין מכשירים:</p>
   <table class="facts">
     <tr><th>מפתח</th><th>מה יש בו</th><th>איפה</th></tr>
     <tr><td><code>precall_profile_v1</code></td><td>הפרופיל העסקי שלכם (מה מוכרים, למי, עסקה אחרונה)</td><td>PRE-CALL</td></tr>
     <tr><td><code>postcall_deals_v1</code></td><td>פנקס העסקאות שנשמרו, כולל תוצאות ושעות בפועל</td><td>POST-CALL</td></tr>
     <tr><td><code>postcall_draft_v1</code></td><td>הטופס הנוכחי שלא נשמר עדיין כעסקה</td><td>POST-CALL</td></tr>
+    <tr><td><code>postcall_journal_v1</code></td><td>יומן שינויים: מה זז בעסקה, ממה למה ומתי — סטטוסים, מחירים ומספר סעיפים בהיקף. בלי שמות ובלי טקסט חופשי, כדי שהמחיר שירד לפני שההצעה נשלחה יהיה נראה בכלל</td><td>POST-CALL</td></tr>
     <tr><td><code>postcall_sender_v1</code></td><td>מי שולח את ההצעה — השם, העסק והדרכים ליצור קשר שמודפסים על המסמך</td><td>POST-CALL</td></tr>
     <tr><td><code>postcall_key</code></td><td>מפתח הרישיון, אם הוזן (לא כלול בגיבוי — ראו למטה)</td><td>POST-CALL</td></tr>
     <tr><td><code>postcall_key_ok_at</code></td><td>מתי המפתח אומת לאחרונה מול השרת</td><td>POST-CALL</td></tr>

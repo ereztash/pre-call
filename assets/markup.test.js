@@ -647,6 +647,55 @@ test('privacy.html has balanced div tags', () => {
   const close = (privacy.match(/<\/div>/g) || []).length;
   assert.strictEqual(open, close, 'an orphan </div> reparents everything after it');
 });
+/* The README makes two counting claims about the suite, and both were stale
+   before this line existed — it said 24 packages when 21 run in Node, and
+   promised "two" browser suites while naming three. The test total moves on
+   every commit and cannot be checked without running everything, so it stays
+   prose; the package counts are static facts about the directory, so they get
+   pinned here. A new suite that nobody added to the README is exactly the drift
+   this catches. */
+test('the README counts the test packages it actually has', () => {
+  const readme = read('README.md');
+  const inNode = SCRIPTS.length && fs.readdirSync(path.join(root, 'assets'))
+    .filter(f => f.endsWith('.test.js') && !/^(journey|a11y|perf)\./.test(f)).length;
+  const browser = fs.readdirSync(path.join(root, 'assets'))
+    .filter(f => /^(journey|a11y|perf)\.test\.js$/.test(f)).length;
+  const words = { 'שתי': 2, 'שלוש': 3, 'ארבע': 4 };
+  assert.ok(new RegExp('ב-' + inNode + ' חבילות').test(readme),
+    'the README does not say ' + inNode + ' Node packages');
+  const said = Object.entries(words).find(([w]) => new RegExp(w + ' חבילות שכן דורשות דפדפן').test(readme));
+  assert.ok(said, 'the sentence counting the browser suites changed shape — re-pin it');
+  assert.strictEqual(said[1], browser,
+    'the README promises ' + said[0] + ' browser suites and there are ' + browser);
+});
+
+/* The one page whose entire job is to be factually complete. It names the
+   storage keys and says how many there are, and both go stale the moment a
+   module starts writing a new one — silently, because nothing else on the site
+   reads that page. A privacy notice that is merely out of date is still a
+   privacy notice that is wrong. */
+test('privacy.html names every key the product actually writes', () => {
+  const keys = new Set();
+  for (const f of SCRIPTS)
+    for (const m of read(f).matchAll(/'((?:pre|post)call_[a-z0-9_]+)'/g)) keys.add(m[1]);
+  assert.ok(keys.size >= 6, 'the key scan found almost nothing — the pattern drifted');
+  const undisclosed = [...keys].filter(k => !privacy.includes(k));
+  assert.deepStrictEqual(undisclosed, [],
+    'written to the visitor\'s browser and not listed on the privacy page: ' +
+    undisclosed.join(', '));
+});
+test('privacy.html counts the keys it lists correctly', () => {
+  /* The prose says how many there are in words, which no amount of editing the
+     table below it will ever update. */
+  const listed = new Set([...privacy.matchAll(/<code>((?:pre|post)call_[a-z0-9_]+)<\/code>/g)]
+    .map(m => m[1]));
+  const words = { 'חמישה': 5, 'שישה': 6, 'שבעה': 7, 'שמונה': 8, 'תשעה': 9, 'עשרה': 10 };
+  const said = Object.entries(words)
+    .find(([w]) => new RegExp(w + ' מפתחות').test(privacy));
+  assert.ok(said, 'the sentence that counts the keys changed shape — re-pin it');
+  assert.strictEqual(said[1], listed.size,
+    'the page says ' + said[0] + ' (' + said[1] + ') and the table lists ' + listed.size);
+});
 test('privacy.html has no duplicate element id', () => {
   const ids = [...privacy.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
   const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
@@ -704,6 +753,36 @@ test('the shell loads after everything it depends on', () => {
     assert.ok(order.indexOf(dep) > -1 && order.indexOf(dep) < order.indexOf('post-call.js'),
       dep + ' must load before the shell'));
 });
+/* deals.js constructs itself at the bottom of its own file —
+   make(localStorage, root.PC.journal) — so the journal has to already be a
+   global by the time that line runs. Load it afterwards and nothing breaks
+   loudly: the ledger is built with journal undefined, every note() returns
+   early, and each transition goes unrecorded in silence. deals.test.js keeps
+   passing too, because it injects a journal by hand. Only the order in the
+   markup decides whether the running product records anything. */
+test('the journal loads before the ledger that writes into it', () => {
+  const order = [...html['post-call.html'].matchAll(/<script src="assets\/([^"]+)"/g)].map(m => m[1]);
+  const j = order.indexOf('pc-journal.js'), d = order.indexOf('deals.js');
+  assert.ok(j > -1, 'pc-journal.js is not loaded by post-call.html at all');
+  assert.ok(j < d, 'deals.js captures PC.journal at load time, so loading it ' +
+    'first records nothing — and fails without a single error');
+});
+test('what the journal records is rendered somewhere the operator sees it', () => {
+  /* A log nothing reads back is storage, not a feature. The deal row is the
+     only place that can show it, because it is the only place a specific deal
+     is on screen. */
+  assert.ok(/journal\s*&&[\s\S]{0,120}\.movement\(|journal\.movement\(/
+    .test(read('assets/pc-ledger.js')),
+    'the journal is written on every transition and read by nobody');
+});
+test('a visit is recorded, so the sequence has an anchor', () => {
+  /* Without it the log is a pile of deal transitions with no notion of when the
+     operator came back — which is the one funnel question the telemetry row can
+     never answer, since it carries no session id. */
+  assert.ok(/journal[\s\S]{0,80}what:\s*'session'/.test(read('assets/post-call.js')),
+    'nothing appends a session line on load');
+});
+
 /* A top-level const declared twice across classic scripts is a SyntaxError,
    and the file that loses simply does not run — the page half-boots with
    nothing obvious to point at. Only names loaded by the SAME page can

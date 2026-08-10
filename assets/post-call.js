@@ -1491,3 +1491,10 @@ applyEntryRoute();   // after the renders above, so there is something to land o
    the code, where it looks like one path. */
 window.addEventListener('hashchange', applyEntryRoute);
 track('opened');
+/* One line per visit, so the transitions underneath it have something to be
+   ordered against. track('opened') leaves the machine and comes back as a
+   count; this stays here and gives the operator's own sequence — the second
+   visit, the fourth — which a count of visits from everybody cannot.
+   After the renders on purpose: a write on the way in must never be able to
+   delay the page coming up, and PC.journal swallows its own failures. */
+if (PC.journal) PC.journal.append({ what: 'session', to: 'post-call' });

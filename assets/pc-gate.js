@@ -40,12 +40,17 @@
 const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
 
 /* Fill in ONE of these to start selling. `contact` is where a buyer asks for a
-   key: 'mailto:you@example.com' or 'https://wa.me/9725...'. It is deliberately
-   empty in the repository — whatever goes here is published on a page anyone
-   can read and a crawler can scrape, so which address to expose is the
-   operator's call, not a default somebody inherits. */
+   key: 'mailto:you@example.com' or 'https://wa.me/9725...'.
+
+   Whatever goes here is published on a page anyone can read and a crawler can
+   scrape, which is why it is never a default somebody inherits — a fork that
+   forgets to change it sends its buyers to this operator. Anyone cloning this
+   repository to sell their own copy has to replace the line below.
+
+   International format, no leading zero: wa.me silently opens nothing for a
+   local number. gate.test.js pins the shape. */
 const SALES = {
-  contact: '',
+  contact: 'https://wa.me/972524545963',
   turnaround: 'בדרך כלל תוך כמה שעות, ולא יותר מיום עסקים אחד'
 };
 const KEY_SHAPE = /^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
@@ -219,6 +224,18 @@ const setText = (id, s) => { const n = el(id); if (n) n.textContent = s; };
    tab behind in most browsers. An https route (wa.me, a form) must NOT replace
    it: the buyer is mid-proposal, and navigating away from an unsaved document
    to a chat window is losing their work to open a shop. */
+/* What to print next to the button, given what is behind it. A number is kept in
+   international form with the plus: it is the only form that works from abroad
+   and the only one WhatsApp itself will accept, and dropping the country code to
+   look local would produce a number that fails for exactly the caller who has to
+   type it by hand. Anything unrecognised is printed as it stands rather than
+   mangled — better a URL on screen than a wrong address. */
+function contactLabel(){
+  const c = (SALES.contact || '').trim();
+  const wa = c.match(/^https:\/\/wa\.me\/(\d+)$/i);
+  return wa ? '+' + wa[1] : c.replace(/^mailto:/i, '');
+}
+
 function openContact(){
   if (/^mailto:/i.test(SALES.contact)) window.location.href = SALES.contact;
   else window.open(SALES.contact, '_blank', 'noopener');
@@ -240,8 +257,12 @@ function renderBuyRoute(){
     setText('payBtn', 'בקשו מפתח בהודעה');
     setText('buyHow', 'התשלום נסגר איתי ישירות, והמפתח נשלח ביד — ' + SALES.turnaround +
       '. בהודעה כתבו שם, ואת המייל שאליו לשלוח את המפתח.');
-    // strip the scheme: mailto:a@b reads as an address, wa.me/972... as a link
-    setText('buyContact', SALES.contact.replace(/^mailto:/i, ''));
+    /* The text under the button is the fallback for the case where the button
+       did nothing — a blocked popup, no WhatsApp on this machine. So it has to
+       be the thing itself and not a route to it: an email address reads as an
+       address once the scheme is stripped, and a wa.me link is worth nothing
+       typed by hand, where the phone number behind it can be dialled or saved. */
+    setText('buyContact', contactLabel());
     show('buyRoute', true);
     if (pay) pay.onclick = openContact;
     return;

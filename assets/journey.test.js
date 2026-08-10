@@ -369,6 +369,49 @@ async function journey(engineName, base) {
     await c.close();
   });
 
+  /* A price that moved is the one thing a deal row cannot get from the deal.
+     The record holds the current price and nothing else — every earlier value
+     was overwritten by the save that replaced it — so a quote that started at
+     12,000 and went out at 10,000 reads, from the ledger, exactly like one that
+     was 10,000 all along.
+
+     Driven through the running page rather than asserted on the source,
+     because everything load-bearing here is wiring: deals.js captures the
+     journal once, at the moment its own file is evaluated. Get the script
+     order wrong and every call below still succeeds, the save still returns a
+     deal, nothing throws — and no transition is recorded. Only a browser that
+     actually boots the page in order can tell the difference. */
+  await test(label('a price that moved before the quote went out says so on the row'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(400);
+    const before = await fresh.evaluate(() => document.querySelectorAll('.deal-mv').length);
+    assert.strictEqual(before, 0, 'a page with no deals on it claimed something moved');
+
+    const wired = await fresh.evaluate(() => {
+      const d = PC.deals.save({ client: 'מסעדת הדר', priceQuoted: 12000, estimatedHours: 20,
+                                form: { fields: {}, systems: [], scope: {} } });
+      PC.deals.save({ id: d.id, priceQuoted: 10000 });   // thought better of it
+      PC.deals.setStatus(d.id, 'sent');                  // and only then sent it
+      return { id: d.id, journalled: PC.journal.forDeal(d.id).length };
+    });
+    assert.ok(wired.journalled >= 3,
+      'the running page recorded ' + wired.journalled + ' transitions for three ' +
+      'mutations — deals.js was built before the journal was a global');
+
+    await fresh.reload();
+    await fresh.waitForTimeout(600);
+    const row = await fresh.evaluate(() =>
+      (document.querySelector('.deal-mv') || {}).textContent || '');
+    assert.ok(/12,000/.test(row) && /10,000/.test(row),
+      'the row shows one price where two existed: "' + row + '"');
+    assert.ok(/לפני/.test(row),
+      'a discount given before anyone asked reads the same as one that was ' +
+      'negotiated, which is the distinction worth having: "' + row + '"');
+    await c.close();
+  });
+
   await test(label('#ledger works as an in-page link too, not only across a reload'), async () => {
     const c = await browser.newContext();
     const fresh = await c.newPage();
