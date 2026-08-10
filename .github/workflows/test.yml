@@ -65,6 +65,8 @@ jobs:
         run: node api/event.test.js
       - name: the health endpoint
         run: node api/health.test.js
+      - name: where a usage event goes, and whether it is kept
+        run: node api/sink.test.js
       - name: what the tool's own advice has been worth
         run: node assets/history.test.js
       - name: the key minter agrees with the gate that has to accept its keys
