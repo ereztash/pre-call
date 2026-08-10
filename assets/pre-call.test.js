@@ -26,6 +26,11 @@ const test = (name, fn) => {
 };
 
 const CONTENT_SRC = fs.readFileSync(path.join(__dirname, 'pre-call-content.js'), 'utf8');
+/* PRE-CALL now reads the ledger, so the real deals.js is evaluated into the fake
+   page rather than the tenure summary being stubbed. Stubbing it would let this
+   file pass while the two modules disagreed about what a closed deal is — which
+   is the whole reason the summary lives in deals.js and not here. */
+const DEALS_SRC = fs.readFileSync(path.join(__dirname, 'deals.js'), 'utf8');
 const SRC = fs.readFileSync(path.join(__dirname, 'pre-call.js'), 'utf8');
 
 /* A minimal element: enough surface for this file's DOM calls
@@ -65,7 +70,15 @@ function page() {
       removeItem: k => { delete store[k]; }
     },
     navigator: { clipboard: null }, // absent on purpose: exercises the execCommand fallback path
-    window: { scrollTo() {}, print() {}, addEventListener() {} },
+    /* The three window methods this file calls. `window` itself is wired to the
+       context object below, because in a browser window IS the global — and the
+       old shape, a separate literal, was not merely inaccurate: every module in
+       this project ends with
+         })(typeof window !== 'undefined' ? window : globalThis)
+       so a standalone `window` object received PC and nothing looked it up as a
+       global. deals.js loaded fine and `typeof PC` was still 'undefined'. That
+       hid a real cross-module path rather than a test detail. */
+    scrollTo() {}, print() {}, addEventListener() {},
     document: {
       getElementById,
       querySelectorAll: () => [],
@@ -82,6 +95,8 @@ function page() {
     setTimeout, clearTimeout
   };
   vm.createContext(ctx);
+  ctx.window = ctx;          // as in a browser, and as every module here assumes
+  vm.runInContext(DEALS_SRC, ctx);
   vm.runInContext(CONTENT_SRC, ctx);
   vm.runInContext(SRC, ctx);
 
@@ -568,6 +583,81 @@ test('a throwing parseBiz is caught the same way', () => {
   p.call('parseBiz');
   assert.ok(!orig('errBoundary').classList.contains('hidden'));
   assert.ok(orig('errBoundary').innerHTML.includes('חילוץ השדות'));
+});
+
+console.log('\nthe script leans on what the operator has actually done');
+/* A beginner and a veteran need opposite things from the same twelve questions.
+   The beginner has no number of their own, so the anchor in question 11 rests on
+   an estimate; the veteran has one and gives it away before being asked. Neither
+   is knowable by asking "how experienced are you" — years in business say nothing
+   about whether somebody can hold a price. The ledger already knows, so the
+   emphasis is derived from it, the same rule the rest of the product follows.
+
+   One line, by priority, never three. The script's whole design is that it is
+   read aloud under pressure. */
+const withLedger = deals => {
+  const p = page();
+  p.store['postcall_deals_v1'] = JSON.stringify(deals);
+  p.set('f_what', 'מסדר תהליכי גבייה לעסקים קטנים');
+  p.set('f_gain', 'כ-40,000 ₪');
+  p.call('build');
+  return p.run("document.getElementById('outArea').innerHTML");
+};
+const past = (over = {}) => Object.assign({
+  id: 'd' + Math.random().toString(36).slice(2), status: 'won', priceQuoted: 10000,
+  outcome: { closedPrice: 10000, concession: 'unknown' }
+}, over);
+
+test('a discount the operator offered unasked is named before the call, not after', () => {
+  /* The ledger records this after delivery, when nothing can be done about it.
+     Prep is the only moment it can change behaviour. */
+  const out = withLedger([
+    past({ outcome: { closedPrice: 8000, concession: 'i_offered' } }),
+    past({ outcome: { closedPrice: 9000, concession: 'i_offered' } }),
+    past()
+  ]);
+  assert.ok(/ירדתם.{0,4}במחיר/.test(out),
+    'two self-offered discounts on record and the prep says nothing: ' + out.slice(0, 300));
+});
+test('a price that has never moved is reported as untested, not as a good record', () => {
+  const out = withLedger([past(), past(), past()]);
+  assert.ok(/לא בדקתם|לא נבדק/.test(out),
+    'three full-price closes and no line about never having tested the ceiling');
+  assert.ok(!/מצוין|כל הכבוד/.test(out), 'this is not praise');
+});
+test('proposals with nothing closed yet point at his numbers, not at an estimate', () => {
+  const out = withLedger([
+    { id: 's1', status: 'sent', priceQuoted: 9000 },
+    { id: 's2', status: 'lost', priceQuoted: 9000 }
+  ]);
+  assert.ok(/אין לכם מספר משלכם/.test(out),
+    'a ledger with no close in it gives no orientation at all');
+});
+test('no ledger at all says nothing, rather than naming the other tool', () => {
+  /* Somebody who has never opened POST-CALL is the likeliest person holding this
+     script. Telling them what their ledger does not contain is a line about a tool
+     they may not know exists — and it would also put a heading over a prep list
+     that should have stayed empty, which this file has protected all along. */
+  const out = withLedger([]);
+  assert.ok(!/פנקס/.test(out), 'mentioned a ledger to somebody who has no ledger');
+});
+test('only one tenure line appears, whatever the ledger holds', () => {
+  const out = withLedger([
+    past({ outcome: { closedPrice: 8000, concession: 'i_offered' } }), past(), past()
+  ]);
+  const hits = ['ירדתם', 'לא בדקתם', 'אין לכם מספר משלכם']
+    .filter(s => out.includes(s));
+  assert.strictEqual(hits.length, 1, 'the script is read aloud — it gets one line: ' + hits);
+});
+test('a broken or absent ledger never stops a script from building', () => {
+  /* PRE-CALL worked with no ledger at all for its whole life, and must keep
+     working: somebody who has never opened POST-CALL is the likeliest user of it. */
+  const p = page();
+  p.store['postcall_deals_v1'] = 'not json at all';
+  p.set('f_what', 'מסדר תהליכי גבייה');
+  p.call('build');
+  assert.ok(p.run("document.getElementById('outArea').innerHTML").includes('מסדר תהליכי גבייה'),
+    'a corrupt ledger took the script down with it');
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

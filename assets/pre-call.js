@@ -368,6 +368,48 @@ function render(){
   if(S.ppair==='2') openers.push('שניים בשיחה. בשאלת הבעלות, בקשו תשובה מכל אחד בנפרד. אם ענו שונה, ההצעה מותנית בסבב שני עם שניהם.');
   if(S.ptext) openers.push('יש לכם טקסט ציבורי עליו. השוו בשאלה 6 בין מה שהוא כתב על עצמו למה שהוא אומר עכשיו. הפער הוא הסימן.');
   if(!S.unit) openers.push('אין לכם יחידה תחומה. שימו לב לשאלה 8. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.');
+
+  /* --- what the ledger already knows about the person holding this script ---
+     A beginner and a veteran need opposite things from the same twelve questions.
+     The beginner has no number of their own, so the anchor in question 11 leans on
+     an estimate. The veteran has one, and gives it away before being asked.
+
+     Neither is answerable by asking "how experienced are you": years in business
+     say nothing about whether somebody can hold a price, and the ledger says it
+     exactly — how many deals were priced, and how many held. So this is derived,
+     like everything else here, and no question was added to any form.
+
+     One line, by priority, never three: this page is read aloud under pressure and
+     the whole design of it is one instruction at a time.
+
+     Guarded on every level because PRE-CALL has worked with no ledger at all for
+     its entire life and must keep working — somebody who has never opened
+     POST-CALL is the likeliest person to be holding this. A corrupt store reads as
+     an empty one inside deals.js, which lands on the first-timer line, and that is
+     the right answer for it. */
+  const ten = (typeof PC !== 'undefined' && PC.deals && PC.deals.tenure)
+    ? PC.deals.tenure() : null;
+  if(ten){
+    if(ten.selfOffered > 0){
+      openers.push('בפנקס שלכם ' + (ten.selfOffered === 1 ? 'עסקה אחת שבה ירדתם' :
+        ten.selfOffered + ' עסקאות שבהן ירדתם') + ' במחיר לפני שהלקוח ביקש. ' +
+        'שאלה 12 היא המקום שזה מתחיל בו — החליטו עכשיו מה לא תיתנו, לפני שהוא שואל.');
+    } else if(ten.closed >= 2 && !ten.discounted){
+      openers.push(ten.closed + ' העסקאות שסגרתם נסגרו במחיר שנקבתם, ואף אחת לא ירדה — ' +
+        'כלומר לא בדקתם את התקרה שלכם. בשאלה 11 נקבו במספר גבוה מהאחרון, ותקשיבו לתשובה.');
+    /* `total > 0` and not merely `closed === 0`, which is the difference between
+       a ledger with nothing closed in it and no ledger at all. Somebody who has
+       never opened POST-CALL is the likeliest person holding this script, and
+       telling them what their ledger does not contain would be a line about a tool
+       they may not know exists. Silence is the right output there — and it is also
+       what keeps an untriggered prep list empty rather than rendering a heading
+       over one sentence, which a test in this file has protected since before any
+       of this. */
+    } else if(ten.total > 0 && ten.closed === 0){
+      openers.push('יש בפנקס הצעות, אבל אף אחת לא נסגרה — כלומר אין לכם מספר משלכם לעוגן. ' +
+        'בשאלות 2 ו-8 תשמעו את המספרים שלו — הם עדיפים על אומדן שלכם.');
+    }
+  }
   if(S.src) openers.push(`הלקוח האחרון שלכם הגיע דרך ${SRC_LABEL[S.src]||S.src}. בשאלה 5 תשמעו מאיפה הגיע הלקוח שלו — אם זה ערוץ אחר משלכם, זה סימן שהערוץ ששכנע אתכם לא בהכרח ישכנע אותו.`);
 
   if(S.last && S.gain) priv.push(`העסקה האחרונה שלכם: ${S.last}. הרווח שהערכתם אצל הלקוח: ${S.gain}. היחס הזה הוא הכיול שלכם בראש לפני שאלה 11.`);

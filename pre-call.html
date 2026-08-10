@@ -286,6 +286,13 @@
 
 </div>
 
+<!-- Read-only here. The call script's emphasis depends on whether this operator
+     can hold a price, which the ledger knows and no question could ask — years in
+     business say nothing about it. Same tested module POST-CALL uses, rather than
+     a second parser of the same storage key. PRE-CALL still works with no ledger
+     at all: every read of it is guarded, and an empty or corrupt store lands on
+     the first-timer line, which is the right answer for it. -->
+<script src="assets/deals.js"></script>
 <script src="assets/pc-backup.js"></script>
 <script src="assets/pre-call-content.js"></script>
 <script src="assets/pre-call.js"></script>

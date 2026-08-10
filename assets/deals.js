@@ -271,6 +271,37 @@
       remove(id) { return write(read().filter(d => d.id !== id)); },
       clear() { try { storage.removeItem(KEY); return true; } catch (e) { return false; } },
 
+      /* What this operator has actually done, for a caller that needs the facts
+         without the whole track record. PRE-CALL reads it: the emphasis in a call
+         script should depend on whether the person can hold a price, and years in
+         business say nothing about that while the ledger says it exactly.
+
+         Facts only — no verdict. `untested` deliberately does not live here even
+         though the inputs do, because pc-history.js ceiling() already owns that
+         judgement together with its threshold and its wording, and a second copy
+         is how the two would come to disagree. A caller with a simpler question
+         ("has a price ever moved at all") can read `discounted` and answer it
+         without borrowing a verdict calibrated for something else. */
+      tenure() {
+        const all = read();
+        const won = all.filter(d =>
+          d.status === 'won' && d.outcome && d.outcome.closedPrice > 0);
+        const h = api.priceHold();
+        const bc = h.byConcession || {};
+        return {
+          /* Reported so a caller can tell "no ledger" from "a ledger with nothing
+             closed in it". PRE-CALL needs the difference: somebody who has never
+             opened POST-CALL should not be told what their ledger does not
+             contain, and somebody with three sent proposals and no close should. */
+          total: all.length,
+          closed: won.length,
+          bestClosed: won.length
+            ? won.reduce((m, d) => Math.max(m, +d.outcome.closedPrice), 0) : null,
+          discounted: h.discounted,
+          selfOffered: bc.i_offered ? bc.i_offered.n : 0
+        };
+      },
+
       /* Estimate-versus-actual. Deliberately refuses to report anything under
          five deliveries: a ratio from two jobs is noise wearing a number, and
          this whole module exists because a confident number without evidence
