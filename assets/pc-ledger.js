@@ -68,11 +68,16 @@ function loadDeal(id){
   scrollToEl('proposal', 'start');
 }
 
-function saveCurrentDeal(){
+/* `announce` exists for markSent below, which saves and then writes its own offer
+   to the same bar. Announcing here would put the news above the offer and then be
+   overwritten by it; markSent defers to the end instead. */
+function saveCurrentDeal(announce){
+  const before = announce === false ? null : reportNow();
   const rec = PC.deals.save(dealSnapshot());
   if (!rec) { flashDoc('השמירה נכשלה — ייתכן שאחסון הדפדפן חסום'); return; }
   currentDealId = rec.id;
   renderLedger(); flashDoc('נשמר'); track('deal_saved');
+  if (announce !== false) announceCrossings(before);
 }
 
 /* The emotional peak of the whole product is the moment a proposal worth
@@ -81,11 +86,14 @@ function saveCurrentDeal(){
    operator is willing to do one more thing, and the one thing worth doing
    is the thing that makes them come back. */
 function markSent(){
-  if (!currentDealId) saveCurrentDeal();
+  const before = reportNow();
+  if (!currentDealId) saveCurrentDeal(false);
   if (!currentDealId) return;
   PC.deals.setStatus(currentDealId, 'sent');
   renderLedger(); track('deal_sent');
   offerFollowup(currentDealId);
+  // last, so the offer headlines and the news sits under it rather than instead
+  announceCrossings(before);
 }
 
 /* No server here means the product cannot notify anybody, ever. What it
@@ -136,11 +144,19 @@ function flashDoc(msg){
    while calibration is the thing the product argues it is for. */
 function setDealStatus(id, s){
   const before = PC.deals.get(id);
+  const wasSayable = reportNow();
   PC.deals.setStatus(id, s);
   renderLedger();
   if (s === 'sent' && (!before || before.status !== 'sent')) offerFollowup(id);
+  /* Marking one won or lost can be the sixth DECIDED proposal, which is what makes
+     the ceiling question answerable. Missing this path meant the commonest way a
+     crossing happens was the one that never said so. Raised in review. */
+  announceCrossings(wasSayable);
 }
 
+/* No crossing check here, and that is by construction rather than by oversight:
+   deleting a deal can only ADD to the cannot-say list, and crossed() is a
+   one-directional difference, so it would return nothing every time. */
 function removeDeal(id){
   if (currentDealId === id) currentDealId = null;
   PC.deals.remove(id); renderLedger();
@@ -206,11 +222,17 @@ function announceCrossings(before){
   const gained = PC.history.crossed(before, reportNow());
   if (!gained.length) return;
   const bar = el('draftNote'); if (!bar) return;
-  bar.innerHTML = '<b>' + (gained.length === 1
+  /* Its own block, and APPENDED rather than written over. The follow-up offer
+     claims this same bar and it carries a button and a deadline, so it outranks a
+     piece of news — but clobbering one with the other would leave telemetry
+     counting an announcement nobody could read. Both stand, the offer first. */
+  const line = '<div><b>' + (gained.length === 1
       ? 'עכשיו אפשר לומר משהו נוסף:'
       : 'עכשיו אפשר לומר עוד ' + gained.length + ' דברים:') + '</b> ' +
     gained.map(esc).join(' · ') +
-    '<span class="ledger-act-n">הפאנל "כמה הייעוץ הזה היה שווה לך" עודכן.</span>';
+    '<span class="ledger-act-n">הפאנל "כמה הייעוץ הזה היה שווה לך" עודכן.</span></div>';
+  const claimed = !bar.classList.contains('hidden') && bar.innerHTML.trim();
+  bar.innerHTML = claimed ? bar.innerHTML + line : line;
   show('draftNote', true);
   track('finding_unlocked');
 }

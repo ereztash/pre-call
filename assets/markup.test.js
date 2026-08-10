@@ -484,21 +484,31 @@ test('scope drift reaches the panel instead of being computed and discarded', ()
   assert.ok(/hold\.widened/.test(ledger),
     'deals.js reports widened and nothing renders it — dead code shaped like a finding');
 });
-test('a threshold crossing is announced where the action caused it', () => {
+test('a threshold crossing is announced on every path that can cause one', () => {
   /* The only trigger in this product that needs no channel: there is no server, so
      nothing can be pushed, but a crossing is caused by an action inside the tool
-     and the tool is therefore already open. crossed() would be dead code without
-     both call sites, and the two actions that can cause one are recording an
-     outcome and entering a past deal. */
+     and the tool is therefore already open.
+
+     Raised in review, and the objection was right: the first version wired only
+     two of the paths. There are six ledger mutations, and four of them can remove
+     an item from unknowns() — saving a proposal can complete a method or
+     provenance bucket, marking one won can be the sixth decided deal, and both
+     recording an outcome and entering a past deal already did. Announcing on two
+     of four means the panel silently gains a finding in the commonest flows.
+
+     remove() is the fifth and needs nothing: deleting a deal can only ADD to the
+     cannot-say list, and crossed() is a one-directional difference, so it returns
+     nothing there by construction rather than by omission. */
   const ledger = read('assets/pc-ledger.js');
   assert.ok(/crossed\(/.test(ledger), 'crossed() is computed nowhere — dead code');
+  const snaps = (ledger.match(/= reportNow\(\)/g) || []).length;
   const calls = (ledger.match(/announceCrossings\(/g) || []).length;
-  assert.ok(calls >= 3,
-    'expected the helper plus both call sites (outcome recorded, past deal added), found ' +
-    calls + ' references');
-  assert.ok(/const before = reportNow\(\)/.test(ledger),
-    'a crossing is a difference — without a snapshot taken BEFORE the mutation ' +
-    'there is nothing to difference against');
+  assert.ok(snaps >= 4,
+    'a crossing is a difference, so each announcing path needs a snapshot taken ' +
+    'BEFORE its mutation. Found ' + snaps + ', expected 4 ' +
+    '(saveCurrentDeal, markSent, setDealStatus, saveOutcome, addPastDeal — ' +
+    'markSent may share saveCurrentDeal\'s)');
+  assert.ok(calls >= 5, 'expected the helper plus one call per path, found ' + calls);
 });
 test('the ceiling finding reaches the panel', () => {
   /* winRate() was computed in deals.js and printed as a score from the day the
