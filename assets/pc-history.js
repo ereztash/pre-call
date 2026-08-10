@@ -262,9 +262,21 @@
   function provenance(deals, labels) {
     const known = labels ? Object.keys(labels) : null;
     const ok = v => !!v && (!known || known.indexOf(v) !== -1);
+    /* One value carries an ambiguity the others do not. 'prompted' used to be
+       the form's default, so a stored 'prompted' cannot be told apart from a
+       question nobody touched by looking at the value — and this panel claims
+       every row is a choice somebody made. A record that was genuinely answered
+       carries the flag collectDraft() writes; one that was not is unattributed,
+       which the panel already discloses by name.
+       The other three were never a default, so demanding a flag from them would
+       throw away real answers from every record written before the flag existed.
+       Raised in review, and it is the reason the disclaimer that used to sit in
+       unknowns() could go rather than being reworded. */
+    const answered = d => !!(d.form && d.form.provenanceAnswered);
+    const usable = (v, d) => ok(v) && (v !== 'prompted' || answered(d));
     return bucketBy(deals, 'provenance', d => {
-      if (ok(d.provenance)) return d.provenance;
-      return d.form && ok(d.form.q_provenance) ? d.form.q_provenance : null;
+      if (usable(d.provenance, d)) return d.provenance;
+      return d.form && usable(d.form.q_provenance, d) ? d.form.q_provenance : null;
     }, labels);
   }
 
@@ -372,19 +384,16 @@
        on screen said so. Excluding a row quietly and excluding it visibly are
        two different products, and this panel is the one that says what it
        cannot answer. */
-    /* The standing caveat on this axis, and it does not resolve with more rows.
-       One of the four is the form's own default, so its group necessarily mixes
-       deals where that was chosen with deals where the question was never
-       touched. Said out loud rather than left for the reader to discover,
-       because a group that looks measured and is partly a default is worse than
-       one nobody claims anything about. Raised in review, and it is a limit of
-       the input rather than of the arithmetic. */
-    if (p.rows.some(r => r.provenance === 'prompted')) out.push({
-      what: 'הקבוצה "הוא נקב אחרי שאלה"',
-      need: 0,
-      text: 'זו גם ברירת המחדל של הטופס, ולכן היא כוללת גם הצעות שבהן לא נגעת בשאלה בכלל. ' +
-            'שלוש הקבוצות האחרות נבחרות במפורש.'
-    });
+    /* A caveat used to live here saying that one of the four groups doubled as
+       the form's default, so it necessarily mixed deals where somebody chose it
+       with deals where nobody touched the question. It is gone because it stopped
+       being true: the form's default is now 'unset', which is not one of the
+       four and never becomes a group. Every row in this breakdown is a choice
+       somebody made.
+
+       Retired rather than kept as reassurance. A disclaimer that no longer
+       describes the code is worse than none — it teaches the reader to discount
+       the ones that do. */
 
     if (p.unattributed) out.push({
       what: 'הצעות בלי מקור למספר',

@@ -60,6 +60,16 @@ test('confidence rises with the number of signals actually present', () => {
   assert.ok(thick.confidence > thin.confidence);
   assert.strictEqual(thick.confidence, 1);
 });
+test('the unanswered default is not a signal, and does not inflate confidence', () => {
+  /* Raised in review. clientProfile() passes the form's value verbatim, so with
+     the new default it passes the non-empty string 'unset' — and a truthiness
+     check counted that as a filled field. A form with one number in it reported
+     40% confidence on the strength of a question nobody had answered. */
+  assert.strictEqual(read({ freq: 20, freqUnit: 52, provenance: 'unset' }).confidence, 0.2,
+    'an explicit "not answered" is the absence of a signal, not one');
+  assert.strictEqual(read({ freq: 20, freqUnit: 52, provenance: 'unprompted' }).confidence, 0.4,
+    'a real answer still counts');
+});
 test('a read always says what it was based on', () => {
   const p = read({ systems: ['ERP'], decider: 'ההנהלה' });
   assert.ok(p.evidence.length, 'an inference with no stated basis cannot be checked');
@@ -91,6 +101,30 @@ test('a number the operator invented is not quoted back at the client', () => {
   assert.ok(a.changes.some(c => /ROI/.test(c)));
   assert.ok(a.focus.includes('q_provenance'));
 });
+test('a number nobody has vouched for yet is not quoted back either', () => {
+  /* The form's default used to be 'prompted', so an untouched question was
+     stored as though it had been answered and the ROI paragraph went out on the
+     strength of it. The default is now an explicit "not answered", and the rule
+     the rest of this module already follows decides the rest: a figure the tool
+     cannot attribute to the client is a figure it may not quote to the client.
+     Fail closed, and say which of the two reasons it is. */
+  const a = adapt({ provenance: 'unset', freq: 20, freqUnit: 52 });
+  assert.strictEqual(a.suppressRoi, true);
+  assert.ok(a.focus.includes('q_provenance'));
+  assert.ok(a.changes.some(c => /לא סימנת|לא נרשם/.test(c)),
+    'suppressed for a different reason than "the number is yours" — say which: ' +
+    JSON.stringify(a.changes));
+  assert.ok(!a.changes.some(c => /הערכה שלך/.test(c)),
+    'an unanswered question is not the same claim as "you estimated it"');
+});
+test('an absent provenance behaves the same as an explicit unanswered one', () => {
+  /* read() used to default a missing value to 'none', which is a real answer
+     meaning the client named no figure — so an absent value was read as
+     somebody having said so. It defaults to 'unset' now, and this pins that:
+     a form that was never touched must not land on an answer by accident. */
+  assert.strictEqual(adapt({}).suppressRoi, true,
+    'nothing recorded cannot license quoting the number');
+});
 test('a number the client volunteered is kept', () => {
   assert.strictEqual(adapt({ provenance: 'unprompted' }).suppressRoi, false);
 });
@@ -105,12 +139,25 @@ test('someone burned before gets a handover clause, not a reassuring sentence', 
   assert.ok(h, 'no handover clause');
   assert.ok(/על שמכם|בעצמכם/.test(h.p), 'the clause has to actually transfer something');
 });
-test('nothing known changes nothing', () => {
+test('nothing known infers nothing, and licenses nothing either', () => {
+  /* Retuned when the form gained an explicit unanswered default, and the split
+     is the point. Inference and permission are two different things, and this
+     test used to assert one rule over both.
+
+     Nothing known must still invent nothing: the validity stays at its default,
+     no clause is added, and the panel says nothing — silence remains the right
+     output for no evidence.
+
+     But suppressRoi is not an inference about the client, it is a permission to
+     quote a figure back to him as his own, and the answer with no evidence is
+     no. It costs nothing on an empty form, because the paragraph only exists
+     once there is an annual value. */
   const a = adapt({});
   assert.strictEqual(a.validityDays, 14);
-  assert.strictEqual(a.suppressRoi, false);
   assert.deepStrictEqual(a.clauses, []);
   assert.deepStrictEqual(a.changes, [], 'silence is the correct output for no evidence');
+  assert.strictEqual(a.suppressRoi, true,
+    'an empty form has said nothing, and nothing does not license a quotation');
 });
 test('every change is explained, never applied silently', () => {
   [{ decider: 'ההנהלה' }, { systems: ['ERP'] }, { provenance: 'mine' }, { prev: 'x' }]

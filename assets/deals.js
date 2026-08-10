@@ -28,11 +28,18 @@
      and nothing has ever read it. Promoting it to a field of its own is what
      lets the track record group by it, the way it already groups by pricedBy.
 
-     Four values, not three. 'none' is an answer: the client never named a
-     figure at all. That is a different fact from a deal saved before anyone
-     was asked, and folding the two together would hide the first inside the
-     second. */
-  const PROVENANCE = ['unprompted', 'prompted', 'mine', 'none'];
+     Four answers, and a fifth value that is not one. 'none' is an answer: the
+     client named no figure at all. 'unset' is the form's default and means
+     nobody has said yet — a different fact from every answer, and the reason it
+     exists is that 'prompted' used to hold that job. An untouched question was
+     therefore stored as an answer, counted as one in the track record, and
+     quoted to the client as one.
+
+     'unset' is listed here so it survives a save, and deliberately absent from
+     the label map below, because that map is what pc-history.js uses as its set
+     of buckets. So it can be stored, and it can never become a group the panel
+     makes a claim about. */
+  const PROVENANCE = ['unprompted', 'prompted', 'mine', 'none', 'unset'];
   const PROVENANCE_LABEL = {
     unprompted: 'הוא נקב מעצמו',
     prompted:   'הוא נקב אחרי שאלה',
@@ -159,9 +166,10 @@
          own bucket in the track record, which is a claim assembled from a
          string nobody defined. */
       provenanceOf(d) {
+        // 'unset' is storable but is not an attribution, so it reads as none
+        const real = v => valid(v) && v !== 'unset' ? v : null;
         if (!d) return null;
-        if (valid(d.provenance)) return d.provenance;
-        return d.form && valid(d.form.q_provenance) ? d.form.q_provenance : null;
+        return real(d.provenance) || (d.form ? real(d.form.q_provenance) : null);
       },
 
       remove(id) { return write(read().filter(d => d.id !== id)); },
