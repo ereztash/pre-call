@@ -253,6 +253,102 @@ test('the labels come from the model, so the two can never drift apart', () => {
   assert.strictEqual(m.rows[0].label, M.METHOD_LABEL.market);
 });
 
+console.log('\nwhere the number came from, as a track record');
+/* Same shape as methods() above, on the axis the ledger has been storing and
+   never reading. The point of grouping by it is that the four values are not
+   interchangeable inputs to the same calculation — a figure the client named
+   unprompted and a figure you estimated for him are different kinds of claim,
+   and if they close differently the operator should be the one to see it. */
+const P = require('./deals.js');
+const prov = (provenance, status, price, closed) => ({
+  id: 'p' + (++seq), client: 'ל' + seq, status, priceQuoted: price,
+  provenance, created: '2026-01-01T00:00:00.000Z',
+  outcome: closed == null ? null : { closedPrice: closed, actualHours: 0 }
+});
+
+test('groups by provenance and holds to the same threshold as the methods table', () => {
+  const r = H.provenance([prov('unprompted', 'won', 10000, 10000),
+                          prov('unprompted', 'won', 8000, 8000)], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.rows[0].quoted, 2);
+  assert.strictEqual(r.rows[0].enough, false,
+    'two quotes is no more a finding here than it is about a pricing method');
+});
+test('at three it reports, and averages only the discounts that happened', () => {
+  const r = H.provenance([
+    prov('mine', 'won', 10000, 10000),
+    prov('mine', 'won', 10000, 8000),    // 20% off
+    prov('mine', 'lost', 10000, null)
+  ], P.PROVENANCE_LABEL);
+  const row = r.rows[0];
+  assert.strictEqual(row.enough, true);
+  assert.strictEqual(row.quoted, 3);
+  assert.strictEqual(row.winRate, 0.67, 'two won of three decided');
+  assert.strictEqual(row.heldFull, 1);
+  assert.strictEqual(row.avgDiscount, 20, 'not 10 — averaging in the zero answers nobody’s question');
+});
+test('"no number" is its own group, not folded into the unattributed', () => {
+  const r = H.provenance([
+    prov('none', 'won', 4000, 4000),
+    { id: 'x', status: 'won', priceQuoted: 4000 }        // saved before the field was read
+  ], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.attributed, 1);
+  assert.strictEqual(r.unattributed, 1);
+  assert.strictEqual(r.rows.length, 1);
+  assert.strictEqual(r.rows[0].provenance, 'none',
+    '"the client never gave a figure" is an answer; "nobody recorded it" is not');
+});
+test('an old deal is read through its stored form rather than being dropped', () => {
+  /* The value was in form.q_provenance on every saved deal long before
+     anything read it, so a ledger full of old rows is not a blank slate. */
+  const r = H.provenance([
+    { id: 'o1', status: 'won', priceQuoted: 4000, form: { q_provenance: 'prompted' } },
+    { id: 'o2', status: 'won', priceQuoted: 4000, form: { q_provenance: 'prompted' } },
+    { id: 'o3', status: 'won', priceQuoted: 4000, form: { q_provenance: 'prompted' } }
+  ], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.attributed, 3);
+  assert.strictEqual(r.rows[0].enough, true);
+});
+test('the labels come from deals.js, so the two can never drift apart', () => {
+  const r = H.provenance([prov('unprompted', 'won', 1000, 1000)], P.PROVENANCE_LABEL);
+  assert.strictEqual(r.rows[0].label, P.PROVENANCE_LABEL.unprompted);
+});
+test('a deal with no recorded source is disclosed, not just dropped', () => {
+  /* Found by rendering the panel in a browser: the row was correctly kept out
+     of every bucket, and nothing on screen said so. Excluding a deal quietly
+     and excluding it visibly are different products — the whole panel is built
+     on saying what it cannot answer. */
+  const u = H.unknowns([
+    prov('unprompted', 'won', 4000, 4000),
+    { id: 'n1', status: 'won', priceQuoted: 4000, pricedBy: 'value' }   // no provenance anywhere
+  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(u.some(x => /בלי שנרשם מאיפה|בלי מקור/.test(x.what + x.text)),
+    'the excluded deal is invisible: ' + JSON.stringify(u.map(x => x.what)));
+});
+test('the group that doubles as the form default says so', () => {
+  /* Raised in review: 'prompted' is the option the markup marks selected, so a
+     deal where nobody touched the question is stored as if it were answered.
+     The arithmetic cannot separate them, so the panel says which group is
+     affected instead of presenting all four as equally chosen. */
+  const u = H.unknowns([
+    prov('prompted', 'won', 4000, 4000),
+    prov('prompted', 'won', 4000, 4000),
+    prov('prompted', 'won', 4000, 4000)
+  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(u.some(x => /ברירת המחדל של הטופס/.test(x.text)),
+    'a group that is partly a default and looks measured is worse than no group');
+  const clean = H.unknowns([
+    prov('unprompted', 'won', 4000, 4000)
+  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(!clean.some(x => /ברירת המחדל של הטופס/.test(x.text)),
+    'the caveat belongs to that one group, not to the panel');
+});
+test('report() carries the breakdown, and unknowns() counts down to it', () => {
+  const rep = H.report([prov('mine', 'won', 5000, 5000)], M.METHOD_LABEL);
+  assert.ok(rep.provenance, 'report() must expose it or the ledger cannot render it');
+  assert.ok(rep.unknowns.some(u => /מאיפה/.test(u.what) || /מקור/.test(u.what)),
+    'one quote is not enough to conclude from, so it belongs in the countdown');
+});
+
 console.log('\nwhat it admits it cannot say');
 test('an empty history reports no findings rather than an empty panel', () => {
   assert.strictEqual(H.report([]), null);

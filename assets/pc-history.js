@@ -179,23 +179,33 @@
     return out;
   }
 
-  /* Per-method track record. Reads pricedBy, never method: the two differ
-     whenever the requested method had no data behind it, and a claim
-     about which method performs, assembled from mislabelled rows, is
-     worse than no claim. Deals saved before pricedBy existed are counted
-     as unattributable rather than guessed at. */
-  function methods(deals, labels) {
+  /* One bucketer, two breakdowns. It was written inline inside methods(), and
+     that was fine until a second axis needed the same arithmetic — at which
+     point the honest-discount rule (average only the deals that were actually
+     discounted, never the zeros) would have existed in two places and been
+     free to drift in one of them. That rule is the whole reason this module
+     exists; it does not get a second copy.
+
+     `keyName` is what the row calls its own grouping value, so a caller reads
+     r.method or r.provenance rather than a generic r.key. `keyOf` returns the
+     grouping value or a falsy value for "this deal cannot be attributed". */
+  function bucketBy(deals, keyName, keyOf, labels) {
     const L = labels || {};
     const all = (deals || []).filter(d => d && d.priceQuoted > 0);
-    const attributed = all.filter(d => d.pricedBy);
+    const attributed = all.filter(d => keyOf(d));
     const buckets = {};
 
     attributed.forEach(d => {
-      const b = buckets[d.pricedBy] || (buckets[d.pricedBy] = {
-        method: d.pricedBy, label: L[d.pricedBy] || d.pricedBy,
-        quoted: 0, won: 0, lost: 0, undecided: 0,
-        heldFull: 0, discounted: 0, discounts: []
-      });
+      const k = keyOf(d);
+      let b = buckets[k];
+      if (!b) {
+        b = buckets[k] = {
+          label: L[k] || k,
+          quoted: 0, won: 0, lost: 0, undecided: 0,
+          heldFull: 0, discounted: 0, discounts: []
+        };
+        b[keyName] = k;
+      }
       b.quoted++;
       if (d.status === 'won') b.won++;
       else if (d.status === 'lost') b.lost++;
@@ -226,6 +236,38 @@
     return { rows, attributed: attributed.length, unattributed: all.length - attributed.length };
   }
 
+  /* Per-method track record. Reads pricedBy, never method: the two differ
+     whenever the requested method had no data behind it, and a claim
+     about which method performs, assembled from mislabelled rows, is
+     worse than no claim. Deals saved before pricedBy existed are counted
+     as unattributable rather than guessed at. */
+  function methods(deals, labels) {
+    return bucketBy(deals, 'method', d => d.pricedBy, labels);
+  }
+
+  /* The same track record on the axis the ledger has been storing since the
+     transcript step existed and never once read: where the annual-value figure
+     came from. Four values, and they are not interchangeable inputs to one
+     calculation — a figure the client named unprompted and a figure the
+     operator estimated for him are different kinds of claim. If they close
+     differently, or hold their price differently, the operator is the one who
+     should get to see it.
+
+     Two reasons the reading is not simply d.provenance. Deals saved before the
+     field was promoted still carry it inside the stored form, so dropping them
+     would report a blank slate to someone whose ledger is full. And the label
+     map is the enum: only keys it defines become buckets, so a hand-edited
+     store or a fifth form option added later cannot grow a group named after a
+     string this module cannot explain. */
+  function provenance(deals, labels) {
+    const known = labels ? Object.keys(labels) : null;
+    const ok = v => !!v && (!known || known.indexOf(v) !== -1);
+    return bucketBy(deals, 'provenance', d => {
+      if (ok(d.provenance)) return d.provenance;
+      return d.form && ok(d.form.q_provenance) ? d.form.q_provenance : null;
+    }, labels);
+  }
+
   /* Is the estimate getting better, or is it just being averaged over
      more jobs? Compares the typical error of the earlier half against the
      later half. Only from six, so each half has three. */
@@ -250,10 +292,11 @@
   /* The half that keeps this honest. Everything the track record cannot
      yet say, and exactly what it would take — because a panel that shows
      only its conclusions reads as if the silence means agreement. */
-  function unknowns(deals, labels) {
+  function unknowns(deals, labels, provLabels) {
     const list = deals || [];
     const acc = accuracy(list);
     const m = methods(list, labels);
+    const p = provenance(list, provLabels);
     const out = [];
 
     if (!acc.enough) out.push({
@@ -278,6 +321,23 @@
       what: 'איזו שיטת תמחור עובדת לך',
       need: Math.min(...short.map(r => MIN_PER_METHOD - r.quoted)),
       text: short.map(r => r.label + ' (' + r.quoted + '/' + MIN_PER_METHOD + ')').join(' · ') +
+            ' — עוד לא מספיק כדי לומר משהו.'
+    });
+
+    /* Same threshold, same sentence shape as the method countdown above. The
+       question is worth its own line because it is answerable from data the
+       ledger already holds — the operator is not waiting on new behaviour,
+       only on enough rows. */
+    const provShort = p.rows.filter(r => !r.enough);
+    if (!p.rows.length) out.push({
+      what: 'מאיפה הגיע המספר בהצעות שנסגרו',
+      need: MIN_PER_METHOD,
+      text: 'צריך לפחות ' + MIN_PER_METHOD + ' הצעות שנרשם בהן מאיפה הגיע המספר.'
+    });
+    else if (provShort.length) out.push({
+      what: 'מאיפה הגיע המספר בהצעות שנסגרו',
+      need: Math.min.apply(null, provShort.map(r => MIN_PER_METHOD - r.quoted)),
+      text: provShort.map(r => r.label + ' (' + r.quoted + '/' + MIN_PER_METHOD + ')').join(' · ') +
             ' — עוד לא מספיק כדי לומר משהו.'
     });
 
@@ -306,33 +366,65 @@
             ' כאן. הצעות חדשות כן.'
     });
 
+    /* The same disclosure on the second axis, and it is not optional. Found by
+       rendering the panel in a browser: a deal with nothing recorded about the
+       source of its number was correctly kept out of every bucket, and nothing
+       on screen said so. Excluding a row quietly and excluding it visibly are
+       two different products, and this panel is the one that says what it
+       cannot answer. */
+    /* The standing caveat on this axis, and it does not resolve with more rows.
+       One of the four is the form's own default, so its group necessarily mixes
+       deals where that was chosen with deals where the question was never
+       touched. Said out loud rather than left for the reader to discover,
+       because a group that looks measured and is partly a default is worse than
+       one nobody claims anything about. Raised in review, and it is a limit of
+       the input rather than of the arithmetic. */
+    if (p.rows.some(r => r.provenance === 'prompted')) out.push({
+      what: 'הקבוצה "הוא נקב אחרי שאלה"',
+      need: 0,
+      text: 'זו גם ברירת המחדל של הטופס, ולכן היא כוללת גם הצעות שבהן לא נגעת בשאלה בכלל. ' +
+            'שלוש הקבוצות האחרות נבחרות במפורש.'
+    });
+
+    if (p.unattributed) out.push({
+      what: 'הצעות בלי מקור למספר',
+      need: 0,
+      text: count(p.unattributed, 'הצעה אחת נשמרה', 'הצעות נשמרו') +
+            ' בלי שנרשם מאיפה הגיע המספר, ולכן ' +
+            (p.unattributed === 1 ? 'היא לא נספרת' : 'הן לא נספרות') +
+            ' בטבלה הזאת.'
+    });
+
     return out;
   }
 
   /* The whole thing, or null when there is no history at all — an empty
      panel that explains what it would show is still an empty panel, and
      the ledger above it already says there is nothing saved. */
-  function report(deals, labels) {
+  function report(deals, labels, provLabels) {
     const list = (deals || []).filter(Boolean);
     if (!list.length) return null;
     const acc = accuracy(list);
     const m = methods(list, labels);
+    const p = provenance(list, provLabels);
     const t = trend(list);
     return {
       deals: list.length,
       accuracy: acc,
       methods: m,
+      provenance: p,
       trend: t,
-      unknowns: unknowns(list, labels),
+      unknowns: unknowns(list, labels, provLabels),
       /* Nothing worth showing yet is different from nothing at all: the
          first is a countdown, the second is an empty state. */
-      hasFindings: !!(acc.verdict || t || m.rows.some(r => r.enough))
+      hasFindings: !!(acc.verdict || t ||
+        m.rows.some(r => r.enough) || p.rows.some(r => r.enough))
     };
   }
 
   root.PC = root.PC || {};
   root.PC.history = {
-    deliveries, accuracy, methods, trend, unknowns, report,
+    deliveries, accuracy, methods, provenance, trend, unknowns, report,
     MIN_DELIVERIES, MIN_PER_METHOD, MIN_FOR_TREND, CLOSE_ENOUGH
   };
 
