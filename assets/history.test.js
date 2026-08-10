@@ -447,5 +447,74 @@ test('nulls, blanks and text in numeric fields produce no findings and no crash'
   assert.deepStrictEqual(H.deliveries(junk), []);
 });
 
+console.log('\nwinning everything is not a result, it is a missing measurement');
+/* winRate() has been computed and displayed as a score since the ledger existed.
+   Nobody interprets it. And the interpretation is the counterintuitive one: an
+   operator who has never lost a priced proposal, and never had one negotiated
+   down, has no evidence about their ceiling — not because they are underpricing
+   for certain, but because they have never tested it. You need a lost deal to
+   know where the edge is.
+
+   The claim is narrow on purpose. It fires only when there is nothing else that
+   could explain the run: no losses, no discounts, and no deal that quietly grew
+   its scope at the same price. Any one of those means the price WAS tested and
+   moved, which is a different finding. */
+const closed = (id, over = {}) => Object.assign({
+  id, status: 'won', priceQuoted: 10000, pricedBy: 'value', provenance: 'unprompted',
+  outcome: { closedPrice: 10000, concession: 'unknown' }
+}, over);
+const cleanHold = { n: 6, held: 6, discounted: 0, widened: 0, heldClean: 6, scopeTracked: 6 };
+const sixWins = Array.from({ length: 6 }, (_, i) => closed('w' + i));
+
+test('six decided, none lost, nothing discounted — says the price is untested', () => {
+  const c = H.ceiling(sixWins, cleanHold);
+  assert.strictEqual(c.enough, true);
+  assert.strictEqual(c.untested, true);
+  assert.ok(c.text, 'a finding with nothing to say is not a finding');
+});
+test('the text does not congratulate, and does not order a price rise', () => {
+  const c = H.ceiling(sixWins, cleanHold);
+  assert.ok(!/מצוין|כל הכבוד|מעולה/.test(c.text), 'this is not good news: ' + c.text);
+  assert.ok(!/תעלה את המחיר|העלה את המחיר/.test(c.text),
+    'the finding is an absence of evidence, not an instruction: ' + c.text);
+});
+test('one lost deal is enough to make the price tested', () => {
+  const withLoss = sixWins.slice(0, 5).concat([{ id: 'l', status: 'lost', priceQuoted: 10000 }]);
+  assert.strictEqual(H.ceiling(withLoss, cleanHold).untested, false,
+    'a loss is the evidence — it is where the edge showed up');
+});
+test('a discount means the price was tested and moved', () => {
+  const hold = Object.assign({}, cleanHold, { discounted: 1 });
+  assert.strictEqual(H.ceiling(sixWins, hold).untested, false);
+});
+test('scope that grew at the same price also counts as tested', () => {
+  /* The link to the drift work in deals.js. A deal that gained a clause after the
+     quote was conceded, even though both numbers held — so a run of those is not
+     an untested price, it is a tested one that moved somewhere the discount
+     figure cannot see. */
+  const hold = Object.assign({}, cleanHold, { widened: 1, heldClean: 5 });
+  assert.strictEqual(H.ceiling(sixWins, hold).untested, false,
+    'widening is a concession, and a conceded price is not an untested one');
+});
+test('says nothing under the threshold, and says how far off it is', () => {
+  const three = sixWins.slice(0, 3);
+  const c = H.ceiling(three, Object.assign({}, cleanHold, { n: 3, held: 3, heldClean: 3, scopeTracked: 3 }));
+  assert.strictEqual(c.enough, false);
+  assert.strictEqual(c.untested, null, 'not enough data is not a verdict of "tested"');
+  assert.ok(c.need > 0, 'a countdown, the way every other threshold here reports one');
+});
+test('an empty ledger reports nothing rather than a perfect record', () => {
+  const c = H.ceiling([], { n: 0, held: null, discounted: 0, widened: null, heldClean: null, scopeTracked: 0 });
+  assert.strictEqual(c.untested, null);
+  assert.strictEqual(c.enough, false);
+});
+test('undecided proposals are not counted as wins', () => {
+  // same rule winRate() already follows: sent-and-silent is not a result
+  const mixed = sixWins.slice(0, 3).concat(
+    Array.from({ length: 5 }, (_, i) => ({ id: 's' + i, status: 'sent', priceQuoted: 10000 })));
+  assert.strictEqual(H.ceiling(mixed, cleanHold).enough, false,
+    'five silent proposals must not push this over the threshold');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

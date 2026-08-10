@@ -255,12 +255,17 @@ const renderLedger = guard('ledger', function (){
    the finding: silence here must never read as agreement. */
 const renderHistory = guard('history', function (list) {
   const box = el('historyBox'); if (!box) return;
-  const rep = PC.history.report(list, PC.model.METHOD_LABEL, PC.PROVENANCE_LABEL);
+  /* Computed before the report rather than after it, because the ceiling finding
+     needs to know whether the price was ever tested — and a discount or a scope
+     that widened is exactly that test. Passing it in keeps the question of
+     whether the scope moved in deals.js, where scopeDrift() defines it, instead
+     of growing a second implementation inside the track record. */
+  const hold = PC.deals.priceHold();
+  const rep = PC.history.report(list, PC.model.METHOD_LABEL, PC.PROVENANCE_LABEL, hold);
   if (!rep) { box.innerHTML = ''; show('historySec', false); return; }
   show('historySec', true);
 
   const acc = rep.accuracy;
-  const hold = PC.deals.priceHold();
 
   /* Quoted versus closed across everything, at any n. priceHold() has
      been written, commented and tested in deals.js since the ledger
@@ -327,6 +332,13 @@ const renderHistory = guard('history', function (list) {
     ? `<div class="hist-find hist-${acc.verdict.kind}">${esc(acc.verdict.text)}</div>` : '';
   const trendLine = rep.trend
     ? `<div class="hist-find hist-${rep.trend.improving ? 'holds' : 'low'}">${esc(rep.trend.text)}</div>` : '';
+  /* Rendered as a finding rather than a row, because it is an argument and not a
+     count — and marked `low` rather than `holds`, since a price nobody has ever
+     tested is the same shape of problem as one that keeps sliding: in both cases
+     the operator does not know where their ceiling is. Reading it as good news is
+     exactly the mistake a win rate printed as a score invites. */
+  const ceilingLine = rep.ceiling && rep.ceiling.untested && rep.ceiling.text
+    ? `<div class="hist-find hist-low">${esc(rep.ceiling.text)}</div>` : '';
 
   const ready = rep.methods.rows.filter(r => r.enough);
   const methodTable = ready.length ? `
@@ -378,7 +390,7 @@ const renderHistory = guard('history', function (list) {
 
   box.innerHTML = (accLine || holdLine
       ? `<div class="hist-rows">${accLine}${holdLine}${widenLine}${concLine}</div>` : '') +
-    verdict + trendLine + methodTable + provTable + missing;
+    verdict + trendLine + ceilingLine + methodTable + provTable + missing;
 });
 
 function newDeal(){

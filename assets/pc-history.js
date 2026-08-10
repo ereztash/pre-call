@@ -51,6 +51,10 @@
   /* Halved into before and after, so six is the first n where each half
      has three. */
   const MIN_FOR_TREND = 6;
+
+  /* Six decided proposals before saying anything about the ceiling. A run of
+     three wins is luck; the same threshold trend() uses, for the same reason. */
+  const MIN_FOR_CEILING = 6;
   /* Within a quarter of the estimate is a good estimate for this kind of
      work. Anyone who thinks they can do better than ±25% on a build they
      have not started is measuring something other than reality. */
@@ -280,6 +284,46 @@
     }, labels);
   }
 
+  /* Winning everything is not a result. It is a missing measurement.
+
+     winRate() has been computed in deals.js and printed as a score since the
+     ledger existed, and nobody has ever interpreted it. The interpretation is
+     the counterintuitive one: an operator who has never lost a priced proposal,
+     never had one negotiated down, and never quietly widened one at the same
+     price has no evidence about their ceiling. Not "you are underpricing" — that
+     would be a claim from the same absence of data. The edge shows up in the deal
+     that did not close, and they do not have one.
+
+     The claim is narrow on purpose. Any of the three — a loss, a discount, a
+     scope that grew after the quote — means the price WAS tested and moved, which
+     is a different finding and belongs to the lines that already report it.
+     Widening counts because a deal that gained a clause after the quote was
+     conceded even though both numbers held; see scopeDrift() in deals.js.
+
+     `hold` is passed in rather than recomputed. Whether the scope moved lives in
+     deals.js, and a second implementation of it here is how the two would come to
+     disagree. */
+  function ceiling(deals, hold) {
+    const list = (deals || []).filter(Boolean);
+    const decided = list.filter(d => d.status === 'won' || d.status === 'lost');
+    const lost = decided.filter(d => d.status === 'lost').length;
+    const n = decided.length;
+    const h = hold || {};
+    if (n < MIN_FOR_CEILING) {
+      return { n, lost, enough: false, untested: null,
+               need: MIN_FOR_CEILING - n, text: null };
+    }
+    const moved = lost > 0 || (h.discounted || 0) > 0 || (h.widened || 0) > 0;
+    return {
+      n, lost, enough: true, untested: !moved, need: 0,
+      text: moved ? null
+        : 'כל ' + n + ' ההצעות שהוכרעו נסגרו, אף אחת לא ירדה במחיר, ' +
+          'ואף אחת לא קיבלה סעיף נוסף באותו מחיר. ' +
+          'זה לא אומר שהמחיר נכון — זה אומר שהוא לא נבדק. ' +
+          'הקצה מתגלה בהצעה שלא נסגרה, ואין לך אחת כזאת.'
+    };
+  }
+
   /* Is the estimate getting better, or is it just being averaged over
      more jobs? Compares the typical error of the earlier half against the
      later half. Only from six, so each half has three. */
@@ -304,7 +348,7 @@
   /* The half that keeps this honest. Everything the track record cannot
      yet say, and exactly what it would take — because a panel that shows
      only its conclusions reads as if the silence means agreement. */
-  function unknowns(deals, labels, provLabels) {
+  function unknowns(deals, labels, provLabels, ceil) {
     const list = deals || [];
     const acc = accuracy(list);
     const m = methods(list, labels);
@@ -321,6 +365,18 @@
       what: 'האם האומדן שלך משתפר',
       need: MIN_FOR_TREND - acc.n,
       text: 'צריך ' + MIN_FOR_TREND + ' מסירות כדי להשוות את הראשונות לאחרונות.'
+    });
+
+    /* Same countdown shape as the two above, on the question the ledger can
+       answer without any new behaviour from the operator — only more decided
+       proposals. Silent once it is answerable, because then the finding itself
+       is on screen and a countdown beside it would contradict it. */
+    const c = ceil || ceiling(list, null);
+    if (!c.enough) out.push({
+      what: 'האם המחיר שלך נבדק בכלל',
+      need: c.need,
+      text: 'צריך ' + MIN_FOR_CEILING + ' הצעות שהוכרעו — נסגרו או נדחו. ' +
+            'הצעה שממתינה לתשובה עדיין לא אומרת כלום על המחיר.'
     });
 
     const short = m.rows.filter(r => !r.enough);
@@ -410,31 +466,37 @@
   /* The whole thing, or null when there is no history at all — an empty
      panel that explains what it would show is still an empty panel, and
      the ledger above it already says there is nothing saved. */
-  function report(deals, labels, provLabels) {
+  /* `hold` comes from deals.js priceHold(). Optional, because report() is
+     called from tests and from anywhere that has a deal list but no ledger
+     instance — a missing hold simply means the ceiling stays unmeasurable, which
+     is the same answer it gives below its threshold. */
+  function report(deals, labels, provLabels, hold) {
     const list = (deals || []).filter(Boolean);
     if (!list.length) return null;
     const acc = accuracy(list);
     const m = methods(list, labels);
     const p = provenance(list, provLabels);
     const t = trend(list);
+    const c = ceiling(list, hold);
     return {
       deals: list.length,
       accuracy: acc,
       methods: m,
       provenance: p,
       trend: t,
-      unknowns: unknowns(list, labels, provLabels),
+      ceiling: c,
+      unknowns: unknowns(list, labels, provLabels, c),
       /* Nothing worth showing yet is different from nothing at all: the
          first is a countdown, the second is an empty state. */
-      hasFindings: !!(acc.verdict || t ||
+      hasFindings: !!(acc.verdict || t || (c.untested && c.text) ||
         m.rows.some(r => r.enough) || p.rows.some(r => r.enough))
     };
   }
 
   root.PC = root.PC || {};
   root.PC.history = {
-    deliveries, accuracy, methods, provenance, trend, unknowns, report,
-    MIN_DELIVERIES, MIN_PER_METHOD, MIN_FOR_TREND, CLOSE_ENOUGH
+    deliveries, accuracy, methods, provenance, trend, ceiling, unknowns, report,
+    MIN_DELIVERIES, MIN_PER_METHOD, MIN_FOR_TREND, MIN_FOR_CEILING, CLOSE_ENOUGH
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.history;

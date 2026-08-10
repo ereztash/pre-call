@@ -118,6 +118,11 @@
     }
   ];
 
+  /* How far above the operator's best-ever close counts as a stretch. Two,
+     because doubling the largest number you have ever successfully charged is
+     the point where "have I held this before" stops being rhetorical. */
+  const STRETCH = 2;
+
   /* Numbers that cannot be true. Written as an observation with the
      arithmetic shown, never as "invalid input" — someone who does not know
      why 15 hours a day is impossible learns nothing from a red border. */
@@ -151,6 +156,40 @@
       out.push({ id: 'unset', field: 'q_provenance',
         text: 'לא סומן מאיפה הגיע המספר השנתי, ולכן פסקת ההחזר לא נכנסת למסמך שנשלח. ' +
               'סימון אחד מחזיר אותה. אי-הסימון לא שינה את המחיר.' });
+    }
+    /* An anchor this operator has never held.
+
+       The tool will put a number on screen that is many times anything they have
+       actually closed, and two things can follow: they do not send it, or they
+       send it and fold at the first push. An anchor you cannot defend is worse
+       than a lower one you can.
+
+       This is not "your price is too high" — nothing here lowers it, and the
+       text is tested against reading that way. It is "you have never held a
+       number like this", and it points at the question that decides whether a
+       defence exists rather than at the price.
+
+       Silent with no history, and that is the point rather than a gap: guidance
+       in this product was arriving only for the operator who least needed it,
+       because every threshold sensibly refuses to speak without evidence. With
+       no closed deals there is no ceiling to compare against, and inventing one
+       would be worse than saying nothing. Two closed deals is the floor — one is
+       not a ceiling. */
+    const best = +s.bestClosed || 0;
+    if (+s.price > 0 && best > 0 && (+s.closedCount || 0) >= 2 && +s.price >= best * STRETCH) {
+      /* "His" means the client sourced the annual figure — not the operator's own
+         estimate, and not an unanswered question. Both of those leave the price
+         standing on nothing the client said. */
+      const defensible = !s.numbersAreMine && !s.numbersUnset;
+      out.push({ id: 'stretch', field: 'q_provenance',
+        text: 'המחיר הזה גבוה פי ' + (Math.round(+s.price / best * 10) / 10) +
+              ' מהעסקה הגדולה ביותר שסגרת עד היום (' +
+              Math.round(best).toLocaleString('en-US') + ' ₪). ' +
+              (defensible
+                ? 'המספרים בהצעה הם שלו, ולכן יש לך תשובה כשהוא ידחוף — וכנראה שהוא ידחוף. ' +
+                  'שווה להחליט מראש מה לא תיתן.'
+                : 'לא סומן שהמספר השנתי בא ממנו, ולכן אין לך משפט אחד להגיד כשהוא ישאל ' +
+                  '"על מה זה מבוסס?". סימון אחד, או שאלה אחת אליו בשיחה הבאה.') });
     }
     if (s.numbersAreMine && (+s.errCost > 0 || +s.freq > 0)) {
       out.push({ id: 'mine', field: 'q_provenance',

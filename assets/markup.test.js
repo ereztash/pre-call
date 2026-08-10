@@ -484,6 +484,27 @@ test('scope drift reaches the panel instead of being computed and discarded', ()
   assert.ok(/hold\.widened/.test(ledger),
     'deals.js reports widened and nothing renders it — dead code shaped like a finding');
 });
+test('the ceiling finding reaches the panel', () => {
+  /* winRate() was computed in deals.js and printed as a score from the day the
+     ledger existed, and nothing ever interpreted it. ceiling() is the
+     interpretation, and it would rot the same way. */
+  const ledger = read('assets/pc-ledger.js');
+  assert.ok(/rep\.ceiling/.test(ledger), 'ceiling() is computed and never rendered');
+  assert.ok(/report\([^)]*hold\)/.test(ledger),
+    'report() must be given priceHold(), or the ceiling cannot tell a tested ' +
+    'price from an untested one');
+});
+test('the guide is told what the operator has actually closed', () => {
+  /* pc-guide.js is pure and cannot read storage, so the stretch warning is dead
+     unless the shell passes these three in. It is the one warning in that module
+     that depends on anything outside the form. */
+  const shell = read('assets/post-call.js');
+  ['price:', 'bestClosed:', 'closedCount:'].forEach(k =>
+    assert.ok(shell.includes(k),
+      'guideState() is missing ' + k + ' — the stretch warning can never fire'));
+  assert.ok(/closedPrice > 0/.test(shell),
+    'the ceiling must come from what closed, not from what was quoted');
+});
 test('the full-price claim is qualified where the scope moved', () => {
   /* "נסגרו במחיר המלא" is true of the two numbers and false of the deal when work
      was added after the quote. Whatever renders the drift has to say it is
