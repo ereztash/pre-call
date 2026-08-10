@@ -641,6 +641,21 @@ test('no ledger at all says nothing, rather than naming the other tool', () => {
   const out = withLedger([]);
   assert.ok(!/פנקס/.test(out), 'mentioned a ledger to somebody who has no ledger');
 });
+test('a lost proposal means the ceiling WAS tested, and the script says so no more', () => {
+  /* Raised in review, and it is a contradiction inside one change rather than a
+     missing case. ceiling() in pc-history.js requires lost === 0 before calling a
+     price untested, on the explicit argument that a loss is the evidence — it is
+     where the edge showed up. This branch checked only for discounts, so the same
+     ledger could read "you have not tested your ceiling" in the call script and
+     "tested" in the panel. Two surfaces of one product disagreeing about the same
+     deals is worse than either being wrong alone. */
+  const out = withLedger([
+    past(), past(), past(),
+    { id: 'l1', status: 'lost', priceQuoted: 14000 }
+  ]);
+  assert.ok(!/לא בדקתם/.test(out),
+    'a rejected proposal already tested the price, and the script still says otherwise');
+});
 test('only one tenure line appears, whatever the ledger holds', () => {
   const out = withLedger([
     past({ outcome: { closedPrice: 8000, concession: 'i_offered' } }), past(), past()

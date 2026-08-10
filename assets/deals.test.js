@@ -1,5 +1,5 @@
 /* node assets/deals.test.js — no browser, no deps. */
-const { make } = require('./deals.js');
+const { make, priceMoved } = require('./deals.js');
 const assert = require('assert');
 
 let pass = 0, fail = 0;
@@ -534,6 +534,36 @@ test('six entered deals are enough for the ceiling finding to speak', () => {
   assert.strictEqual(w.won, 6);
   assert.strictEqual(w.rate, 1);
   assert.strictEqual(d.priceHold().discounted, 0);
+});
+
+console.log('\nthe two places that ask "was the price ever tested" agree');
+/* Review found these two apart: ceiling() in pc-history.js requires lost === 0
+   before calling a price untested, and PRE-CALL's line checked only for discounts
+   — so one ledger read "untested" in the call script and "tested" in the panel.
+   The rule now lives once, in priceMoved(), and this pins the agreement rather
+   than trusting two call sites to stay in step. Same instrument the project uses
+   between the key minter and the gate, and between the client's event names and
+   the server allowlist. */
+const H = require('./pc-history.js');
+test('priceMoved and the ceiling verdict never disagree', () => {
+  const wins = n => Array.from({ length: n }, (_, i) => ({
+    id: 'w' + i, status: 'won', priceQuoted: 10000,
+    outcome: { closedPrice: 10000, concession: 'unknown' } }));
+  const cases = [
+    { label: 'clean six',        deals: wins(6), hold: { n: 6, discounted: 0, widened: 0, scopeTracked: 6 } },
+    { label: 'one lost',         deals: wins(5).concat([{ id: 'l', status: 'lost', priceQuoted: 10000 }]),
+                                 hold: { n: 5, discounted: 0, widened: 0, scopeTracked: 5 } },
+    { label: 'one discounted',   deals: wins(6), hold: { n: 6, discounted: 1, widened: 0, scopeTracked: 6 } },
+    { label: 'one widened',      deals: wins(6), hold: { n: 6, discounted: 0, widened: 1, scopeTracked: 6 } },
+    { label: 'scope unknown',    deals: wins(6), hold: { n: 6, discounted: 0, widened: null, scopeTracked: 0 } }
+  ];
+  cases.forEach(c => {
+    const lost = c.deals.filter(d => d.status === 'lost').length;
+    const moved = priceMoved({ lost, discounted: c.hold.discounted, widened: c.hold.widened });
+    const verdict = H.ceiling(c.deals, c.hold);
+    assert.strictEqual(verdict.untested, !moved,
+      c.label + ': priceMoved says ' + moved + ' and ceiling says untested=' + verdict.untested);
+  });
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

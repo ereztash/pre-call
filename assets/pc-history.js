@@ -313,12 +313,23 @@
       return { n, lost, enough: false, untested: null,
                need: MIN_FOR_CEILING - n, text: null };
     }
-    const moved = lost > 0 || (h.discounted || 0) > 0 || (h.widened || 0) > 0;
+    const moved = lost > 0 || (h.discounted || 0) > 0 ||
+                  (h.widened !== null && (h.widened || 0) > 0);
+    /* Whether the scope clause may be SAID, which is a different question from
+       whether the scope moved. widened is null for every deal with no baseline —
+       anything entered through addPast(), and anything saved before baselines
+       existed — and `(h.widened || 0) > 0` read that as "nothing widened", so the
+       sentence went on to assert it. Raised in review, and it is this change's own
+       flagship scenario: six remembered deals produce exactly that ledger.
+
+       The price evidence is untouched by this — no loss and no discount is real —
+       so the finding still stands. What goes is the clause it cannot support. */
+    const scopeKnown = (h.scopeTracked || 0) > 0 && h.widened !== null;
     return {
       n, lost, enough: true, untested: !moved, need: 0,
       text: moved ? null
-        : 'כל ' + n + ' ההצעות שהוכרעו נסגרו, אף אחת לא ירדה במחיר, ' +
-          'ואף אחת לא קיבלה סעיף נוסף באותו מחיר. ' +
+        : 'כל ' + n + ' ההצעות שהוכרעו נסגרו, אף אחת לא ירדה במחיר' +
+          (scopeKnown ? ', ואף אחת לא קיבלה סעיף נוסף באותו מחיר' : '') + '. ' +
           'זה לא אומר שהמחיר נכון — זה אומר שהוא לא נבדק. ' +
           'הקצה מתגלה בהצעה שלא נסגרה, ואין לך אחת כזאת.'
     };

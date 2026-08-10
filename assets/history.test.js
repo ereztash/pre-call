@@ -516,5 +516,30 @@ test('undecided proposals are not counted as wins', () => {
     'five silent proposals must not push this over the threshold');
 });
 
+test('a ledger with no scope baselines never claims that nothing gained scope', () => {
+  /* Raised in review, and it is item 1's own flagship scenario. Six deals entered
+     through addPast() carry no scopeAtQuote, so priceHold() reports widened:null —
+     correctly, because nothing is measurable. `(h.widened || 0) > 0` then read null
+     as "no widening", and the sentence went on to assert "ואף אחת לא קיבלה סעיף
+     נוסף באותו מחיר" about deals where that could not be known.
+
+     Which is exactly the null-versus-zero discipline this same change argued for
+     three times over, applied everywhere except the sentence a person reads. The
+     price evidence is still real — no loss, no discount — so the finding stands;
+     what has to go is the clause it cannot support. */
+  const unknownScope = { n: 6, held: 6, discounted: 0, widened: null,
+                         heldClean: null, scopeTracked: 0 };
+  const c = H.ceiling(sixWins, unknownScope);
+  assert.strictEqual(c.untested, true, 'no loss and no discount is still evidence');
+  assert.ok(!/סעיף נוסף/.test(c.text),
+    'claimed no deal gained scope, on a ledger where scope was never tracked: ' + c.text);
+  assert.ok(/לא נבדק/.test(c.text), 'the finding itself must survive');
+});
+test('with baselines present the scope clause is stated, because then it is known', () => {
+  const c = H.ceiling(sixWins, cleanHold);
+  assert.ok(/סעיף נוסף/.test(c.text),
+    'six tracked deals that did not widen — say so, that is a real part of the case');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

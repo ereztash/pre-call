@@ -288,12 +288,20 @@
           d.status === 'won' && d.outcome && d.outcome.closedPrice > 0);
         const h = api.priceHold();
         const bc = h.byConcession || {};
+        const lost = all.filter(d => d.status === 'lost').length;
         return {
           /* Reported so a caller can tell "no ledger" from "a ledger with nothing
              closed in it". PRE-CALL needs the difference: somebody who has never
              opened POST-CALL should not be told what their ledger does not
              contain, and somebody with three sent proposals and no close should. */
           total: all.length,
+          lost,
+          /* The one boolean, so a caller cannot assemble its own version of the
+             rule out of the parts. Raised in review: PRE-CALL had checked only for
+             discounts, so a ledger with three full-price wins and one rejection
+             read "you have not tested your ceiling" in the call script while the
+             panel, which requires lost === 0, read it as tested. */
+          priceEverMoved: priceMoved({ lost, discounted: h.discounted, widened: h.widened }),
           closed: won.length,
           bestClosed: won.length
             ? won.reduce((m, d) => Math.max(m, +d.outcome.closedPrice), 0) : null,
@@ -431,6 +439,18 @@
     return Object.keys(s).filter(k => s[k] === 'in').sort();
   };
 
+  /* Has the price ever actually been tested — one rule, one place.
+     A loss is the evidence: it is where the edge showed up. A discount is the
+     price moving. A scope that grew at the same price is the price moving
+     somewhere the discount figure cannot see. Any one of the three, and a run of
+     wins is no longer an untested price.
+
+     `widened === null` means unmeasurable, and unmeasurable is not evidence of
+     movement — so it does not set this true. What it must also never do is let a
+     caller go on to ASSERT that no scope moved; see the text in ceiling(). */
+  const priceMoved = f => ((f.lost || 0) > 0) || ((f.discounted || 0) > 0) ||
+                          (f.widened !== null && (f.widened || 0) > 0);
+
   const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : null; };
   const valid = v => PROVENANCE.indexOf(v) !== -1;
   // anything outside the three reads as no answer, never as one of the two
@@ -438,6 +458,7 @@
 
   root.PC = root.PC || {};
   root.PC.dealsFactory = make;
+  root.PC.priceMoved = priceMoved;
   root.PC.STATUS_LABEL = STATUS_LABEL;
   root.PC.STATUS = STATUS;
   root.PC.PROVENANCE = PROVENANCE;
@@ -447,6 +468,6 @@
   if (typeof localStorage !== 'undefined') root.PC.deals = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, STATUS, STATUS_LABEL,
+    module.exports = { make, priceMoved, STATUS, STATUS_LABEL,
                        PROVENANCE, PROVENANCE_LABEL, CONCESSION, CONCESSION_LABEL };
 })(typeof window !== 'undefined' ? window : globalThis);

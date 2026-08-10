@@ -394,7 +394,12 @@ function render(){
       openers.push('בפנקס שלכם ' + (ten.selfOffered === 1 ? 'עסקה אחת שבה ירדתם' :
         ten.selfOffered + ' עסקאות שבהן ירדתם') + ' במחיר לפני שהלקוח ביקש. ' +
         'שאלה 12 היא המקום שזה מתחיל בו — החליטו עכשיו מה לא תיתנו, לפני שהוא שואל.');
-    } else if(ten.closed >= 2 && !ten.discounted){
+    /* priceEverMoved, not !discounted. A loss tests the price as surely as a
+       discount does — that is ceiling()'s own argument in pc-history.js — and this
+       branch used to ignore losses, so one ledger could read "untested" here and
+       "tested" in the panel. The boolean comes from deals.js so there is one rule
+       and not two. Raised in review. */
+    } else if(ten.closed >= 2 && !ten.priceEverMoved){
       openers.push(ten.closed + ' העסקאות שסגרתם נסגרו במחיר שנקבתם, ואף אחת לא ירדה — ' +
         'כלומר לא בדקתם את התקרה שלכם. בשאלה 11 נקבו במספר גבוה מהאחרון, ותקשיבו לתשובה.');
     /* `total > 0` and not merely `closed === 0`, which is the difference between
