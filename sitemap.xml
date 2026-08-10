@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Clean URLs, because vercel.json sets cleanUrls and every page's canonical
+     tag points at the extensionless form. assets/markup.test.js asserts the two
+     agree: a sitemap that disagrees with the canonicals asks a crawler to index
+     one address while the page names another. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://pre-call-swart.vercel.app/</loc><priority>1.0</priority></url>
+  <url><loc>https://pre-call-swart.vercel.app/post-call</loc><priority>0.9</priority></url>
+  <url><loc>https://pre-call-swart.vercel.app/pre-call</loc><priority>0.7</priority></url>
+  <url><loc>https://pre-call-swart.vercel.app/privacy</loc><priority>0.3</priority></url>
+</urlset>

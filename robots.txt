@@ -1,0 +1,7 @@
+# Nothing here is private, and the one channel this product travels through is a
+# link somebody pastes. A pasted link that no crawler ever resolves is a link
+# that only works for the person who received it.
+User-agent: *
+Allow: /
+
+Sitemap: https://pre-call-swart.vercel.app/sitemap.xml
