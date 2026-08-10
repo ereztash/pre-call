@@ -11,17 +11,19 @@
    It reports whether keys exist and how many. It never reports what they are.
 
    telemetryDurable is the same shape of question about the other endpoint, and
-   the answer is currently no. api/event.js writes one line to stdout and
-   nothing else, and hosted log retention is measured in hours to a day — so
-   events are discarded faster than they accumulate, and the single question the
-   endpoint exists to answer cannot be asked of a month of them. That is not a
-   bug in event.js; it is the state it is in, and a deployment should be able to
-   see it from outside rather than by reading the source. Whoever wires a real
-   store flips this, and api/health.test.js fails until the sink actually
-   changes — so the flag cannot drift from the code in either direction. */
-const TELEMETRY_DURABLE = false;
+   the answer is currently no. Events go to stdout and nothing else, and hosted
+   log retention runs from an hour to a day — so an event is discarded faster
+   than it accumulates and no month of them exists to read. That is the state,
+   not a bug, and a deployment should be able to see it from outside rather than
+   by reading the source.
+
+   Read from api/_sink.js rather than decided here. An earlier version kept its
+   own constant and a test that inferred the truth from the tokens in event.js,
+   which could both certify a false answer and block a true one. The sink
+   declares what it is; this endpoint only repeats it. */
 
 import { preflight } from './_guard.js';
+import { SINK } from './_sink.js';
 
 export default async function handler(req, res) {
   if (!preflight(req, res, { method: 'GET', limit: 30, windowMs: 60_000, bucket: 'health' }))
@@ -35,7 +37,8 @@ export default async function handler(req, res) {
     at: new Date().toISOString(),
     licenseEnforced: keys.length > 0,
     licenseKeyCount: keys.length,
-    telemetryDurable: TELEMETRY_DURABLE,
+    telemetryDurable: SINK.durable,
+    telemetrySink: SINK.target,
     node: process.version
   });
 }

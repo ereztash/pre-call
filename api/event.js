@@ -37,6 +37,7 @@ const bucketPrice = n => {
 };
 
 import { preflight, parseBody } from './_guard.js';
+import { SINK } from './_sink.js';
 
 export default async function handler(req, res) {
   // A session that fills in a deal, edits the scope and exports fires on the
@@ -59,10 +60,9 @@ export default async function handler(req, res) {
   };
 
   // One line per event. Swap for a real store when there is traffic worth storing;
-  // One line to stdout, which the host keeps for an hour to a day. Enough to
-  // watch a single session go by while debugging; not enough to answer whether
-  // anyone used this last month. See the header, and telemetryDurable in
-  // api/health.js.
-  console.log('POSTCALL_EVENT ' + JSON.stringify(row));
+  /* Through the declared sink rather than logging here, so that what happens to
+     an event and what /api/health says happens to it are one fact in one file.
+     See api/_sink.js. */
+  SINK.write(row);
   return res.status(204).end();
 }
