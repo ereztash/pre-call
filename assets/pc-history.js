@@ -372,6 +372,20 @@
        on screen said so. Excluding a row quietly and excluding it visibly are
        two different products, and this panel is the one that says what it
        cannot answer. */
+    /* The standing caveat on this axis, and it does not resolve with more rows.
+       One of the four is the form's own default, so its group necessarily mixes
+       deals where that was chosen with deals where the question was never
+       touched. Said out loud rather than left for the reader to discover,
+       because a group that looks measured and is partly a default is worse than
+       one nobody claims anything about. Raised in review, and it is a limit of
+       the input rather than of the arithmetic. */
+    if (p.rows.some(r => r.provenance === 'prompted')) out.push({
+      what: 'הקבוצה "הוא נקב אחרי שאלה"',
+      need: 0,
+      text: 'זו גם ברירת המחדל של הטופס, ולכן היא כוללת גם הצעות שבהן לא נגעת בשאלה בכלל. ' +
+            'שלוש הקבוצות האחרות נבחרות במפורש.'
+    });
+
     if (p.unattributed) out.push({
       what: 'הצעות בלי מקור למספר',
       need: 0,

@@ -336,6 +336,15 @@ function newDeal(){
   currentDealId = null;
   ['q_process','q_client','q_trigger','q_prev','q_decider','q_deadline','q_success',
    'q_freq','q_minutes','q_err_freq','q_err_cost'].forEach(id => { const e = el(id); if (e) e.value = ''; });
+  /* A select cannot be blanked the way a text field can — clearing its value
+     leaves it showing nothing — so it goes back to the option the markup marks
+     as default. It was missing from the list above, and that mattered much more
+     once the ledger started reading it: a deal where the operator chose "I
+     estimated it" left that choice sitting on the form, and the next proposal
+     inherited it silently. One deal's answer became the next deal's record.
+     Reported in review on the pull request that started reading this field. */
+  const prov = el('q_provenance');
+  if (prov) prov.value = 'prompted';
   clearSystems();
   resetScope();
   clearTemplateChoice();

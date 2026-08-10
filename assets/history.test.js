@@ -324,6 +324,24 @@ test('a deal with no recorded source is disclosed, not just dropped', () => {
   assert.ok(u.some(x => /בלי שנרשם מאיפה|בלי מקור/.test(x.what + x.text)),
     'the excluded deal is invisible: ' + JSON.stringify(u.map(x => x.what)));
 });
+test('the group that doubles as the form default says so', () => {
+  /* Raised in review: 'prompted' is the option the markup marks selected, so a
+     deal where nobody touched the question is stored as if it were answered.
+     The arithmetic cannot separate them, so the panel says which group is
+     affected instead of presenting all four as equally chosen. */
+  const u = H.unknowns([
+    prov('prompted', 'won', 4000, 4000),
+    prov('prompted', 'won', 4000, 4000),
+    prov('prompted', 'won', 4000, 4000)
+  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(u.some(x => /ברירת המחדל של הטופס/.test(x.text)),
+    'a group that is partly a default and looks measured is worse than no group');
+  const clean = H.unknowns([
+    prov('unprompted', 'won', 4000, 4000)
+  ], M.METHOD_LABEL, P.PROVENANCE_LABEL);
+  assert.ok(!clean.some(x => /ברירת המחדל של הטופס/.test(x.text)),
+    'the caveat belongs to that one group, not to the panel');
+});
 test('report() carries the breakdown, and unknowns() counts down to it', () => {
   const rep = H.report([prov('mine', 'won', 5000, 5000)], M.METHOD_LABEL);
   assert.ok(rep.provenance, 'report() must expose it or the ledger cannot render it');
