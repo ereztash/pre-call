@@ -157,6 +157,35 @@ async function scan(page, label) {
     await p.close();
   });
 
+  await test('the script on a phone, and the same script in call mode', async () => {
+    /* Two states that change structure rather than only colour, so neither is
+       covered by scanning the desktop script or a cold page at 320px.
+
+       Below 600px the reading tables stop being tables in layout terms —
+       display:block strips a table of its semantics for assistive technology
+       unless the roles are named explicitly, and reading the stylesheet cannot
+       tell you whether they survived. Call mode then removes most of the page,
+       which is the other way to break a document: what is left has to still
+       have a heading order, a focusable way out, and contrast against the
+       ground it is now sitting on alone. */
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const p = await phone.newPage();
+    await p.goto(base + '/pre-call.html');
+    await p.click('.stepbtn[data-s="2"]');
+    await p.fill('#f_what', 'מסדר תהליכי גבייה לעסקים קטנים');
+    await p.fill('#f_gain', 'כ-40,000 ₪ תזרים');
+    await p.click('[data-act="go3"]');
+    await p.fill('#p_own', 'אני מנחש שאצלכם אף אחד לא מוגדר כאחראי על המעקב');
+    await p.click('[data-act="build"]');
+    await p.waitForTimeout(200);
+    await scan(p, 'pre-call.html · script at 390px, tables stacked');
+    await p.click('[data-act="callmode-on"]');
+    await p.waitForTimeout(150);
+    await scan(p, 'pre-call.html · call mode');
+    await p.close();
+    await phone.close();
+  });
+
   console.log('\nPOST-CALL');
   await test('the working surface, with a real proposal on it', async () => {
     const p = await ctx.newPage();

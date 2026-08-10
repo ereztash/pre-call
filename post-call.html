@@ -188,6 +188,24 @@
       <span class="copied" id="cpFlag">הועתק</span>
     </div>
   </div>
+  <!-- ============ asking for a key before it is needed ============
+       The gate stops three actions, and all three happen at the same moment:
+       the proposal is finished and the operator is about to send it to their
+       client. With a manual sale the answer to "I need a key" is "I will
+       email you one within a few hours", and that is the worst possible
+       moment in the whole flow to ask somebody to wait.
+
+       So the requirement is surfaced while there is still slack, next to the
+       buttons it will apply to. Written by renderKeyAhead() in
+       assets/pc-gate.js, and shown only when all of it is true: there is
+       somewhere to ask, no key is held yet, a real price exists, and it has
+       not been dismissed. Otherwise it is a nag next to the work, which is
+       the kind of noise this project removes rather than adds. -->
+  <div class="keyahead hidden" id="keyAhead">
+    <p id="keyAheadText"></p>
+    <button class="ghost" data-act="askkey">בקשו מפתח מראש</button>
+    <button class="ghost" data-act="laterkey">אחר כך</button>
+  </div>
   <!-- The three sanity checks the chain and the verdict box already compute,
        as a row that reads in one glance instead of a paragraph — see the
        comment on PC.flow.guardrails() for why this exists and why it is
@@ -220,8 +238,21 @@
   <div id="wall" class="wall hidden">
     <h3>לייצוא ההצעה נדרש מפתח</h3>
     <p>המסמך והמספרים חינם ותמיד יישארו. התשלום הוא על לקיחתו החוצה.</p>
-    <div class="price">₪49</div>
+    <div class="price" id="wallPrice">₪49</div>
+    <!-- The label, the button's destination and everything below are written by
+         renderBuyRoute() in assets/pc-gate.js, because they depend on how the
+         money actually arrives — and that is configuration, not markup. The
+         label here is the automated case; a manual sale must not say "קנה",
+         which promises a key on the spot. -->
     <button class="act" id="payBtn">קנה וקבל מפתח</button>
+    <div class="buyroute hidden" id="buyRoute">
+      <p id="buyHow"></p>
+      <!-- The address in text as well as behind the button. A mailto with no
+           mail client configured is a click that silently does nothing, which
+           is the one failure this project keeps finding; something selectable
+           means the route survives a browser that cannot open it. -->
+      <p class="buyaddr" id="buyContact"></p>
+    </div>
     <div class="keyrow">
       <input type="text" id="keyIn" aria-label="מפתח פתיחה" placeholder="הדבק כאן את המפתח" autocomplete="off">
       <button class="ghost" data-act="unlock">הפעל את המפתח</button>

@@ -200,17 +200,47 @@
     </select>
   </div>
 
+  <!-- ============ the sentence that used to be composed live ============
+       Until now the script handed the operator a multi-line observation and
+       asked them to turn it into one sentence about this specific person,
+       in second person, deliberately slightly off — in the room, out loud,
+       with somebody waiting. That is the highest-load moment in the whole
+       tool and it does not show up in any measurement of the page, because
+       it costs no pixels. Reading and speaking compete for the same channel;
+       composing under that load is exactly what produces the flat, read-off-
+       a-page voice the rest of this script is built to avoid. The work moves
+       here, to the minutes before the call. -->
+  <div class="box">
+    <h3>המשפט שתגידו בשאלה 10</h3>
+    <p class="hint-p">שאלה 10 בודקת מי מחזיק את הבעיה, והיא עובדת רק אם קודם אמרתם לו משפט שהוא יכול לדחות. נסחו אותו עכשיו — בשיחה עצמה אין קשב פנוי לנסח.</p>
+    <p class="hint-p" id="edgeRef"></p>
+    <label for="p_own">משפט אחד עליו, בגוף שני, מעט לא מדויק בכוונה
+      <span class="hint">אם תשאירו ריק, התסריט יבקש מכם לנסח אותו בזמן השיחה, והוא יגיד את זה במפורש.</span></label>
+    <textarea id="p_own" placeholder="למשל: אני מנחש שאצלכם אף אחד לא באמת מוגדר כאחראי על המעקב, ולכן זה חוזר אליך"></textarea>
+  </div>
+
   <button class="act" data-act="build">בנה את התסריט</button>
   <div class="err hidden" id="err"></div>
 </div>
 
 <!-- ============ STEP 4 ============ -->
 <div class="panel" id="p4">
+  <!-- This box must stay the FIRST div inside #p4: the print sheet hides it
+       with `#p4 .box:first-of-type`, which is first-of-*element*-type, so a
+       div inserted above it would stop matching and the button row would
+       start appearing in the PDF. .callbar therefore sits below it, and
+       markup.test.js pins the assumption so a future insert breaks a test
+       instead of a printout. -->
   <div class="box">
-    <button class="act" data-act="cp-out">העתק את התסריט כטקסט</button>
+    <button class="act" data-act="callmode-on">מצב שיחה · רק מה שאומרים</button>
+    <button class="ghost" data-act="cp-out">העתק את התסריט כטקסט</button>
     <button class="ghost" data-act="print">הדפסה או PDF</button>
     <button class="ghost" data-act="go3">חזרה לעריכה</button>
     <span class="copied" id="c3">הועתק</span>
+  </div>
+  <div class="callbar hidden" id="callbar">
+    <button class="ghost" data-act="callmode-off">יציאה ממצב שיחה</button>
+    <button class="ghost" data-act="to-card">השיחה נגמרה · לכרטיס הקריאה</button>
   </div>
   <div class="out" id="outArea"></div>
   <div id="privArea" class="priv hidden"></div>

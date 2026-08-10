@@ -17,7 +17,37 @@
    a key past the server.
    ============================================================ */
 
+/* ---- how the money actually arrives ----
+   Three states, and the wall says which one it is in rather than showing a buy
+   button that leads nowhere. Before this there were only two, and the second
+   was an alert() addressed to whoever wrote the code: "replace PAYMENT_URL in
+   assets/pc-gate.js". A buyer who clicked "קנה וקבל מפתח" was told to edit a
+   source file. That is the wall's whole job failing at the only moment it
+   matters.
+
+     PAYMENT_URL set      → a payment page opens, a key follows from it
+     SALES.contact set    → a manual sale. The button opens the route, the wall
+                            says how long a key takes and what to write, and the
+                            address is also on screen as text
+     neither              → not on sale. Said plainly, in the buyer's language,
+                            with the price hidden — a price above "not for sale
+                            yet" is a contradiction — and the key field still
+                            working for anyone who already has one
+
+   The manual state is the one this product is actually in, and it is not a
+   placeholder: taking money by hand for the first handful of buyers is a
+   decision, not a gap. What it needs is a wall that says so. */
 const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
+
+/* Fill in ONE of these to start selling. `contact` is where a buyer asks for a
+   key: 'mailto:you@example.com' or 'https://wa.me/9725...'. It is deliberately
+   empty in the repository — whatever goes here is published on a page anyone
+   can read and a crawler can scrape, so which address to expose is the
+   operator's call, not a default somebody inherits. */
+const SALES = {
+  contact: '',
+  turnaround: 'בדרך כלל תוך כמה שעות, ולא יותר מיום עסקים אחד'
+};
 const KEY_SHAPE = /^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const KEY_STORE = 'postcall_key';
 const KEY_OK_AT = 'postcall_key_ok_at';
@@ -85,6 +115,7 @@ async function tryUnlock(){
 
   unlocked = true;
   show('wall', false);
+  renderKeyAhead(); // the note asks for the thing that just arrived
   try {
     localStorage.setItem(KEY_STORE, raw);
     // only stamp a confirmation the server actually gave, so a fallback
@@ -148,19 +179,131 @@ function rehydrateKey(){
         unlocked = true;
         try { localStorage.setItem(KEY_OK_AT, new Date().toISOString()); } catch(e){}
       }
+      renderKeyAhead(); // in both directions: a revoked key brings the note back
       // 'throttled' or null: no verdict, leave it as it was
     });
   } catch(e){}
 }
 
-function mountGate(){
+/* The automated route needs a URL that actually goes somewhere, and "is not the
+   placeholder" is not that test. Found in review, and the failing case is the
+   likeliest way anyone configures this: the README says to fill SALES.contact,
+   so a tidy operator also clears the payment URL they are not using. Then
+   ''.includes('example.com') is false, the sale is classified automated, the
+   manual contact is ignored, and the button calls window.open('') — the exact
+   dead-end blank tab this whole change exists to remove.
+
+   So it is asked positively: what is the configured payment URL, if any.
+   https is required rather than assumed — a payment page reached over http is
+   worse than no link, and the scheme check also means nothing but a URL can
+   ever reach window.open() from here. example.com is a reserved documentation
+   domain and never a real payment page, so it stays excluded whatever path it
+   is wearing. */
+function configuredPayment(){
+  const u = (PAYMENT_URL || '').trim();
+  if (!u || u.includes('example.com') || !/^https:\/\/\S/i.test(u)) return '';
+  return u;
+}
+
+/* Which of the three states we are in. Kept as one function so the wall cannot
+   end up describing one route while its button goes to another. */
+function salesRoute(){
+  if (configuredPayment()) return 'automated';
+  if (SALES.contact) return 'manual';
+  return 'none';
+}
+
+const setText = (id, s) => { const n = el(id); if (n) n.textContent = s; };
+
+/* A mailto has to replace the location — window.open leaves an orphaned blank
+   tab behind in most browsers. An https route (wa.me, a form) must NOT replace
+   it: the buyer is mid-proposal, and navigating away from an unsaved document
+   to a chat window is losing their work to open a shop. */
+function openContact(){
+  if (/^mailto:/i.test(SALES.contact)) window.location.href = SALES.contact;
+  else window.open(SALES.contact, '_blank', 'noopener');
+}
+
+function renderBuyRoute(){
   const pay = el('payBtn');
-  if (pay) pay.onclick = () => {
-    if (PAYMENT_URL.includes('example.com')) {
-      alert('עוד לא חובר קישור תשלום.\n\nהחלף את PAYMENT_URL בקובץ assets/pc-gate.js בקישור מ-Stripe / Lemon Squeezy / Paddle,\nושלח לקונה מפתח בפורמט PC-XXXX-XXXX.');
-      return;
-    }
-    window.open(PAYMENT_URL, '_blank', 'noopener');
-  };
+  const route = salesRoute();
+
+  if (route === 'automated') {
+    show('buyRoute', false);
+    if (pay) pay.onclick = () => window.open(configuredPayment(), '_blank', 'noopener');
+    return;
+  }
+
+  if (route === 'manual') {
+    // never "קנה" here: that promises a key on the spot, and this one arrives
+    // when a person sends it
+    setText('payBtn', 'בקשו מפתח בהודעה');
+    setText('buyHow', 'התשלום נסגר איתי ישירות, והמפתח נשלח ביד — ' + SALES.turnaround +
+      '. בהודעה כתבו שם, ואת המייל שאליו לשלוח את המפתח.');
+    // strip the scheme: mailto:a@b reads as an address, wa.me/972... as a link
+    setText('buyContact', SALES.contact.replace(/^mailto:/i, ''));
+    show('buyRoute', true);
+    if (pay) pay.onclick = openContact;
+    return;
+  }
+
+  // Not on sale. Everything that implies a purchase comes off, and the one
+  // thing that still works — a key somebody already holds — stays.
+  show('wallPrice', false);
+  show('payBtn', false);
+  setText('buyHow', 'הכלי עוד לא נמכר, ואין כרגע דרך לקנות מפתח. אם כבר יש לכם מפתח, הפעילו אותו כאן.');
+  setText('buyContact', '');
+  show('buyRoute', true);
+}
+
+/* ---- asking for a key before the gate asks for it ----
+   The three gated actions all happen at one moment: the proposal is finished
+   and about to go to the client. With a manual sale, the answer to "I need a
+   key" is "I will send you one within a few hours" — so the gate lands at the
+   single worst point in the flow to introduce a wait.
+
+   This is the fix, and the whole design is about not becoming noise. It says
+   the requirement once, next to the buttons it applies to, while there is
+   still slack, and it disappears for good on any of three grounds: a key
+   arrives, there is nowhere to ask, or the operator says not now.
+
+   Dismissal is in memory and not persisted, deliberately. A stored dismissal
+   would mean the one warning is spent forever on the first session, and the
+   buyer who comes back in three weeks meets the wall cold — which is the
+   situation this exists to prevent. A session here is one call. */
+let keyAheadDismissed = false, keyAheadPriced = false;
+
+/* Called from the recompute chain with whether a real price exists, and called
+   with nothing from the two places that can make it obsolete without a
+   recompute — an unlock, and a stored key confirmed after load. Remembering
+   the last answer is what lets both callers use one function; asking the two
+   of them to know about the price would be the way the note survives the key
+   that made it pointless. */
+function renderKeyAhead(hasRealPrice){
+  if (hasRealPrice !== undefined) keyAheadPriced = !!hasRealPrice;
+  const worth = keyAheadPriced && !unlocked && !keyAheadDismissed && salesRoute() !== 'none';
+  if (!worth) { show('keyAhead', false); return; }
+  setText('keyAheadText', salesRoute() === 'manual'
+    ? 'שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח, והוא נשלח ביד. ' +
+      'בקשו אותו עכשיו, בזמן שאתם עוד עובדים, כדי לא לחכות לו כשההצעה מוכנה לשליחה.'
+    : 'שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח. אפשר לסדר את זה עכשיו.');
+  show('keyAhead', true);
+}
+
+/* Same destination as the wall's button. One route, so a buyer who asks early
+   and a buyer who asks late end up in the same conversation. */
+function askForKeyAhead(){
+  track('key_requested');
+  if (salesRoute() === 'manual') return openContact();
+  window.open(configuredPayment(), '_blank', 'noopener');
+}
+
+function dismissKeyAhead(){
+  keyAheadDismissed = true;
+  show('keyAhead', false);
+}
+
+function mountGate(){
+  renderBuyRoute();
   rehydrateKey();
 }
