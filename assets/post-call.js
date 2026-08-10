@@ -1146,7 +1146,17 @@ function collectDraft(){
   PC.DRAFT_FIELDS.forEach(id => { const f = el(id); if (f) fields[id] = f.value; });
   return { fields, systems: [...chosenSystems], scope: scopeState,
            template: activeTemplate, dealId: currentDealId, override: clientOverride,
-           scopeConfirmed };
+           scopeConfirmed,
+           /* Whether somebody actually answered where the number came from, as a
+              sibling flag in the same shape as scopeConfirmed. It exists because
+              of one irreducible ambiguity: 'prompted' used to be the form's
+              default, so a stored 'prompted' cannot be told apart from an
+              untouched question by looking at the value. The other three answers
+              were never a default and need no flag.
+              Records written before this flag existed simply lack it, which is
+              exactly the reading we want — unconfirmed. */
+           provenanceAnswered: el('q_provenance')
+             ? el('q_provenance').value !== 'unset' : false };
 }
 
 function saveDraft(){
@@ -1183,6 +1193,18 @@ const PRISTINE = (() => {
 function applyDraft(d){
   if (!d) return;
   Object.entries(d.fields || {}).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
+  /* Reopening a draft or a saved deal used to restore the old default verbatim,
+     so the ROI paragraph went back into a client-facing document on the strength
+     of a question nobody had answered — the exact thing the new default exists
+     to stop, surviving in every record written before it. Raised in review.
+
+     Only the ambiguous value is downgraded, and only when the flag is absent.
+     'unprompted', 'mine' and 'none' were never a default, so restoring them
+     verbatim is safe; a 'prompted' that was genuinely chosen carries the flag
+     and is left alone. Nothing is rewritten in storage — this is the value on
+     the form, and answering it again saves it stamped. */
+  const prov = el('q_provenance');
+  if (prov && !d.provenanceAnswered && prov.value === 'prompted') prov.value = 'unset';
   selectSystems(d.systems || []);
   scopeState = Object.assign(defaultScopeState(), d.scope || {});
   activeTemplate = d.template || null;

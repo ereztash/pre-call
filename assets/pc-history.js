@@ -262,9 +262,21 @@
   function provenance(deals, labels) {
     const known = labels ? Object.keys(labels) : null;
     const ok = v => !!v && (!known || known.indexOf(v) !== -1);
+    /* One value carries an ambiguity the others do not. 'prompted' used to be
+       the form's default, so a stored 'prompted' cannot be told apart from a
+       question nobody touched by looking at the value — and this panel claims
+       every row is a choice somebody made. A record that was genuinely answered
+       carries the flag collectDraft() writes; one that was not is unattributed,
+       which the panel already discloses by name.
+       The other three were never a default, so demanding a flag from them would
+       throw away real answers from every record written before the flag existed.
+       Raised in review, and it is the reason the disclaimer that used to sit in
+       unknowns() could go rather than being reworded. */
+    const answered = d => !!(d.form && d.form.provenanceAnswered);
+    const usable = (v, d) => ok(v) && (v !== 'prompted' || answered(d));
     return bucketBy(deals, 'provenance', d => {
-      if (ok(d.provenance)) return d.provenance;
-      return d.form && ok(d.form.q_provenance) ? d.form.q_provenance : null;
+      if (usable(d.provenance, d)) return d.provenance;
+      return d.form && usable(d.form.q_provenance, d) ? d.form.q_provenance : null;
     }, labels);
   }
 

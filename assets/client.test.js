@@ -60,6 +60,16 @@ test('confidence rises with the number of signals actually present', () => {
   assert.ok(thick.confidence > thin.confidence);
   assert.strictEqual(thick.confidence, 1);
 });
+test('the unanswered default is not a signal, and does not inflate confidence', () => {
+  /* Raised in review. clientProfile() passes the form's value verbatim, so with
+     the new default it passes the non-empty string 'unset' — and a truthiness
+     check counted that as a filled field. A form with one number in it reported
+     40% confidence on the strength of a question nobody had answered. */
+  assert.strictEqual(read({ freq: 20, freqUnit: 52, provenance: 'unset' }).confidence, 0.2,
+    'an explicit "not answered" is the absence of a signal, not one');
+  assert.strictEqual(read({ freq: 20, freqUnit: 52, provenance: 'unprompted' }).confidence, 0.4,
+    'a real answer still counts');
+});
 test('a read always says what it was based on', () => {
   const p = read({ systems: ['ERP'], decider: 'ההנהלה' });
   assert.ok(p.evidence.length, 'an inference with no stated basis cannot be checked');

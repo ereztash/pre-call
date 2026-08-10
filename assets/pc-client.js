@@ -60,7 +60,12 @@
     /* Confidence is reported, not used to gate anything. The operator should
        be able to see that a read resting on one filled field is a read
        resting on one filled field. */
-    const known = [systems.length > 0, runs > 0, !!decider, !!s.provenance,
+    /* `numbers !== 'unset'` rather than `!!s.provenance`. The form passes its
+       value verbatim, so with an explicit unanswered default it passes a
+       non-empty string, and a truthiness check counted a question nobody had
+       answered as a filled field — a form with one number in it reported 40%
+       confidence. Raised in review. */
+    const known = [systems.length > 0, runs > 0, !!decider, numbers !== 'unset',
                    burned || urgency !== 'none'].filter(Boolean).length;
 
     const evidence = [];
