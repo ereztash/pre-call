@@ -68,6 +68,12 @@
   const FIELDS = ['at', 'what', 'from', 'to', 'ref', 'retro'];
   const REF_MAX = 48;          // a generated id is ~22 chars; prose is not an id
 
+  /* Two sends make a "median" that is the mean of two numbers wearing a
+     statistician's hat. The rest of this product refuses to speak on thin
+     evidence rather than speak quietly — pc-history.js will not draw a ceiling
+     under six deals — and a duration is no different. */
+  const MIN_FOR_MEDIAN = 3;
+
   function make(storage) {
     const read = () => {
       try {
@@ -164,6 +170,74 @@
         };
       },
 
+      /* The funnel, and the reason it needs no identifier. The telemetry row
+         carries no session id, so counts from the server are all it can ever
+         give — a total, never a sequence. Here the log is local and one
+         person's, so the operator's own order IS the funnel, and the whole
+         privacy question the server version raises never comes up.
+
+         Retro deals are counted and then held out of every duration. A deal
+         typed in from memory reaches the log with its whole life inside one
+         minute, and a median that included it would be timing the data entry
+         rather than the selling.
+
+         Returns null, not zero, for anything there is not yet enough evidence
+         for — and `sendsNeeded` so a caller can say how much is missing instead
+         of showing a quiet zero. Silence reads as agreement otherwise. */
+      funnel(all) {
+        const rows = all || read();
+        const watched = rows.filter(l => l.retro !== true);
+        const refs = pred => {
+          const s = new Set();
+          watched.forEach(l => { if (l.ref && pred(l)) s.add(l.ref); });
+          return s;
+        };
+        const status = to => l => l.what === 'deal.status' && l.to === to;
+
+        const retroRefs = new Set();
+        rows.forEach(l => { if (l.retro === true && l.ref) retroRefs.add(l.ref); });
+
+        /* Per deal, first line to the send. The first line is the save, because
+           save() is what creates a deal — there is nothing earlier to measure
+           from, and the session line belongs to the visit rather than the deal. */
+        const mins = [];
+        refs(status('sent')).forEach(id => {
+          const mine = watched.filter(l => l.ref === id);
+          const sent = mine.find(status('sent'));
+          const t0 = Date.parse(mine[0].at), t1 = Date.parse(sent.at);
+          if (isFinite(t0) && isFinite(t1) && t1 >= t0) mins.push(Math.round((t1 - t0) / 60000));
+        });
+        mins.sort((a, b) => a - b);
+        const med = mins.length < MIN_FOR_MEDIAN ? null
+          : (mins.length % 2 ? mins[(mins.length - 1) / 2]
+             : Math.round((mins[mins.length / 2 - 1] + mins[mins.length / 2]) / 2));
+
+        /* Two different facts about the same operator, reported apart because
+           averaged together they describe neither: a price that fell before
+           anyone had seen it, and a price that fell while it was being argued
+           over. A price that held writes no closing line at all — the module
+           refuses non-events everywhere — so this counts falls, and a caller
+           that needs holds has to ask the ledger, which keeps both numbers. */
+        let before = 0;
+        refs(() => true).forEach(id => {
+          if (api.movement(id, watched).droppedBeforeSending) before++;
+        });
+
+        return {
+          sessions: rows.filter(l => l.what === 'session').length,
+          deals: refs(() => true).size,
+          sent: refs(status('sent')).size,
+          decided: refs(l => l.what === 'deal.status' &&
+                             ['won', 'lost', 'no_answer'].indexOf(l.to) > -1).size,
+          removed: refs(l => l.what === 'deal.removed').size,
+          retro: retroRefs.size,
+          medianMinutesToSend: med,
+          sendsNeeded: Math.max(0, MIN_FOR_MEDIAN - mins.length),
+          droppedBeforeSending: before,
+          closedLower: refs(l => l.what === 'deal.closed' && +l.to < +l.from).size
+        };
+      },
+
       clear() { try { storage.removeItem(KEY); return true; } catch (e) { return false; } }
     };
     return api;
@@ -175,5 +249,5 @@
   if (typeof localStorage !== 'undefined') root.PC.journal = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, WHAT, CAP, KEY, FIELDS };
+    module.exports = { make, WHAT, CAP, KEY, FIELDS, MIN_FOR_MEDIAN };
 })(typeof window !== 'undefined' ? window : globalThis);

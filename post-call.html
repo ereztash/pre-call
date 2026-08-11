@@ -532,6 +532,27 @@
      It is hidden until there is at least one saved deal, because an empty
      panel explaining what it would eventually show is still an empty
      panel, and the ledger above already says there is nothing saved. -->
+<!-- ============ מה עשית, לא מה חשבת ============
+
+     A sibling of the track record rather than a line inside it, for one
+     concrete reason: renderHistory hides itself whenever PC.history.report
+     returns nothing, and it deliberately returns nothing until there is
+     evidence. This panel is at its most useful exactly then — "you opened this
+     four times and sent one proposal" is what a first week looks like, and the
+     track record is right to stay quiet about it.
+
+     Placed above the track record because the reading order is what you did,
+     then what the tool learned from it. -->
+<div class="sec hidden" id="funnelSec">
+  <div class="sec-h">מה עשית</div>
+  <h2>מה קרה בפועל, לא מה נראה נכון</h2>
+  <p class="lead">
+    נמדד מהיומן המקומי — כמה פעמים פתחת, כמה הצעות נשמרו, כמה יצאו, וכמה זמן עבר
+    בין השתיים. שום דבר כאן לא נשאל אותך: אלה המעברים עצמם, שנרשמו כשקרו.
+  </p>
+  <div class="box" id="funnelBox"></div>
+</div>
+
 <div class="sec hidden" id="historySec">
   <div class="sec-h">הכלי על עצמו</div>
   <h2>כמה הייעוץ הזה היה שווה לך</h2>

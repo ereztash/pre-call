@@ -1476,6 +1476,18 @@ function applyEntryRoute(){
    the bottom of whichever file happened to define the function. */
 mountGate();
 renderTemplates();
+/* One line per visit, before any render rather than after. track('opened')
+   leaves the machine and comes back as a count from everybody; this stays here
+   and gives the operator's own sequence — the second visit, the fourth — which
+   no count can.
+
+   It was written after the renders at first, on the theory that a write on the
+   way in must never delay the page. That was the wrong trade and a browser
+   showed it: the panel that reads this counted the visit before the current one,
+   so it was permanently one behind and said "once" on the second visit. A single
+   localStorage write costs microseconds, PC.journal swallows its own failures,
+   and a number that is visibly wrong costs more than either. */
+if (PC.journal) PC.journal.append({ what: 'session', to: 'post-call' });
 restoreSender();  // before the first render, so the document has a letterhead
 restoreDraft();   // before the first render, so the page comes up as it was left
 renderScope();
@@ -1491,10 +1503,3 @@ applyEntryRoute();   // after the renders above, so there is something to land o
    the code, where it looks like one path. */
 window.addEventListener('hashchange', applyEntryRoute);
 track('opened');
-/* One line per visit, so the transitions underneath it have something to be
-   ordered against. track('opened') leaves the machine and comes back as a
-   count; this stays here and gives the operator's own sequence — the second
-   visit, the fourth — which a count of visits from everybody cannot.
-   After the renders on purpose: a write on the way in must never be able to
-   delay the page coming up, and PC.journal swallows its own failures. */
-if (PC.journal) PC.journal.append({ what: 'session', to: 'post-call' });

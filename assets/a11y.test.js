@@ -244,13 +244,39 @@ async function scan(page, label) {
                    at: '2026-0' + (i + 1) + '-20T09:00:00.000Z' }
       }));
       localStorage.setItem('postcall_deals_v1', JSON.stringify(deals));
+      /* The journal too, because seeding the ledger alone leaves the funnel
+         panel hidden — and a scan that silently skips a whole section is a scan
+         that reports a clean bill for markup it never saw. Written straight to
+         the key rather than through append(), which stamps `at` with the clock
+         and would give every line the same millisecond. */
+      const at = (d, h, m) => '2026-08-0' + d + 'T' + h + ':' + m + ':00.000Z';
+      localStorage.setItem('postcall_journal_v1', JSON.stringify([
+        { at: at(1, '09', '00'), what: 'session', to: 'post-call' },
+        { at: at(2, '09', '00'), what: 'session', to: 'post-call' },
+        { at: at(2, '09', '05'), what: 'deal.status', to: 'draft', ref: 'h0' },
+        { at: at(2, '09', '05'), what: 'deal.price', to: 14000, ref: 'h0' },
+        { at: at(2, '09', '12'), what: 'deal.price', from: 14000, to: 12000, ref: 'h0' },
+        { at: at(2, '09', '25'), what: 'deal.status', from: 'draft', to: 'sent', ref: 'h0' },
+        { at: at(3, '10', '00'), what: 'deal.status', to: 'draft', ref: 'h1' },
+        { at: at(3, '10', '30'), what: 'deal.status', from: 'draft', to: 'sent', ref: 'h1' },
+        { at: at(3, '11', '00'), what: 'deal.closed', from: 12000, to: 9000, ref: 'h1' },
+        { at: at(4, '10', '00'), what: 'deal.status', to: 'draft', ref: 'h2' },
+        { at: at(4, '10', '40'), what: 'deal.status', from: 'draft', to: 'sent', ref: 'h2' },
+        { at: at(5, '10', '00'), what: 'deal.status', to: 'won', ref: 'h5', retro: true }
+      ]));
     });
     await p.goto(base + '/post-call.html#ledger');
     await p.waitForTimeout(500);
     const painted = await p.evaluate(() =>
       !!document.querySelector('.hist-find') && !!document.querySelector('.hist-t'));
     assert.ok(painted, 'the fixture produced no findings, so this scan proves nothing');
-    await scan(p, 'post-call.html · the track record with findings');
+    const funnel = await p.evaluate(() => {
+      const s = document.getElementById('funnelSec');
+      return !!s && !s.classList.contains('hidden') &&
+             !!document.querySelector('#funnelBox .hist-t');
+    });
+    assert.ok(funnel, 'the funnel panel stayed hidden, so this scan never saw it');
+    await scan(p, 'post-call.html · the track record and the funnel, with findings');
     await p.close();
   });
 

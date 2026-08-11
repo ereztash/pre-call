@@ -362,7 +362,8 @@ const renderLedger = guard('ledger', function (){
     ? `<button type="button" class="ghost" data-act="newdeal">הצעה חדשה</button>
        <span class="dealbar-n">${list.length} שמורות · ${win.undecided} ממתינות לתשובה</span>` : '';
 
-  renderHistory(list);
+  renderFunnel();      // transitions, from the journal
+  renderHistory(list); // states, from the ledger
 });
 
 /* ---------- the tool's own track record ----------
@@ -378,6 +379,87 @@ const renderLedger = guard('ledger', function (){
    using it. This is the part that can stop being an assertion, and the
    panel is written so that the countdown to a finding is as visible as
    the finding: silence here must never read as agreement. */
+/* ---------- what the operator actually did ----------
+
+   Every other panel on this page reads the ledger, which holds states. This one
+   reads the journal, which holds transitions — and it is the only place in the
+   product that answers "did anything move" rather than "what is true now".
+
+   Behaviour, never opinion. The research on this is unambiguous and it is not a
+   close call: across 298 designs with both measured, preference and performance
+   correlate .53, and users prefer the better-performing design only 70% of the
+   time. A satisfaction number from a single operator would land in that 30%
+   with no way to detect that it had. Counts of what happened cannot.
+
+   Silence here says what is missing and how much of it. A zero that looks
+   measured is worse than an admission, because the reader cannot tell the two
+   apart — the same discipline the track record below holds. */
+const renderFunnel = guard('funnel', function (){
+  const box = el('funnelBox'); if (!box) return;
+  if (!PC.journal || !PC.journal.funnel) { show('funnelSec', false); return; }
+  const f = PC.journal.funnel();
+
+  /* One deal, or a second visit. Not "any activity at all": a first visit with
+     nothing saved reads "you opened this once and saved nothing", which is the
+     empty panel explaining what it would eventually show that the track record
+     below is careful never to be.
+
+     A SECOND visit with nothing saved is the opposite — it is the most useful
+     line on the page, because coming back and still not sending is the finding.
+     So the gate is the thing that makes it a fact rather than a restatement of
+     the ledger. */
+  if (!f.deals && f.sessions < 2) { box.innerHTML = ''; show('funnelSec', false); return; }
+  show('funnelSec', true);
+
+  const n = (v, one, many) => v === 1 ? one : many.replace('%', v);
+  const held = f.deals - f.removed;
+
+  const row = (k, v) => `<div class="hist-row">
+      <span class="hist-k">${k}</span><span class="hist-v">${v}</span></div>`;
+
+  const stages = row('פתחת את הדף',
+      n(f.sessions, 'פעם אחת', '% פעמים')) +
+    row('נשמרו הצעות',
+      f.deals ? n(f.deals, 'אחת', '%') + (f.removed
+        ? ` · ${f.removed === 1 ? 'אחת נמחקה' : f.removed + ' נמחקו'}, ${held} בפנקס` : '')
+              : 'עדיין אף אחת') +
+    row('יצאו ללקוח', f.sent ? n(f.sent, 'אחת', '%') : 'עדיין אף אחת') +
+    row('קיבלו תשובה', f.decided ? n(f.decided, 'אחת', '%') : 'עדיין אף אחת');
+
+  /* The gap between saving and sending is the one duration this product can
+     measure without asking anything, and it is the interesting one: a proposal
+     that sits unsent is the most common way a good price never gets tested. */
+  const timing = f.medianMinutesToSend !== null
+    ? `<div class="hist-t"><b>מהשמירה לשליחה: ${f.medianMinutesToSend} דקות בחציון.</b>
+         נמדד על ${n(f.sent, 'הצעה אחת', '% הצעות')} שיצאו.</div>`
+    : `<div class="hist-gap">מהשמירה לשליחה — ${
+         n(f.sendsNeeded, 'עוד שליחה אחת', 'עוד % שליחות')} וזה יימדד.
+         עד אז אין כאן מספר, ולא אפס.</div>`;
+
+  /* Reported apart because averaged together they describe neither: a price
+     that fell before anybody had seen it is a decision made alone, and a price
+     that fell at closing is one made across a table. */
+  const money = (f.droppedBeforeSending
+      ? `<div class="hist-find">${n(f.droppedBeforeSending,
+          'בהצעה אחת המחיר ירד לפני שההצעה יצאה', 'ב-% הצעות המחיר ירד לפני שההצעה יצאה')}
+         — זו הנחה שאף אחד לא ביקש.</div>` : '') +
+    (f.closedLower
+      ? `<div class="hist-find">${n(f.closedLower,
+          'הצעה אחת נסגרה מתחת למחיר שנשלח', '% הצעות נסגרו מתחת למחיר שנשלח')}.</div>` : '');
+
+  /* The whole clause varies, not only the count. Swapping the number alone left
+     "הצעה אחת … ואינן", which is a plural verb after a singular subject — the
+     kind of thing a template with one variable slot produces and a screenshot
+     catches. */
+  const retro = f.retro
+    ? `<div class="hist-gap">${f.retro === 1
+        ? 'הצעה אחת הוזנה בדיעבד ואינה נכללת בזמנים'
+        : f.retro + ' הצעות הוזנו בדיעבד ואינן נכללות בזמנים'} — שם נמדדת
+         ההקלדה ולא המכירה.</div>` : '';
+
+  box.innerHTML = `<div class="hist-rows">${stages}</div>` + timing + money + retro;
+});
+
 const renderHistory = guard('history', function (list) {
   const box = el('historyBox'); if (!box) return;
   /* Computed before the report rather than after it, because the ceiling finding

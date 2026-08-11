@@ -22,7 +22,7 @@
      2. It carries no free text. It is local, but pc-backup.js round-trips it into
         a file that leaves the machine, so it holds the same discipline as the
         telemetry row: statuses, counts, ids. Never a client name. */
-const { make, WHAT, CAP } = require('./pc-journal.js');
+const { make, WHAT, CAP, MIN_FOR_MEDIAN } = require('./pc-journal.js');
 const assert = require('assert');
 
 let pass = 0, fail = 0;
@@ -202,6 +202,105 @@ test('a session line anchors the sequence without any id being invented', () => 
   j.append({ what: 'session', to: 'post-call' });
   assert.strictEqual(j.list().filter(l => l.what === 'session').length, 2);
   assert.strictEqual(j.sessions(), 2, 'how many times this person came back');
+});
+
+console.log('\nthe funnel, which needs no identifier because the log is one person\'s');
+/* Seeded directly rather than appended, because append() stamps `at` with the
+   clock and every line in a test would land on the same millisecond — which is
+   exactly the collision that broke movement() the first time. Durations need
+   chosen times, so the times are chosen. */
+const at = (day, hh, mm) => '2026-08-' + String(day).padStart(2, '0') +
+                            'T' + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':00.000Z';
+const seeded = rows => make(mem({ postcall_journal_v1: JSON.stringify(rows) }));
+
+const week = () => seeded([
+  { at: at(3, 9, 0),  what: 'session', to: 'post-call' },
+  // d_1: opened, saved, price cut before sending, sent 20 minutes later, closed lower
+  { at: at(3, 9, 5),  what: 'deal.status', to: 'draft', ref: 'd_1' },
+  { at: at(3, 9, 5),  what: 'deal.price', to: 12000, ref: 'd_1' },
+  { at: at(3, 9, 12), what: 'deal.price', from: 12000, to: 10000, ref: 'd_1' },
+  { at: at(3, 9, 25), what: 'deal.status', from: 'draft', to: 'sent', ref: 'd_1' },
+  { at: at(6, 11, 0), what: 'deal.status', from: 'sent', to: 'won', ref: 'd_1' },
+  { at: at(6, 11, 1), what: 'deal.closed', from: 10000, to: 9000, ref: 'd_1' },
+  // d_2: opened next day, sent after 40 minutes, still waiting
+  { at: at(4, 14, 0), what: 'session', to: 'post-call' },
+  { at: at(4, 14, 2), what: 'deal.status', to: 'draft', ref: 'd_2' },
+  { at: at(4, 14, 2), what: 'deal.price', to: 8000, ref: 'd_2' },
+  { at: at(4, 14, 42), what: 'deal.status', from: 'draft', to: 'sent', ref: 'd_2' },
+  // d_3: saved and never sent
+  { at: at(5, 10, 0), what: 'session', to: 'post-call' },
+  { at: at(5, 10, 3), what: 'deal.status', to: 'draft', ref: 'd_3' },
+  /* d_4: typed in from memory. It carries a send, deliberately — a retro deal
+     with no send would be excluded from the median by accident rather than by
+     the rule, and the test would pass without proving anything. Its whole life
+     lands inside one minute, so counting it would pull the median from 30 to 25. */
+  { at: at(5, 10, 30), what: 'deal.status', to: 'draft', ref: 'd_4', retro: true },
+  { at: at(5, 10, 30), what: 'deal.price', to: 20000, ref: 'd_4', retro: true },
+  { at: at(5, 10, 30), what: 'deal.status', from: 'draft', to: 'sent', ref: 'd_4', retro: true },
+  { at: at(5, 10, 30), what: 'deal.status', from: 'sent', to: 'won', ref: 'd_4', retro: true },
+  // d_5: the third send, so the median has enough to speak on
+  { at: at(6, 16, 0),  what: 'deal.status', to: 'draft', ref: 'd_5' },
+  { at: at(6, 16, 30), what: 'deal.status', from: 'draft', to: 'sent', ref: 'd_5' }
+]);
+
+test('it counts the four stages without any identifier existing', () => {
+  /* The telemetry row carries no session id, so counts from the server are all
+     it can ever give. Here the log is local and ordered, so one person's own
+     sequence IS the funnel. */
+  const f = week().funnel();
+  assert.strictEqual(f.sessions, 3, 'how many times this person came back');
+  assert.strictEqual(f.deals, 4, 'four deals the tool watched (the retro one is not one)');
+  assert.strictEqual(f.sent, 3);
+  assert.strictEqual(f.decided, 1);
+});
+test('a deal typed in from memory is counted apart, never inside a duration', () => {
+  const f = week().funnel();
+  assert.strictEqual(f.retro, 1, 'it happened and it belongs somewhere');
+  // 20, 30 and 40 minutes; the retro deal has no open-to-send interval at all,
+  // and if it were counted its whole life fits inside one minute and would drag
+  // the median down to 20
+  assert.strictEqual(f.medianMinutesToSend, 30);
+});
+test('the median needs enough sends before it says anything', () => {
+  /* Two sends make a median that is just the mean of two numbers, and the
+     product's discipline everywhere else is to refuse to speak on thin
+     evidence rather than speak quietly. */
+  const thin = seeded([
+    { at: at(3, 9, 0), what: 'deal.status', to: 'draft', ref: 'd_1' },
+    { at: at(3, 9, 30), what: 'deal.status', from: 'draft', to: 'sent', ref: 'd_1' }
+  ]);
+  const f = thin.funnel();
+  assert.strictEqual(f.medianMinutesToSend, null, 'one send is not a median');
+  assert.strictEqual(f.sendsNeeded, MIN_FOR_MEDIAN - 1,
+    'and it has to say how many more, not just go quiet');
+});
+test('it separates the price that moved before sending from the one that moved at closing', () => {
+  /* Two different facts about the same operator: a discount nobody asked for,
+     and a discount that was negotiated. Reported apart or they average into
+     something that describes neither. */
+  const f = week().funnel();
+  assert.strictEqual(f.droppedBeforeSending, 1);
+  assert.strictEqual(f.closedLower, 1);
+});
+test('a deleted deal is subtracted, so the funnel cannot read higher than the ledger', () => {
+  const f = seeded([
+    { at: at(3, 9, 0), what: 'deal.status', to: 'draft', ref: 'd_1' },
+    { at: at(3, 9, 1), what: 'deal.status', to: 'draft', ref: 'd_2' },
+    { at: at(3, 9, 2), what: 'deal.removed', from: 'draft', to: 'gone', ref: 'd_2' }
+  ]).funnel();
+  assert.strictEqual(f.deals, 2, 'both were really saved, and that happened');
+  assert.strictEqual(f.removed, 1);
+  assert.strictEqual(f.deals - f.removed, 1, 'and one is what the ledger now holds');
+});
+test('an empty log reports nothing rather than zeros that look measured', () => {
+  const f = make(mem()).funnel();
+  assert.strictEqual(f.deals, 0);
+  assert.strictEqual(f.medianMinutesToSend, null);
+  assert.strictEqual(f.sendsNeeded, MIN_FOR_MEDIAN);
+});
+test('the funnel accepts an already-read log and answers identically', () => {
+  const j = week();
+  assert.deepStrictEqual(j.funnel(j.list()), j.funnel());
 });
 
 console.log('\ndeterminism');

@@ -785,6 +785,50 @@ test('what the journal records is rendered somewhere the operator sees it', () =
     .test(read('assets/pc-ledger.js')),
     'the journal is written on every transition and read by nobody');
 });
+test('the funnel the journal derives is rendered, and rendered on every ledger change', () => {
+  /* Two separate ways for this to become dark code: a derivation nothing calls,
+     and a renderer nobody re-runs. renderLedger is the one function every
+     mutation path already goes through, so being called from there is what makes
+     the panel current rather than a snapshot of page load. */
+  const src = read('assets/pc-ledger.js');
+  assert.ok(/journal\.funnel\(/.test(src), 'funnel() is derived and read by nobody');
+  /* Presence and adjacency, deliberately not source order. The call sits above
+     the declaration — as renderHistory's already does — and that is fine here
+     rather than a temporal-dead-zone bug, because renderLedger is only invoked
+     from the shell after every script has evaluated. Asserting the order would
+     be asserting a coincidence. */
+  assert.ok(/const renderFunnel\s*=/.test(src), 'renderFunnel is gone');
+  assert.ok(/^\s*renderFunnel\(\);/m.test(src), 'renderFunnel is defined and never called');
+  assert.ok(/renderFunnel\(\);[\s\S]{0,80}renderHistory\(list\)/.test(src),
+    'it must render next to the track record, inside renderLedger — otherwise it ' +
+    'goes stale the moment a deal changes');
+});
+test('the visit is recorded before anything renders, not after', () => {
+  /* Ordering, not presence. Appended after the renders, the panel counts the
+     visit before the current one and reads "once" on the second visit — found by
+     driving the page, not by reading it. */
+  const src = read('assets/post-call.js');
+  const j = src.indexOf("what: 'session'");
+  assert.ok(j > -1, 'nothing appends a session line');
+  assert.ok(j < src.indexOf('renderLedger()'),
+    'the session line lands after the render that reads it, so the count shown ' +
+    'is permanently one behind');
+});
+test('nothing on the page asks for satisfaction without measuring behaviour too', () => {
+  /* Across 298 designs with both measured, preference and performance correlate
+     .53, and users prefer the better-performing design only 70% of the time. A
+     satisfaction number from one operator lands in that 30% with no way to
+     detect that it did. So a rating control may exist here only alongside a
+     behavioural measure — and today there is no rating control at all, which is
+     the state this test is pinning. */
+  const rating = [...PAGES, 'privacy.html']
+    .filter(p => /type="range"|name="rating"|aria-label="[^"]*דירוג|כמה אתה מרוצה|שביעות רצון/
+      .test(p === 'privacy.html' ? read(p) : html[p]));
+  if (!rating.length) return;                       // nothing asks, nothing to pair
+  assert.ok(/journal\.funnel\(/.test(read('assets/pc-ledger.js')),
+    rating.join(', ') + ' asks how it felt, and no behavioural measure is rendered ' +
+    'anywhere to check the answer against');
+});
 test('a visit is recorded, so the sequence has an anchor', () => {
   /* Without it the log is a pile of deal transitions with no notion of when the
      operator came back — which is the one funnel question the telemetry row can
