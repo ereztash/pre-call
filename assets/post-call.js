@@ -1452,11 +1452,50 @@ document.addEventListener('click', e => {
   if (fn) { e.preventDefault(); fn(); }
 });
 
+/* ---------- when the number is allowed to move ----------
+
+   Every keystroke used to rebuild everything, and the cost was never the
+   problem: 14.8ms median on a 4x-throttled phone, one dropped frame at worst.
+   What it produced was. Typing "120" into "how often" showed, in order:
+
+     after "1"    ₪7,390
+     after "12"   ₪9,930
+     after "120"  ₪99,280
+
+   and typing "45" into "minutes each" showed ₪49,640 and then ₪558,450. Not a
+   loading state and not a blank — three confident, fully formatted, wrong
+   prices, each with the document rebuilt around it. For an audience this
+   product describes as having low numerical literacy, half a million shekels
+   flashing past is worse than nothing at all.
+
+   Debounced for numbers only, and that distinction is the whole design: a
+   truncated number is a DIFFERENT number, while a truncated sentence is only a
+   shorter sentence. "הזמנות מגי" in the document is incomplete and honest;
+   ₪558,450 is complete and false.
+
+   `change` stays immediate, on every field. It fires when a text input loses
+   focus and when a select is picked, so moving on always settles the number at
+   once — the timer can only ever be felt by someone staring at the price while
+   typing into the field that sets it.
+
+   And it makes the bump above mean something. That animation fires on a real
+   change in the price text, which during "120" meant three bumps for two
+   garbage values. One settled value, one beat. */
+const SETTLE_MS = 400;
+let settleTimer = null;
+const recomputeSoon = () => {
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(recompute, SETTLE_MS);
+};
+const NUMERIC = n => n.tagName === 'INPUT' && (n.type === 'number' || n.inputMode === 'numeric');
+
 document.querySelectorAll('input,select,textarea').forEach(n => {
   // typing anything means they are building a proposal after all, so the
   // guide stops standing down — see reviewingLedger in renderGuide()
   n.addEventListener('input', () => { reviewingLedger = false; });
-  n.addEventListener('input', recompute);
+  n.addEventListener('input', NUMERIC(n) ? recomputeSoon : recompute);
+  // leaving the field, or picking from a list, settles it with no wait
+  n.addEventListener('change', () => { clearTimeout(settleTimer); recompute(); });
   n.addEventListener('input', saveDraftSoon);
 });
 // the sender's own details persist separately from the draft, and a
