@@ -292,6 +292,12 @@
      a second parser of the same storage key. PRE-CALL still works with no ledger
      at all: every read of it is guarded, and an empty or corrupt store lands on
      the first-timer line, which is the right answer for it. -->
+<!-- Before deals.js, which takes the journal as its second constructor argument
+     and captures it at load. Loaded here too, not only on POST-CALL: without it
+     PC.deals means one thing on one page of this product and another thing on
+     the other, and the page that loses is the one holding the moment after the
+     call. assets/markup.test.js asserts it for every page that loads the ledger. -->
+<script src="assets/pc-journal.js"></script>
 <script src="assets/deals.js"></script>
 <script src="assets/pc-backup.js"></script>
 <script src="assets/pre-call-content.js"></script>

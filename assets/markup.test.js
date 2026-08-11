@@ -760,13 +760,23 @@ test('the shell loads after everything it depends on', () => {
    early, and each transition goes unrecorded in silence. deals.test.js keeps
    passing too, because it injects a journal by hand. Only the order in the
    markup decides whether the running product records anything. */
-test('the journal loads before the ledger that writes into it', () => {
-  const order = [...html['post-call.html'].matchAll(/<script src="assets\/([^"]+)"/g)].map(m => m[1]);
-  const j = order.indexOf('pc-journal.js'), d = order.indexOf('deals.js');
-  assert.ok(j > -1, 'pc-journal.js is not loaded by post-call.html at all');
-  assert.ok(j < d, 'deals.js captures PC.journal at load time, so loading it ' +
-    'first records nothing — and fails without a single error');
-});
+/* Every page, not just the one this started on. The first version of this test
+   checked post-call.html alone, and pre-call.html was meanwhile loading deals.js
+   with no journal at all — so PC.deals meant two different things on two pages
+   of the same product. It happened to be harmless because that page only read,
+   which is exactly the kind of luck that stops holding when someone adds a
+   write. */
+for (const page of PAGES) {
+  const order = [...html[page].matchAll(/<script src="assets\/([^"]+)"/g)].map(m => m[1]);
+  if (order.indexOf('deals.js') === -1) continue;
+  test(page + ' loads the journal before the ledger that writes into it', () => {
+    const j = order.indexOf('pc-journal.js'), d = order.indexOf('deals.js');
+    assert.ok(j > -1, page + ' loads deals.js without pc-journal.js, so its ledger ' +
+      'is built with no journal and every transition on that page goes unrecorded');
+    assert.ok(j < d, 'deals.js captures PC.journal at load time, so loading it ' +
+      'first records nothing — and fails without a single error');
+  });
+}
 test('what the journal records is rendered somewhere the operator sees it', () => {
   /* A log nothing reads back is storage, not a feature. The deal row is the
      only place that can show it, because it is the only place a specific deal

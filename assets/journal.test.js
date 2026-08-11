@@ -112,6 +112,27 @@ test('free text is refused, because a backup leaves the machine', () => {
   assert.deepStrictEqual(Object.keys(line).sort(), ['at', 'from', 'ref', 'to', 'what']);
   assert.ok(!JSON.stringify(j.list()).includes('סודי'), 'a client name reached the journal');
 });
+test('the retro flag is a boolean and cannot become a sentence', () => {
+  /* `retro` is the only field here that is not a status, a number or a generated
+     id, so it is the only place text could try to enter. It is set for a literal
+     true and nothing else — not for a truthy value, which is how a string would
+     have got through. */
+  const j = make(mem());
+  j.append({ what: 'deal.status', to: 'won', ref: 'd_1', retro: 'הוזן בדיעבד' });
+  j.append({ what: 'deal.status', to: 'lost', ref: 'd_2', retro: 1 });
+  j.append({ what: 'deal.status', to: 'won', ref: 'd_3', retro: true });
+  const l = j.list();
+  assert.strictEqual(l[0].retro, undefined, 'a string reached the retro field');
+  assert.strictEqual(l[1].retro, undefined, 'a truthy non-boolean set the flag');
+  assert.strictEqual(l[2].retro, true);
+  assert.ok(!JSON.stringify(l).includes('בדיעבד'), 'text got in through retro');
+});
+test('the vocabulary covers the closing transition, not only the quoting one', () => {
+  /* For a long time it did not, and that was the gap: every verb here watched
+     the quote being written and none watched it being answered. */
+  ['deal.closed', 'deal.hours', 'deal.removed'].forEach(w =>
+    assert.ok(WHAT.indexOf(w) > -1, w + ' is not in the vocabulary'));
+});
 test('a ref longer than a deal id is refused, not truncated', () => {
   // an id is generated (d_2026..._3); anything long is somebody putting prose here
   const j = make(mem());

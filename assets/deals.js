@@ -76,9 +76,17 @@
        reports a failed write to the operator as a real failure, so a journal that
        throws — a full quota, a hostile stub — is swallowed here rather than
        allowed to turn a successful save into a reported one. */
-    const note = entry => {
+    /* The second argument is the record the line is about, and it exists for one
+       reason: `retro` is stamped here rather than at each call site. A deal typed
+       in from memory carries retro:true, and marking it in one place is why no
+       future caller has to remember — the same argument as journaling at the
+       choke point instead of at the call sites. */
+    const note = (entry, rec) => {
       if (!journal || !journal.append) return;
-      try { journal.append(entry); } catch (e) { /* observation, not the event */ }
+      try {
+        journal.append(rec && rec.retro === true
+          ? Object.assign({ retro: true }, entry) : entry);
+      } catch (e) { /* observation, not the event */ }
     };
 
     const read = () => {
@@ -132,10 +140,10 @@
           const merged = Object.assign({}, list[i], deal);
           list[i] = merged;
           if (!write(list)) return null;
-          note({ what: 'deal.price', from: wasPrice, to: merged.priceQuoted, ref: merged.id });
+          note({ what: 'deal.price', from: wasPrice, to: merged.priceQuoted, ref: merged.id }, merged);
           const nowScope = scopeCount(merged.form);
           if (wasScope !== null && nowScope !== null)
-            note({ what: 'deal.scope', from: wasScope, to: nowScope, ref: merged.id });
+            note({ what: 'deal.scope', from: wasScope, to: nowScope, ref: merged.id }, merged);
           return merged;
         }
         const now = deal.created || new Date().toISOString();
@@ -152,8 +160,8 @@
         }, deal);
         list.push(rec);
         if (!write(list)) return null;
-        note({ what: 'deal.status', to: rec.status, ref: rec.id });
-        note({ what: 'deal.price', from: null, to: rec.priceQuoted, ref: rec.id });
+        note({ what: 'deal.status', to: rec.status, ref: rec.id }, rec);
+        note({ what: 'deal.price', from: null, to: rec.priceQuoted, ref: rec.id }, rec);
         return rec;
       },
 
@@ -237,7 +245,7 @@
            'sent' to an outcome, and the gap between them is where the money is
            lost — so the path through it is worth keeping even though no field
            holds it. */
-        if (out) note({ what: 'deal.status', from: was, to: status, ref: id });
+        if (out) note({ what: 'deal.status', from: was, to: status, ref: id }, out);
         return out;
       },
 
@@ -299,7 +307,24 @@
           concession: conc(concession) || conc(prev.concession) || 'unknown',
           at: new Date().toISOString()
         };
-        return api.save(d);
+        const out = api.save(d);
+        /* After the save, and not through it. save() journals `deal.price`,
+           which reads priceQuoted — and priceQuoted does not move when an
+           outcome is recorded, so the same(from,to) guard dropped the line and
+           the closing price landing below the quote wrote nothing at all. That
+           is the fact this module was built to make visible, and it was the one
+           fact it could not see.
+
+           The estimate against the actual is the other half: it is the only
+           number here nobody can reconstruct later, and it is what decalcifies
+           the effort model. */
+        if (out) {
+          note({ what: 'deal.closed', from: d.priceQuoted, to: d.outcome.closedPrice,
+                 ref: id }, out);
+          note({ what: 'deal.hours', from: d.estimatedHours, to: d.outcome.actualHours,
+                 ref: id }, out);
+        }
+        return out;
       },
 
       /* save() can only promote what passes through it, and a deal sitting in
@@ -320,7 +345,17 @@
         return real(d.provenance) || (d.form ? real(d.form.q_provenance) : null);
       },
 
-      remove(id) { return write(read().filter(d => d.id !== id)); },
+      /* The status is carried on the line because it is the last thing anybody
+         will ever know about this deal — after the write there is no record left
+         to look it up in. Without a line here every count derived from the log
+         is higher than the ledger and nothing reveals the gap: four saves and
+         one deletion leave three deals and four save lines. */
+      remove(id) {
+        const gone = api.get(id);
+        const ok = write(read().filter(d => d.id !== id));
+        if (ok && gone) note({ what: 'deal.removed', from: gone.status, to: 'gone', ref: id }, gone);
+        return ok;
+      },
       clear() { try { storage.removeItem(KEY); return true; } catch (e) { return false; } },
 
       /* What this operator has actually done, for a caller that needs the facts

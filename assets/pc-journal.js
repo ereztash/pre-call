@@ -39,7 +39,21 @@
      is refused rather than stored, for the reason PROVENANCE is a closed list in
      deals.js: a string nobody defined becomes a group some panel later makes a
      claim about. */
-  const WHAT = ['session', 'deal.status', 'deal.price', 'deal.scope'];
+  const WHAT = [
+    'session',
+    'deal.status',
+    'deal.price',      // the quote moving while it is still being written
+    'deal.scope',
+    /* The two that close the loop. `deal.price` only ever sees priceQuoted, and
+       priceQuoted does not move when an outcome is recorded — so the closing
+       price landing below the quote, which is the fact this whole module was
+       built to make visible, was the one fact it could not see. */
+    'deal.closed',     // priceQuoted → closedPrice
+    'deal.hours',      // estimatedHours → actualHours
+    /* Without this, every count is higher than reality and nothing shows the
+       gap: four saves and a deletion leave three deals and four save lines. */
+    'deal.removed'
+  ];
 
   /* localStorage is one quota shared with the ledger, the draft, the sender and
      the key. An unbounded log would eventually make saving a deal fail — the
@@ -51,7 +65,7 @@
   /* Only these five keys survive, whatever the caller sends. Not a check on the
      caller's good manners: an allowlist, so free text cannot arrive by accident
      from a future call site that thought a note would be helpful. */
-  const FIELDS = ['at', 'what', 'from', 'to', 'ref'];
+  const FIELDS = ['at', 'what', 'from', 'to', 'ref', 'retro'];
   const REF_MAX = 48;          // a generated id is ~22 chars; prose is not an id
 
   function make(storage) {
@@ -83,6 +97,12 @@
         if (e.from !== undefined && e.from !== null) line.from = e.from;
         if (e.to !== undefined && e.to !== null) line.to = e.to;
         if (e.ref !== undefined) line.ref = e.ref;
+        /* A deal typed in from memory looks exactly like one the tool watched
+           happen, and any duration derived from it would be timing the data
+           entry rather than the selling. Set only for a literal true, never
+           coerced from a truthy value — that is what keeps a string out of the
+           one field here that is not a status, a number or a generated id. */
+        if (e.retro === true) line.retro = true;
 
         const list = read();
         list.push(line);

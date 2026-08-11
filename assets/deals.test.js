@@ -645,6 +645,59 @@ test('a scope nobody answered is not journalled as a scope of zero', () => {
   assert.strictEqual(J.make(st).movement(a.id).scopeMoves, 0,
     'answering the scope question for the first time is not the scope moving');
 });
+test('the money actually moving is journalled — the one transition it exists for', () => {
+  /* The module's own argument is that a price which drops leaves no trace,
+     because the record holds one price. But recordOutcome ended in save(), and
+     save() only compares priceQuoted — which does not move when an outcome is
+     recorded — so the closing price landing below the quote wrote nothing at
+     all. The fact the journal was built for was the fact it could not see. */
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 12000, estimatedHours: 20 });
+  d.setStatus(a.id, 'sent');
+  d.recordOutcome(a.id, { closedPrice: 9500, actualHours: 31 });
+  const j = J.make(st).forDeal(a.id);
+  const closed = j.find(l => l.what === 'deal.closed');
+  assert.ok(closed, 'no deal.closed line: ' + JSON.stringify(j.map(l => l.what)));
+  assert.strictEqual(closed.from, 12000);
+  assert.strictEqual(closed.to, 9500);
+  const hours = j.find(l => l.what === 'deal.hours');
+  assert.ok(hours, 'the estimate against the actual is the other half of the fact');
+  assert.strictEqual(hours.from, 20);
+  assert.strictEqual(hours.to, 31);
+});
+test('a price that held writes no closing line', () => {
+  // same discipline as everywhere else here: a transition that did not move is
+  // not a transition, and a log of non-events buries the events
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 10000 });
+  assert.strictEqual(J.make(st).forDeal(a.id).filter(l => l.what === 'deal.closed').length, 0);
+});
+test('a deal that is deleted says so, instead of just vanishing from the count', () => {
+  /* Without this every number the reader shows is higher than reality and
+     nothing reveals the gap: four saves and one deletion leave three deals in
+     the ledger and four save lines in the log. */
+  const { d, st } = withJournal();
+  const a = d.save({ client: 'א', priceQuoted: 10000 });
+  d.remove(a.id);
+  const j = J.make(st).forDeal(a.id);
+  assert.ok(j.some(l => l.what === 'deal.removed'),
+    'a deal left the ledger and the log did not notice');
+  assert.strictEqual(d.list().length, 0, 'and it really is gone');
+});
+test('a deal entered in hindsight is marked as such', () => {
+  /* addPast reaches the journal only through save(), so a retro entry looks
+     exactly like a deal that happened live — and any median time-from-open-to-
+     send computed over it would be measuring the data entry, not the selling. */
+  const { d, st } = withJournal();
+  const a = d.addPast({ client: 'א', quoted: 8000, closed: 7000, concession: 'client_asked' });
+  assert.ok(a, 'addPast must still work');
+  const j = J.make(st).forDeal(a.id);
+  assert.ok(j.some(l => l.what === 'deal.status' && l.retro === true),
+    'nothing distinguishes it from a deal that happened while the tool watched: ' +
+    JSON.stringify(j));
+});
 test('no journal means no change in behaviour at all', () => {
   const d = make(mem());
   const a = d.save({ client: 'א', priceQuoted: 10000 });
