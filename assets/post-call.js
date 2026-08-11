@@ -475,7 +475,19 @@ function readInputs(){
     method: el('methodChips').dataset.sel || 'value',
     compLast: num('c_last'),
     compScale: parseFloat(el('c_scale').value),
-    compScaleLabel: el('c_scale').selectedOptions[0].text,
+    /* selectedOptions is EMPTY, not a one-element list, whenever a select holds a
+       value none of its options carry — selectedIndex goes to -1 and .value goes
+       to ''. Reading [0].text then throws, and it throws inside readInputs, which
+       feeds model(), which feeds the price, the document, the guide and the save.
+       One stale string in one dropdown produced no price, a zero-character
+       document and a save button that silently did nothing, on every load.
+
+       Nothing needs to be corrupt for that. applyDraft restores whatever a draft
+       holds, so it is enough for this option list to change in a future version,
+       or for a backup from an older one to be restored. The guard below is the
+       local fix; the general one is in applyDraft, which now refuses a value an
+       element cannot hold. */
+    compScaleLabel: (el('c_scale').selectedOptions[0] || {}).text || '',
     deals: parseInt(el('c_deals').value, 10)
   };
 }
@@ -1222,7 +1234,26 @@ const PRISTINE = (() => {
    restoring different subsets of the same state. */
 function applyDraft(d){
   if (!d) return;
-  Object.entries(d.fields || {}).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
+  /* A stored value is only applied if the element can actually hold it. For an
+     input that is always true; for a <select> it is not, and assigning a value
+     none of the options carry leaves selectedIndex at -1 with an empty
+     selectedOptions — a state the reading code did not survive.
+
+     The draft is restored at boot with no button and no confirmation, so a value
+     that cannot be held would poison the first render of every visit. The option
+     list changing in a future version is enough to cause it, as is a backup file
+     written by an older one, and the operator would meet a page with no price and
+     no document.
+
+     Skipped rather than coerced: falling back to the first option would put a
+     number in front of the operator that they never chose, on a form they are
+     about to send. The default the markup already carries is the honest answer. */
+  Object.entries(d.fields || {}).forEach(([id, v]) => {
+    const f = el(id);
+    if (!f) return;
+    if (f.tagName === 'SELECT' && ![...f.options].some(o => o.value === String(v))) return;
+    f.value = v;
+  });
   /* Reopening a draft or a saved deal used to restore the old default verbatim,
      so the ROI paragraph went back into a client-facing document on the strength
      of a question nobody had answered — the exact thing the new default exists
@@ -1476,6 +1507,18 @@ function applyEntryRoute(){
    the bottom of whichever file happened to define the function. */
 mountGate();
 renderTemplates();
+/* One line per visit, before any render rather than after. track('opened')
+   leaves the machine and comes back as a count from everybody; this stays here
+   and gives the operator's own sequence — the second visit, the fourth — which
+   no count can.
+
+   It was written after the renders at first, on the theory that a write on the
+   way in must never delay the page. That was the wrong trade and a browser
+   showed it: the panel that reads this counted the visit before the current one,
+   so it was permanently one behind and said "once" on the second visit. A single
+   localStorage write costs microseconds, PC.journal swallows its own failures,
+   and a number that is visibly wrong costs more than either. */
+if (PC.journal) PC.journal.append({ what: 'session', to: 'post-call' });
 restoreSender();  // before the first render, so the document has a letterhead
 restoreDraft();   // before the first render, so the page comes up as it was left
 renderScope();
@@ -1491,10 +1534,3 @@ applyEntryRoute();   // after the renders above, so there is something to land o
    the code, where it looks like one path. */
 window.addEventListener('hashchange', applyEntryRoute);
 track('opened');
-/* One line per visit, so the transitions underneath it have something to be
-   ordered against. track('opened') leaves the machine and comes back as a
-   count; this stays here and gives the operator's own sequence — the second
-   visit, the fourth — which a count of visits from everybody cannot.
-   After the renders on purpose: a write on the way in must never be able to
-   delay the page coming up, and PC.journal swallows its own failures. */
-if (PC.journal) PC.journal.append({ what: 'session', to: 'post-call' });

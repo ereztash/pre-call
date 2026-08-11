@@ -267,6 +267,52 @@ async function journey(engineName, base) {
      min-height added to stop a layout shift turned a varying height into
      a fixed one. This holds the collapsed state to something a phone can
      afford. */
+  /* The only trigger this product can build without a channel of its own, and it
+     had no test driving it. Splitting the calendar module moved callIcs from
+     PC.followup to PC.ical, PRE-CALL kept reaching for the old name, and the
+     button silently produced nothing — found by a probe, not by this suite. The
+     download is the whole feature, so the download is what gets asserted. */
+  await test(label('PRE-CALL builds the calendar file for the call it is preparing you for'), async () => {
+    const c = await browser.newContext({ acceptDownloads: true });
+    const fresh = await c.newPage();
+    const errs = [];
+    fresh.on('pageerror', e => errs.push(e.message));
+    await fresh.goto(base + '/pre-call.html');
+    await fresh.click('.stepbtn[data-s="2"]');
+    await fresh.fill('#f_what', 'מסדר תהליכי גבייה');
+    await fresh.click('[data-act="go3"]');
+    await fresh.fill('#p_co', 'מסעדת הדר');
+    await fresh.click('[data-act="build"]');
+    await fresh.waitForTimeout(400);
+    await fresh.evaluate(() => { document.querySelector('.callcal').open = true; });
+
+    // refuses before it has a date, rather than producing a file that opens nothing
+    await fresh.click('[data-act="cal-dl"]');
+    await fresh.waitForTimeout(250);
+    assert.ok(/חסר/.test(await fresh.textContent('#calMsg')),
+      'with no date it should say so, not silently do nothing');
+
+    await fresh.fill('#cal_date', '2026-08-20');
+    await fresh.fill('#cal_time', '14:30');
+    await fresh.fill('#cal_len', '45');
+    const [dl] = await Promise.all([
+      fresh.waitForEvent('download'), fresh.click('[data-act="cal-dl"]')
+    ]);
+    const ics = fs.readFileSync(await dl.path(), 'utf8');
+    const unfolded = ics.replace(/\r\n[ \t]/g, '');
+    assert.ok(/TRIGGER;RELATED=END:PT15M/.test(unfolded),
+      'the alarm is not anchored to the end of the call, which is the entire point');
+    assert.strictEqual((ics.match(/BEGIN:VALARM/g) || []).length, 2, 'expected two alarms');
+    assert.ok(/מסעדת הדר/.test(unfolded), 'the reminder does not say which call it is about');
+    const name = dl.suggestedFilename();
+    assert.ok(name.endsWith('.ics') && !/[^\x00-\x7F]/.test(name),
+      'a non-ASCII filename is dropped whole by the browser: ' + name);
+    assert.deepStrictEqual(ics.split('\r\n').filter(l => Buffer.byteLength(l, 'utf8') > 75), [],
+      'lines over 75 octets — some calendar clients render those as mojibake');
+    assert.deepStrictEqual(errs, [], 'the page threw while building the file');
+    await c.close();
+  });
+
   await test(label('the pinned guide collapses instead of owning a third of the phone'), async () => {
     const c = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const fresh = await c.newPage();
@@ -365,7 +411,78 @@ async function journey(engineName, base) {
     ]);
     const ics = require('fs').readFileSync(await dl.path(), 'utf8');
     assert.ok(ics.startsWith('BEGIN:VCALENDAR'), 'the calendar file is not a calendar file');
-    assert.ok(/שעות עבודה/.test(ics), 'the reminder must ask for the hours, or calibration never fills');
+    /* Unfolded first, as any real calendar client does. RFC 5545 breaks long
+       lines with CRLF plus a space and these lines are Hebrew, so this passing
+       on the raw text would only mean a fold happened not to land inside the
+       phrase — luck rather than a test. */
+    assert.ok(/שעות עבודה/.test(ics.replace(/\r\n[ \t]/g, '')),
+      'the reminder must ask for the hours, or calibration never fills');
+    /* The filename as the BROWSER resolved it, which is the only place this
+       could be checked. Chromium discards an <a download> value containing any
+       non-ASCII character and saves the file as "download" with no extension —
+       so the Hebrew name this used to build never once reached a real download,
+       and what the operator got would not open in a calendar. Node cannot see
+       that; a real download can. */
+    const name = dl.suggestedFilename();
+    assert.ok(name.endsWith('.ics'),
+      'a calendar file without the extension opens nothing: ' + name);
+    assert.ok(!/[^\x00-\x7F]/.test(name),
+      'a non-ASCII filename is dropped whole by the browser: ' + name);
+    await c.close();
+  });
+
+  /* Question 12's own help text promises the answer "goes into the proposal as a
+     timeline and as a decision date". Measured across eleven layers, it reached
+     the document and one confidence counter — the decision date did not exist.
+     This drives the whole chain in the running page: a date typed into the form,
+     read at save, stored on the record, and used by the panel that chases. */
+  await test(label('the date the client named reaches the panel that chases, not only the page'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'הזמנות מגיעות בוואטסאפ ומוקלדות ידנית לגיליון');
+    await fresh.fill('#q_freq', '40');
+    await fresh.selectOption('#q_freq_unit', '365');
+    await fresh.fill('#q_minutes', '8');
+    await fresh.fill('#q_client', 'מסעדת הדר');
+    /* Two days out, inside the closing window, and written the way somebody
+       answers out loud rather than as an ISO string. */
+    // question 12 lives behind the "the rest of the questions" drawer, which is
+    // closed at rest on purpose — so it has to be opened, exactly as a person would
+    await fresh.evaluate(() => {
+      const d = [...document.querySelectorAll('details')]
+        .find(x => x.querySelector('#q_deadline'));
+      if (d) d.open = true;
+    });
+    await fresh.waitForTimeout(200);
+    const soon = new Date(Date.now() + 2 * 864e5);
+    const p2 = n => String(n).padStart(2, '0');
+    const soonISO = soon.getFullYear() + '-' + p2(soon.getMonth() + 1) + '-' + p2(soon.getDate());
+    await fresh.fill('#q_deadline', 'צריך שזה יעבוד עד ' + soon.getDate() + '/' + (soon.getMonth() + 1));
+    await fresh.waitForTimeout(400);
+    await fresh.click('[data-act="save"]');
+    await fresh.waitForTimeout(400);
+
+    const stored = await fresh.evaluate(() => {
+      const d = PC.deals.list()[0] || {};
+      return { deadline: d.clientDeadline || null, id: d.id };
+    });
+    assert.ok(stored.deadline,
+      'the deadline was typed and read and still never reached the record');
+    assert.strictEqual(stored.deadline, soonISO,
+      'the stored date is not the one that was typed: ' + stored.deadline);
+
+    await fresh.click('.sbtn[data-status="sent"]');
+    await fresh.waitForTimeout(500);
+    const row = await fresh.evaluate(() => {
+      const el = document.querySelector('.deal-due');
+      return { label: el ? el.textContent.trim() : '', state: el ? el.className : '' };
+    });
+    assert.ok(/closing/.test(row.state),
+      'a proposal the client needs working in two days reads as fresh: ' + JSON.stringify(row));
+    assert.ok(/הלקוח/.test(row.label),
+      'the row says the offer is lapsing when what is closing is the client\'s own ' +
+      'date — two different facts: ' + row.label);
     await c.close();
   });
 
@@ -446,6 +563,102 @@ async function journey(engineName, base) {
     const visible = await fresh.locator('#resumeBox').isVisible();
     assert.ok(visible,
       'the ledger chases no_answer and the entry page ignored it — three files, three ideas of "waiting"');
+    await c.close();
+  });
+
+  /* A draft is restored automatically at boot — no button, no confirmation — and
+     applyDraft writes every stored value straight onto its element with no check
+     that the element can hold it. Give a <select> a value that is not among its
+     options and selectedIndex becomes -1, selectedOptions becomes empty, and
+     readInputs() throws reading .text off undefined.
+
+     readInputs() feeds model(), and model() feeds the price, the document, the
+     guide and the save. So one stale string in one dropdown produces: no price,
+     a document of zero characters, and a save button that silently does nothing
+     — on load, every load, because the draft persists.
+
+     Worse than the crash is what the operator is told. The error boundary
+     catches it and says "the rest of the tool keeps working, and your saved data
+     is intact", which is reassuring and, here, false.
+
+     The realistic trigger is not corruption. It is the option list changing in
+     any future version, or a backup file restored from an older one — and every
+     operator holding a draft would then open a dead page. */
+  await test(label('a dropdown value the page no longer offers does not kill the page'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => localStorage.setItem('postcall_draft_v1', JSON.stringify({
+      at: new Date().toISOString(),
+      fields: { q_process: 'הזמנות מגיעות בוואטסאפ ומוקלדות ידנית לגיליון',
+                q_freq: '40', q_freq_unit: '365', q_minutes: '8', q_client: 'מסעדת הדר',
+                c_scale: '3' },     // 0.7 / 1 / 1.5 / 2.2 are the options
+      systems: [], scope: {}
+    })));
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(700);
+    const state = await fresh.evaluate(() => ({
+      price: (document.getElementById('s_price_top') || {}).textContent.trim(),
+      docChars: (document.getElementById('proposal').innerText || '').length,
+      boundary: (document.getElementById('errBoundary') || {}).textContent.trim(),
+      selectedIndex: document.getElementById('c_scale').selectedIndex
+    }));
+    /* Both mechanisms, pinned separately on purpose. Either guard alone makes the
+       page survive, so asserting only "the page still works" would let a future
+       edit delete one of them silently — the shape of test that passes for the
+       wrong reason. This line pins applyDraft: the select must never be left in
+       the unselectable state at all. The price and document below pin the
+       defensive read, which has to hold whatever the cause. */
+    assert.notStrictEqual(state.selectedIndex, -1,
+      'the draft was applied to a select that cannot hold the value, leaving ' +
+      'selectedIndex at -1 — every reader of that element is now one line from throwing');
+    assert.ok(/₪[\d,]+/.test(state.price),
+      'a stale dropdown value left the page with no price at all: ' + JSON.stringify(state));
+    assert.ok(state.docChars > 200,
+      'the document came back empty (' + state.docChars + ' chars) from one stale value');
+    assert.strictEqual(state.boundary, '',
+      'the error boundary fired on a plain page load: ' + state.boundary);
+    await fresh.click('[data-act="save"]');
+    await fresh.waitForTimeout(500);
+    assert.strictEqual(await fresh.evaluate(() => PC.deals.list().length), 1,
+      'the save button did nothing, and said nothing');
+    await c.close();
+  });
+
+  /* The same state, reached without going through applyDraft — because the guard
+     in readInputs exists to survive it whatever produced it, and with applyDraft
+     filtering, that guard is never exercised by the test above. Forced here
+     deliberately: a browser extension, a future feature that writes to the form,
+     or any code path that has not learned this lesson gets the same one line
+     wrong, and the page must still price and still save. */
+  await test(label('an unselectable dropdown, however it got that way, still prices'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'הזמנות מגיעות בוואטסאפ ומוקלדות ידנית לגיליון');
+    await fresh.fill('#q_freq', '40');
+    await fresh.selectOption('#q_freq_unit', '365');
+    await fresh.fill('#q_minutes', '8');
+    await fresh.waitForTimeout(400);
+    const forced = await fresh.evaluate(() => {
+      const s = document.getElementById('c_scale');
+      s.value = 'nonsense-no-option-has-this';
+      s.dispatchEvent(new Event('change', { bubbles: true }));
+      // and nudge the chain, the way any edit would
+      const t = document.getElementById('q_minutes');
+      t.value = '9'; t.dispatchEvent(new Event('input', { bubbles: true }));
+      return s.selectedIndex;
+    });
+    assert.strictEqual(forced, -1, 'the fixture failed to create the state under test');
+    await fresh.waitForTimeout(600);
+    const after = await fresh.evaluate(() => ({
+      price: (document.getElementById('s_price_top') || {}).textContent.trim(),
+      docChars: (document.getElementById('proposal').innerText || '').length,
+      boundary: (document.getElementById('errBoundary') || {}).textContent.trim()
+    }));
+    assert.ok(/₪[\d,]+/.test(after.price), 'no price: ' + JSON.stringify(after));
+    assert.ok(after.docChars > 200, 'the document emptied: ' + after.docChars + ' chars');
+    assert.strictEqual(after.boundary, '', 'the error boundary fired: ' + after.boundary);
     await c.close();
   });
 
@@ -541,6 +754,73 @@ async function journey(engineName, base) {
      from decoding a lit chip seventeen times. This holds the shape: the
      three groups must exist, and no row may offer a move to where it
      already is. */
+  /* How many choices are in front of you AT ONE DECISION — which is a different
+     number from how many are on the page, and the difference is the whole point.
+
+     This used to be a page total with a ceiling of 95, tacked onto the tail of
+     the scope test. Two things were wrong with that. It measured the wrong thing:
+     Hick's law is about the size of the choice set at a decision, and the
+     research qualifying it is explicit that option complexity, relevance and
+     presentation all confound a raw count — so 91 controls spread across seven
+     sections is not the same situation as 91 in one place, and only the second is
+     a problem. And the lineage the ceiling implied was worse than no lineage:
+     Miller's 7±2 is the usual justification for capping visible items, Miller
+     never studied menus, and the actual working-memory limit is nearer four
+     (Cowan 2001) or three (LeCompte 1999). Nothing in this repo ever encoded a
+     7-item rule, and nothing should.
+
+     So: the primary ceiling is the busiest single section, measured at 44 on the
+     form — the section where the operator is actually deciding. The page total
+     stays as a looser second guard, because a page that grows without bound is
+     still worse than one that does not, but it is no longer the headline. */
+  const SECTION_CONTROL_CEILING = 48;   // measured 44 in the proposal form
+  const PAGE_CONTROL_CEILING = 95;      // measured 91 across the whole page
+
+  await test(label('no single section puts more choices in front of you than it has to'), async () => {
+    /* Its own context at a pinned viewport, because the number is meaningless
+       without one — the same page measured 91 at 390px and 98 at whatever size
+       the shared context happened to be, and the old ceiling was set against an
+       inherited size nobody had chosen. 390x844 is the size the perf harness
+       already uses, for the reason written there: the target user is on a phone
+       right after a meeting, not on the machine this was written on. */
+    const own = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const fresh = await own.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'מעקב אחרי לקוחות בגוגל שיטס');
+    await fresh.waitForTimeout(400);
+    const m = await fresh.evaluate(() => {
+      const SEL = 'button,a,input,select,textarea,[tabindex]';
+      /* checkVisibility, not a bounding rect: Chromium renders a closed
+         <details> with content-visibility on the slot, which PRESERVES the
+         layout boxes of its contents — so a rect filter counts controls that
+         are not painted, cannot take focus and cannot be hit-tested, and the
+         advice "move something behind a disclosure" could not reduce the number
+         by one. */
+      const vis = e => e.checkVisibility
+        ? e.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true,
+                              visibilityProperty: true })
+        : (() => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })();
+      const count = el => [...el.querySelectorAll(SEL)].filter(vis).length;
+      return {
+        total: [...document.querySelectorAll(SEL)].filter(vis).length,
+        sections: [...document.querySelectorAll('main > .sec')]
+          .map(s => ({ head: ((s.querySelector('h2') || {}).textContent || s.id || '?').trim().slice(0, 40),
+                       n: count(s) }))
+          .filter(x => x.n > 0).sort((a, b) => b.n - a.n)
+      };
+    });
+    const worst = m.sections[0] || { head: 'none', n: 0 };
+    const shown = m.sections.map(x => x.n + ' · ' + x.head).join(' | ');
+    assert.ok(worst.n <= SECTION_CONTROL_CEILING,
+      'one section paints ' + worst.n + ' controls at once ("' + worst.head + '"), over the ' +
+      SECTION_CONTROL_CEILING + ' ceiling. That is the number a person faces at a ' +
+      'single decision. Split it, or put part of it behind a disclosure. Sections: ' + shown);
+    assert.ok(m.total <= PAGE_CONTROL_CEILING,
+      'the page paints ' + m.total + ' controls in total, over the ' + PAGE_CONTROL_CEILING +
+      ' ceiling. Sections: ' + shown);
+    await own.close();
+  });
+
   await test(label('the scope reads as three lists, not as seventeen questions'), async () => {
     const c = await browser.newContext();
     const fresh = await c.newPage();
@@ -596,18 +876,10 @@ async function journey(engineName, base) {
 
        Re-baselined on the corrected filter rather than carried over: the old
        numbers (137, then 125) counted a different population and comparing across
-       the change would be meaningless. */
-    const total = await fresh.evaluate(() =>
-      [...document.querySelectorAll('button,a,input,select,textarea,[tabindex]')]
-        .filter(e => e.checkVisibility
-          ? e.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true,
-                                visibilityProperty: true })
-          : (() => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })())
-        .length);
-    assert.ok(total <= 95,
-      'POST-CALL paints ' + total + ' controls (ceiling 95, measured 92 on the corrected ' +
-      'filter, where the same page measured 128 on the old one). ' +
-      'Raise this deliberately or move something behind a disclosure.');
+       the change would be meaningless.
+
+       The count itself moved out of this test's tail and into one of its own
+       below, where it also stopped being a page total. */
 
     /* What the grouping cost, and had to give back. Moving an item is now
        a structural change instead of a chip lighting up, and the first

@@ -17,9 +17,53 @@
    third-party bytes, so the interesting risk here is script execution,
    not transfer.
 
+   Three samples per page, and the MEDIAN decides. This used to be one sample,
+   which meant one draw decided pass/fail — the failure mode Faulkner's five-user
+   study is the cleanest example of: the mean says a set of five finds 85% of
+   problems, the actual range across random sets of five is 55% to 99%, and the
+   mean was therefore never a number anyone could act on.
+
+   The median, chosen on purpose: the best of three hides the bad draws, the worst
+   of three lets any single spike fail the build. Three is still a small sample
+   and the range is printed for exactly that reason — read the spread, not only
+   the verdict.
+
+   What the spread revealed about TBT on post-call.html is worth writing down in
+   full, including the part that took two wrong conclusions to reach.
+
+   First reading, on a busy machine: 228ms and 275ms against the 200ms budget,
+   taken as a real defect. Then, measured on a quiet one:
+
+     one browser, six sequential samples   176 173 167 158 167 141
+     a fresh browser for each sample       167 156 167 186
+
+   which was taken as proof there was no defect. Both conclusions were the same
+   mistake — picking the reading that suited the conclusion already formed. Later
+   the same day, on identical code, the same page measured 215–288 again, and the
+   untouched commit from before any of that work measured 252ms on the same host
+   within the same hour.
+
+   So the honest statement is neither "defect" nor "fine": on identical code this
+   page measured anywhere from 141ms to 288ms in one day, and the host's state
+   decides which side of 200 it lands on. The budget is not comfortably met; it is
+   met or missed depending on the machine.
+
+   Two things follow, and the second is the important one. A TBT failure here is
+   worth re-running before it is believed — but a TBT PASS is worth just as little,
+   and that is why the range is printed rather than only the verdict. And a metric
+   whose answer is set by the container it runs in cannot be settled by any harness
+   on shared hardware; settling it needs field data from real devices, which is the
+   measurement this product does not yet collect.
+
+   LCP and CLS are far less load-sensitive and their verdicts here mean more.
+
      PW_ROOT=/path    where to resolve playwright from
-     PW_ENGINES=...   which engine to measure in (default chromium — the
-                      CDP-based metrics below are Chromium-only)
+
+   Chromium only, and not configurable. CPU throttling comes from CDP and the
+   longtask observer exists nowhere else, so an engine switch here would report
+   numbers it did not measure. A PW_ENGINES knob was documented in this header
+   for a while and never read by a line of code — worse than no knob, because it
+   reads as coverage.
 
    Skips with exit 0 if playwright is not resolvable: an absent harness is
    an environment problem, not a product defect. */
@@ -69,6 +113,17 @@ function serve() {
 }
 
 const LIMITS = { lcp: 2500, cls: 0.1, tbt: 200 };
+const SAMPLES = 3;
+
+/* Sorted copy, then the middle. With SAMPLES odd this is a real median; the even
+   branch is here so raising SAMPLES later does not silently start averaging the
+   two middle values into a number that no run produced. */
+function median(xs) {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length % 2 ? s[(s.length - 1) / 2]
+                      : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+}
+const spread = xs => ({ min: Math.min(...xs), mid: median(xs), max: Math.max(...xs) });
 
 async function measure(browser, url) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -120,23 +175,32 @@ async function measure(browser, url) {
   const table = [];
 
   for (const p of pages) {
-    const m = await measure(browser, base + p);
-    table.push({ page: p, ...m });
+    const runs = [];
+    for (let i = 0; i < SAMPLES; i++) runs.push(await measure(browser, base + p));
+    const s = {
+      lcp: spread(runs.map(r => r.lcp)),
+      cls: spread(runs.map(r => r.cls)),
+      tbt: spread(runs.map(r => r.tbt))
+    };
+    table.push({ page: p, ...s });
     await test(p + ' is inside the "good" band on all three metrics', () => {
       const over = [];
-      if (m.lcp > LIMITS.lcp) over.push('LCP ' + m.lcp + 'ms > ' + LIMITS.lcp);
-      if (m.cls > LIMITS.cls) over.push('CLS ' + m.cls + ' > ' + LIMITS.cls);
-      if (m.tbt > LIMITS.tbt) over.push('TBT ' + m.tbt + 'ms > ' + LIMITS.tbt);
+      // the median, and the range alongside it — a verdict without the spread
+      // is what let this metric pass on a lucky draw for as long as it did
+      const say = (k, u) => k.toUpperCase() + ' ' + s[k].mid + u + ' > ' + LIMITS[k] +
+        ' (' + SAMPLES + ' runs: ' + s[k].min + '–' + s[k].max + ')';
+      if (s.lcp.mid > LIMITS.lcp) over.push(say('lcp', 'ms'));
+      if (s.cls.mid > LIMITS.cls) over.push(say('cls', ''));
+      if (s.tbt.mid > LIMITS.tbt) over.push(say('tbt', 'ms'));
       assert.deepStrictEqual(over, [], over.join('; '));
     });
   }
 
-  console.log('\n  page              LCP      CLS     TBT');
+  const band = (v, u) => (v.mid + u).padStart(7) + ('  ' + v.min + '–' + v.max).padEnd(12);
+  console.log('\n  median, and the range over ' + SAMPLES + ' runs');
+  console.log('  page                 LCP                CLS                TBT');
   table.forEach(r => console.log(
-    '  ' + r.page.padEnd(17) +
-    (r.lcp + 'ms').padStart(6) +
-    String(r.cls).padStart(9) +
-    (r.tbt + 'ms').padStart(8)));
+    '  ' + r.page.padEnd(15) + band(r.lcp, 'ms') + band(r.cls, '') + band(r.tbt, 'ms')));
 
   await browser.close();
   srv.close();

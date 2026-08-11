@@ -7,6 +7,9 @@
    the tab is closed — a calendar file that has to be correct, because a
    subtly malformed .ics does not error, it simply does nothing when
    tapped, and the operator concludes the feature is broken. */
+/* pc-ical.js first: pc-followup.js borrows the escaping, folding and stamps from
+   it rather than keeping a second copy, and PRE-CALL loads only that half. */
+require('./pc-ical.js');
 const F = require('./pc-followup.js');
 const assert = require('assert');
 
@@ -123,24 +126,65 @@ test('the reminder lands before the offer lapses, never after', () => {
   assert.ok(start < expiry, 'a reminder after the expiry date is a reminder to re-quote');
   assert.ok(start > new Date(d.sentAt), 'and it must not be in the past');
 });
+/* Unfold before asserting on content, which is what every real .ics reader does
+   first. RFC 5545 breaks long lines with CRLF plus a leading space, and these
+   files are Hebrew — two octets a letter — so almost every content line is
+   folded. Asserting on the raw text means asserting that a fold happened not to
+   land inside the phrase you were looking for, which is luck, not a test. */
+const unfold = s => String(s).replace(/\r\n[ \t]/g, '');
+
 test('the client name is escaped per the spec, not merely interpolated', () => {
   const out = F.icsFor(sentDaysAgo(1, { client: 'כהן, לוי; ושות׳' }), { now: NOW });
-  assert.ok(out.includes('כהן\\, לוי\\; ושות׳'),
+  assert.ok(unfold(out).includes('כהן\\, לוי\\; ושות׳'),
     'an unescaped comma or semicolon silently truncates the field for the reader');
 });
 test('the description says what to report back — that is the entire point', () => {
-  assert.ok(/שעות עבודה/.test(ics),
+  assert.ok(/שעות עבודה/.test(unfold(ics)),
     'the reminder must ask for the hours, or the calibration still never fills');
 });
 test('a deal with no send date produces no file rather than a broken one', () => {
   assert.strictEqual(F.icsFor({ client: 'x' }), null);
   assert.strictEqual(F.icsFor(sentDaysAgo(1, { sentAt: 'nonsense' })), null);
 });
-test('the filename is safe for a filesystem and still recognisable', () => {
-  const n = F.filenameFor({ client: 'מסעדת "הדר" / סניף ראשי' });
-  assert.ok(n.endsWith('.ics'));
+/* Measured in Chromium, not assumed: an <a download> whose value contains ANY
+   non-ASCII character is discarded entirely and the browser saves the file as
+   "download" — with no extension at all, so tapping it opens nothing. Every
+   shape was tried:
+
+     שיחה.ics                → "download"
+     call-מסעדת.ics          → "download"
+     call-2026-08-20-הדר.ics → "download"
+     call-2026-08-20.ics     → "call-2026-08-20.ics"
+
+   So the name has to be ASCII, and the client's name lives inside the file
+   instead — in SUMMARY, which is where it actually gets read. A file that opens
+   and says who it is beats a file with a better name that does nothing. This
+   test replaces one that asserted the Hebrew name survived into the filename,
+   which it never did outside of Node. */
+const asciiOnly = n => assert.ok(!/[^\x00-\x7F]/.test(n),
+  'a non-ASCII character makes Chromium drop the whole filename: ' + n);
+
+test('the follow-up filename is ASCII and keeps its extension', () => {
+  const n = F.filenameFor(sentDaysAgo(1, { client: 'מסעדת "הדר" / סניף ראשי' }));
+  assert.ok(n.endsWith('.ics'), 'without the extension a calendar will not open it');
+  asciiOnly(n);
   assert.ok(!/["\/\\:*?<>|]/.test(n), 'illegal filename characters survived: ' + n);
-  assert.ok(n.includes('הדר'), 'the client should still be recognisable: ' + n);
+  assert.ok(/\d{4}-\d{2}-\d{2}/.test(n), 'the date is what makes it recognisable now: ' + n);
+});
+test('a latin client name is kept, because it costs nothing', () => {
+  const n = F.filenameFor(sentDaysAgo(1, { client: 'Hadar Bistro & Co.' }));
+  assert.ok(/hadar-bistro/i.test(n), 'transliterable-free names should survive: ' + n);
+  asciiOnly(n);
+});
+test('the call filename is ASCII, dated, and never extensionless', () => {
+  const n = F.callFilename({ date: '2026-08-20', client: 'מסעדת הדר' });
+  assert.ok(n.endsWith('.ics'));
+  asciiOnly(n);
+  assert.ok(n.includes('2026-08-20'), n);
+  // and with nothing at all to go on it is still a usable name
+  const bare = F.callFilename();
+  assert.ok(bare.endsWith('.ics') && bare.length > 4, bare);
+  asciiOnly(bare);
 });
 
 console.log('\nthe calendar date is the date the operator was shown');
@@ -171,6 +215,205 @@ test('DTEND stays exactly one day after DTSTART, in the same calendar', () => {
 test('DTSTAMP is still an instant in UTC, as the spec requires', () => {
   assert.ok(/DTSTAMP:\d{8}T\d{6}Z/.test(F.icsFor(sentDaysAgo(0), { now: NOW })),
     'DTSTAMP is a timestamp, not a calendar date — it keeps the Z form');
+});
+
+console.log('\nthe date the client themselves named');
+/* Question 12 asks "by when do you need this working", and its own help text
+   promises the answer "goes into the proposal as a timeline AND as a decision
+   date". Measured: the answer reached the document and one confidence counter,
+   and nothing else — the decision date it promised did not exist. A field the
+   client answered out loud, typed in by hand, feeding one layer.
+
+   The parse is deliberately narrow. Free text cannot be guessed at, and a
+   reminder that fires on a date nobody named is worse than no reminder: it is
+   the failure that teaches an operator to ignore the panel. So anything not
+   unambiguous returns null and changes nothing. */
+test('a numeric date the client named is read, in the forms people write', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  const iso = d => d && d.toISOString().slice(0, 10);
+  assert.strictEqual(iso(F.deadlineDate('15/10/2026', at)), '2026-10-15');
+  assert.strictEqual(iso(F.deadlineDate('15.10.2026', at)), '2026-10-15');
+  assert.strictEqual(iso(F.deadlineDate('2026-10-15', at)), '2026-10-15');
+  assert.strictEqual(iso(F.deadlineDate('15/10', at)), '2026-10-15', 'the year is implied');
+  assert.strictEqual(iso(F.deadlineDate('צריך את זה עד 15/10, אחרי החגים', at)), '2026-10-15',
+    'the date is inside a sentence, because that is how people answer');
+});
+test('a month with no day resolves to the part of it that was said', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  const iso = d => d && d.toISOString().slice(0, 10);
+  assert.strictEqual(iso(F.deadlineDate('אמצע ספטמבר', at)), '2026-09-15');
+  assert.strictEqual(iso(F.deadlineDate('תחילת אוקטובר', at)), '2026-10-01');
+  assert.strictEqual(iso(F.deadlineDate('סוף אוקטובר', at)), '2026-10-31');
+  assert.strictEqual(iso(F.deadlineDate('ספטמבר', at)), '2026-09-15',
+    'a bare month is the middle of it, which is the honest midpoint of what was said');
+});
+test('a month already past this year means next year, not a date behind us', () => {
+  const at = new Date('2026-11-20T10:00:00Z');
+  const iso = d => d && d.toISOString().slice(0, 10);
+  assert.strictEqual(iso(F.deadlineDate('אמצע מרץ', at)), '2027-03-15');
+  assert.strictEqual(iso(F.deadlineDate('15/3', at)), '2027-03-15');
+});
+test('anything that is not a date returns nothing, and changes nothing', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  ['בהקדם האפשרי', 'כשיהיה מוכן', 'לפני עונת החגים', 'אין דדליין', '', null, undefined,
+   'רבעון שלישי', '40'].forEach(v =>
+    assert.strictEqual(F.deadlineDate(v, at), null, 'guessed a date from: ' + JSON.stringify(v)));
+  // and an impossible date is not silently rolled into the next month
+  assert.strictEqual(F.deadlineDate('31/2/2026', at), null, '31 February is not a date');
+});
+test('the clock closes on the client\'s date when it comes first', () => {
+  /* A proposal cannot sensibly stay "fresh" past the day the client said they
+     need the thing working. Today the clock runs on the document's own validity
+     — 14 days by default — so a client who needs it live in five days is chased
+     on the same schedule as one with no deadline at all. */
+  const at = new Date('2026-08-20T10:00:00Z');
+  const deal = extra => Object.assign({ status: 'sent', client: 'א',
+    sentAt: '2026-08-19T09:00:00.000Z' }, extra);
+
+  /* The client's date replaces the expiry date and the SAME closing window
+     applies to it — three days. Widening the window because the date came from
+     the client rather than the document would be a guess about how long the work
+     takes after a yes, and there is nothing here to support one. */
+  const s = F.dueState(deal({ clientDeadline: '2026-08-23' }), at);
+  assert.strictEqual(s.daysLeft, 3, 'counted to the date the client named');
+  assert.strictEqual(s.state, 'closing',
+    'one day after sending, with the client needing it in three, this is not "fresh"');
+  assert.ok(/הלקוח/.test(s.label),
+    'the label must say whose date this is, or it reads as the offer lapsing: ' + s.label);
+
+  // and the threshold is the existing one, pinned rather than assumed
+  assert.strictEqual(F.dueState(deal({ clientDeadline: '2026-08-24' }), at).state, 'fresh',
+    'four days out is outside the three-day window, exactly as it is for the document');
+});
+test('a deadline later than the validity does not extend the offer', () => {
+  /* The clamp is one-directional on purpose. The document promised 14 days and
+     the client's own need being further out does not make the price hold longer
+     — that would be the tool quietly re-writing what was sent. */
+  const at = new Date('2026-08-20T10:00:00Z');
+  const deal = { status: 'sent', client: 'א', sentAt: '2026-08-19T09:00:00.000Z',
+                 clientDeadline: '2027-01-01' };
+  assert.strictEqual(F.dueState(deal, at).daysLeft, 13, 'the 14-day validity still governs');
+});
+test('the calendar file and the panel agree about when it is closing', () => {
+  /* Two artefacts describing one deal. If the file fires against the document's
+     fourteen days while the panel counts to the client's date, the operator gets
+     a reminder that contradicts their own screen — worse than either being wrong
+     alone, because now neither can be trusted. */
+  const NOWX = new Date('2026-08-20T10:00:00Z');
+  const deal = { status: 'sent', client: 'מסעדת הדר', sentAt: '2026-08-19T09:00:00.000Z',
+                 priceQuoted: 12000, clientDeadline: '2026-08-25' };
+  const ics = unfold(F.icsFor(deal, { now: NOWX }));
+  const start = (ics.match(/DTSTART;VALUE=DATE:(\d{8})/) || [])[1];
+  assert.ok(start, 'no start date in the file');
+  const toD = t => new Date(+t.slice(0,4), +t.slice(4,6) - 1, +t.slice(6,8));
+  assert.ok(toD(start) <= new Date(2026, 7, 25),
+    'the reminder lands after the day the client said they need it working: ' + start);
+  assert.ok(/25\.8\.2026|25\/8\/2026/.test(ics),
+    'the file never says the date the client named, so the operator cannot see why ' +
+    'it fired when it did: ' + ics);
+  // and it still says what the document promised, because both facts matter
+  assert.ok(/2\.9\.2026|2\/9\/2026/.test(ics),
+    'the document validity vanished from the description: ' + ics);
+});
+test('no deadline on the record behaves exactly as before', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  const plain = { status: 'sent', client: 'א', sentAt: '2026-08-19T09:00:00.000Z' };
+  assert.strictEqual(F.dueState(plain, at).daysLeft, 13);
+  assert.strictEqual(F.dueState(Object.assign({ clientDeadline: 'לא תאריך' }, plain), at).daysLeft, 13,
+    'an unparseable value stored by mistake must not move the clock');
+});
+
+console.log('\nthe call itself, which is the only trigger that needs no channel');
+/* Measured, not assumed: over 25 days of this operator's calendar there were 70
+   meetings with more than one attendee — about 19.6 a week, median 60 minutes —
+   and the median gap after one ends is 60 minutes, with 69 of the 70 leaving
+   more than 15 clear minutes. So an alarm 15 minutes after the end lands in
+   empty space essentially always, and a reminder at a fixed hour of the day
+   would not: those meetings start anywhere between 08:00 and 19:00.
+
+   That is what `TRIGGER;RELATED=END` is for, and it is the whole reason this
+   generator is separate from icsFor above — that one reminds you about a
+   proposal days later, this one catches the ten minutes after you hang up. */
+const CALL = { date: '2026-08-20', time: '14:30', minutes: 45, client: 'מסעדת הדר' };
+
+test('the second alarm fires after the meeting ENDS, not after it starts', () => {
+  /* The one line that cannot be got wrong. Anchored to the start, a 45-minute
+     call would be interrupted by its own follow-up reminder. */
+  const ics = F.callIcs(CALL, { now: NOW });
+  assert.ok(/TRIGGER;RELATED=END:PT15M/.test(ics),
+    'no end-relative trigger, so the reminder lands mid-call: ' + ics);
+});
+test('one event, two alarms — before it to prepare, after it to price', () => {
+  const ics = F.callIcs(CALL, { now: NOW });
+  assert.strictEqual((ics.match(/BEGIN:VEVENT/g) || []).length, 1);
+  assert.strictEqual((ics.match(/BEGIN:VALARM/g) || []).length, 2);
+  assert.strictEqual((ics.match(/END:VALARM/g) || []).length, 2);
+  assert.ok(/TRIGGER:-PT\d+M/.test(ics), 'nothing reminds you before the call');
+});
+test('it is a timed event, unlike the follow-up, and the end matches the length', () => {
+  /* icsFor is all-day on purpose and says so; this one is anchored to a specific
+     hour, so an all-day event would make RELATED=END meaningless. */
+  const ics = F.callIcs(CALL, { now: NOW });
+  assert.ok(!/DTSTART;VALUE=DATE/.test(ics), 'an all-day call has no end to relate to');
+  const s = (ics.match(/DTSTART:(\d{8}T\d{6}Z)/) || [])[1];
+  const e = (ics.match(/DTEND:(\d{8}T\d{6}Z)/) || [])[1];
+  assert.ok(s && e, 'DTSTART/DTEND missing or not instants: ' + ics);
+  const toD = t => new Date(Date.UTC(+t.slice(0,4), +t.slice(4,6) - 1, +t.slice(6,8),
+                                     +t.slice(9,11), +t.slice(11,13), +t.slice(13,15)));
+  assert.strictEqual((toD(e) - toD(s)) / 60000, CALL.minutes);
+});
+test('the hour written into the file is the hour the operator typed', () => {
+  /* The defect icsFor already carries a comment about, in the other direction:
+     serialise a local wall-clock time with UTC getters and the file says a
+     different hour than the screen did. 14:30 local must arrive as 14:30 local. */
+  const ics = F.callIcs(CALL, { now: NOW });
+  const s = (ics.match(/DTSTART:(\d{8}T\d{6}Z)/) || [])[1];
+  const back = new Date(Date.UTC(+s.slice(0,4), +s.slice(4,6) - 1, +s.slice(6,8),
+                                 +s.slice(9,11), +s.slice(11,13), +s.slice(13,15)));
+  assert.strictEqual(back.getHours(), 14, 'the hour drifted between screen and file');
+  assert.strictEqual(back.getMinutes(), 30);
+  assert.strictEqual(back.getDate(), 20, 'and so did the day');
+});
+test('a missing or unparseable time produces nothing, not a broken file', () => {
+  // a subtly malformed .ics does not error when tapped, it simply does nothing
+  assert.strictEqual(F.callIcs(null), null);
+  assert.strictEqual(F.callIcs({ date: '', time: '14:30' }), null);
+  assert.strictEqual(F.callIcs({ date: 'לא תאריך', time: '14:30' }), null);
+  assert.strictEqual(F.callIcs({ date: '2026-08-20', time: '99:99' }), null);
+  assert.strictEqual(F.callIcs({ date: '2026-08-20', time: '14:30', minutes: 0 }), null);
+});
+test('the client name is escaped, and it is in there on purpose', () => {
+  /* This file goes into the operator's own calendar, so the name being visible
+     is the point — it is what makes the reminder mean anything three days
+     later. It is also the reason the README says so out loud. */
+  const ics = F.callIcs({ date: '2026-08-20', time: '09:00', minutes: 30,
+                          client: 'כהן, לוי; ושותפים\\בע"מ' }, { now: NOW });
+  assert.ok(ics.includes('כהן'), 'the whole point is that you know who it is');
+  assert.ok(/SUMMARY:[^\r\n]*\\,/.test(ics), 'an unescaped comma splits the field');
+  assert.ok(/\\;/.test(ics), 'an unescaped semicolon splits the field');
+});
+test('no line exceeds 75 octets, and no fold splits a Hebrew character', () => {
+  /* RFC 5545 folds at 75 OCTETS, and Hebrew is two octets per letter — so a
+     naive fold at 75 characters is both wrong and capable of cutting a letter
+     in half, which is how a file becomes mojibake in one calendar and fine in
+     another. Unfolding must return exactly what was folded. */
+  const ics = F.callIcs({ date: '2026-08-20', time: '09:00', minutes: 60,
+    client: 'מרפאת שיניים דוקטור כהן ובניו בעמק הירדן והסביבה בעמ' }, { now: NOW });
+  const lines = ics.split('\r\n');
+  const over = lines.filter(l => Buffer.byteLength(l, 'utf8') > 75);
+  assert.deepStrictEqual(over, [], 'lines longer than 75 octets: ' + over.join(' | '));
+  const unfolded = ics.replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes('מרפאת שיניים דוקטור כהן ובניו בעמק הירדן והסביבה'),
+    'unfolding did not give the text back — a fold landed inside a character');
+  assert.ok(!/�/.test(ics), 'a replacement character means a split code point');
+});
+test('the follow-up file is folded too, and still says what it said', () => {
+  // same helper, applied to the generator that shipped before it existed
+  const ics = F.icsFor(sentDaysAgo(0), { now: NOW });
+  const over = ics.split('\r\n').filter(l => Buffer.byteLength(l, 'utf8') > 75);
+  assert.deepStrictEqual(over, [], 'unfolded long lines: ' + over.join(' | '));
+  assert.ok(ics.replace(/\r\n[ \t]/g, '').includes('שעות עבודה'),
+    'the ask that makes calibration possible must survive folding');
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

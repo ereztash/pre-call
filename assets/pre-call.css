@@ -341,6 +341,22 @@
   /* The only chrome call mode keeps: the way out, and the way to the card
      you need the moment the call ends. Sticky because the one thing you
      cannot afford to hunt for mid-call is the exit. */
+  /* The calendar reminder for the call, closed by default. A date, a time and a
+     length are three things to read while preparing for a call, and the operator
+     who wants them will open the one line that offers them. */
+  .callcal{border:1px solid var(--line);border-radius:var(--r-md);
+           padding:var(--sp-3) var(--sp-4);margin-top:var(--sp-4)}
+  /* --copper, not --copper-label: that token exists only in post-call.css, and
+     an undefined custom property resolves to nothing rather than erroring — the
+     summary would simply have rendered in the body colour. */
+  .callcal>summary{cursor:pointer;font-weight:600;color:var(--copper)}
+  .callcal[open]>summary{margin-bottom:var(--sp-3)}
+  .callcal-f{display:flex;gap:var(--sp-4);flex-wrap:wrap;align-items:flex-end;
+             margin-top:var(--sp-3)}
+  .callcal-f>div{flex:1 1 120px}
+  .callcal-f label{margin-top:0}
+  .callcal-f button{margin-top:0}
+
   .callbar{display:flex;gap:var(--sp-3);flex-wrap:wrap;align-items:center;
            position:sticky;top:0;z-index:2;background:var(--charcoal);
            padding:var(--sp-3) 0;margin-bottom:var(--sp-3)}

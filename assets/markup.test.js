@@ -760,13 +760,23 @@ test('the shell loads after everything it depends on', () => {
    early, and each transition goes unrecorded in silence. deals.test.js keeps
    passing too, because it injects a journal by hand. Only the order in the
    markup decides whether the running product records anything. */
-test('the journal loads before the ledger that writes into it', () => {
-  const order = [...html['post-call.html'].matchAll(/<script src="assets\/([^"]+)"/g)].map(m => m[1]);
-  const j = order.indexOf('pc-journal.js'), d = order.indexOf('deals.js');
-  assert.ok(j > -1, 'pc-journal.js is not loaded by post-call.html at all');
-  assert.ok(j < d, 'deals.js captures PC.journal at load time, so loading it ' +
-    'first records nothing — and fails without a single error');
-});
+/* Every page, not just the one this started on. The first version of this test
+   checked post-call.html alone, and pre-call.html was meanwhile loading deals.js
+   with no journal at all — so PC.deals meant two different things on two pages
+   of the same product. It happened to be harmless because that page only read,
+   which is exactly the kind of luck that stops holding when someone adds a
+   write. */
+for (const page of PAGES) {
+  const order = [...html[page].matchAll(/<script src="assets\/([^"]+)"/g)].map(m => m[1]);
+  if (order.indexOf('deals.js') === -1) continue;
+  test(page + ' loads the journal before the ledger that writes into it', () => {
+    const j = order.indexOf('pc-journal.js'), d = order.indexOf('deals.js');
+    assert.ok(j > -1, page + ' loads deals.js without pc-journal.js, so its ledger ' +
+      'is built with no journal and every transition on that page goes unrecorded');
+    assert.ok(j < d, 'deals.js captures PC.journal at load time, so loading it ' +
+      'first records nothing — and fails without a single error');
+  });
+}
 test('what the journal records is rendered somewhere the operator sees it', () => {
   /* A log nothing reads back is storage, not a feature. The deal row is the
      only place that can show it, because it is the only place a specific deal
@@ -774,6 +784,50 @@ test('what the journal records is rendered somewhere the operator sees it', () =
   assert.ok(/journal\s*&&[\s\S]{0,120}\.movement\(|journal\.movement\(/
     .test(read('assets/pc-ledger.js')),
     'the journal is written on every transition and read by nobody');
+});
+test('the funnel the journal derives is rendered, and rendered on every ledger change', () => {
+  /* Two separate ways for this to become dark code: a derivation nothing calls,
+     and a renderer nobody re-runs. renderLedger is the one function every
+     mutation path already goes through, so being called from there is what makes
+     the panel current rather than a snapshot of page load. */
+  const src = read('assets/pc-ledger.js');
+  assert.ok(/journal\.funnel\(/.test(src), 'funnel() is derived and read by nobody');
+  /* Presence and adjacency, deliberately not source order. The call sits above
+     the declaration — as renderHistory's already does — and that is fine here
+     rather than a temporal-dead-zone bug, because renderLedger is only invoked
+     from the shell after every script has evaluated. Asserting the order would
+     be asserting a coincidence. */
+  assert.ok(/const renderFunnel\s*=/.test(src), 'renderFunnel is gone');
+  assert.ok(/^\s*renderFunnel\(\);/m.test(src), 'renderFunnel is defined and never called');
+  assert.ok(/renderFunnel\(\);[\s\S]{0,80}renderHistory\(list\)/.test(src),
+    'it must render next to the track record, inside renderLedger — otherwise it ' +
+    'goes stale the moment a deal changes');
+});
+test('the visit is recorded before anything renders, not after', () => {
+  /* Ordering, not presence. Appended after the renders, the panel counts the
+     visit before the current one and reads "once" on the second visit — found by
+     driving the page, not by reading it. */
+  const src = read('assets/post-call.js');
+  const j = src.indexOf("what: 'session'");
+  assert.ok(j > -1, 'nothing appends a session line');
+  assert.ok(j < src.indexOf('renderLedger()'),
+    'the session line lands after the render that reads it, so the count shown ' +
+    'is permanently one behind');
+});
+test('nothing on the page asks for satisfaction without measuring behaviour too', () => {
+  /* Across 298 designs with both measured, preference and performance correlate
+     .53, and users prefer the better-performing design only 70% of the time. A
+     satisfaction number from one operator lands in that 30% with no way to
+     detect that it did. So a rating control may exist here only alongside a
+     behavioural measure — and today there is no rating control at all, which is
+     the state this test is pinning. */
+  const rating = [...PAGES, 'privacy.html']
+    .filter(p => /type="range"|name="rating"|aria-label="[^"]*דירוג|כמה אתה מרוצה|שביעות רצון/
+      .test(p === 'privacy.html' ? read(p) : html[p]));
+  if (!rating.length) return;                       // nothing asks, nothing to pair
+  assert.ok(/journal\.funnel\(/.test(read('assets/pc-ledger.js')),
+    rating.join(', ') + ' asks how it felt, and no behavioural measure is rendered ' +
+    'anywhere to check the answer against');
 });
 test('a visit is recorded, so the sequence has an anchor', () => {
   /* Without it the log is a pile of deal transitions with no notion of when the
@@ -999,6 +1053,46 @@ test('every test file in the repository is covered by the ignore list', () => {
     .filter(f => f.endsWith('.test.js')).filter(f => !covers(f));
   assert.deepStrictEqual(uncovered, [],
     'these test files would be deployed: ' + uncovered.join(', '));
+});
+
+/* The rule the test above only half states. It covers test files, and the
+   comment on .vercelignore claims this file "asserts it stays complete" — which
+   was not true: a docs/ directory added later was about to be published, and
+   every check passed. A guard that advertises completeness has to enforce it.
+
+   So the rule is inverted. Instead of naming what must not ship, name what may:
+   anything outside that set is either deliberately served and belongs on the
+   list here, or accidentally served and belongs in .vercelignore. There is no
+   build step, so there is no third possibility. */
+test('every file in the repository is either served on purpose or ignored on purpose', () => {
+  const patterns = fs.readFileSync(path.join(root, '.vercelignore'), 'utf8')
+    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const ignored = f => patterns.some(p =>
+    p === '*.test.js' ? f.endsWith('.test.js')
+      : f === p || f.startsWith(p.replace(/\/$/, '') + '/'));
+
+  /* What the product is. Anything that answers 200 in production and is not in
+     here is an accident — the class of accident that served every test file in
+     this repo from the first deploy until somebody fetched one. */
+  const SERVED = [
+    /^[a-z-]+\.html$/,                      // the four pages
+    /^assets\/[\w.-]+\.(js|css|svg|png|woff2?)$/,
+    /^api\/[\w.-]+\.js$/,                   // the optional serverless functions
+    /^(robots\.txt|sitemap\.xml|vercel\.json|\.vercelignore)$/,
+    /^\.gitignore$/
+  ];
+  const walk = d => fs.readdirSync(path.join(root, d), { withFileTypes: true })
+    .flatMap(e => e.name === '.git' || e.name === 'node_modules' ? []
+      : e.isDirectory() ? walk(path.join(d, e.name))
+      : [path.join(d, e.name)]);
+
+  const stray = walk('.').map(f => f.replace(/^\.\//, ''))
+    .filter(f => !ignored(f))
+    .filter(f => !SERVED.some(re => re.test(f)));
+  assert.deepStrictEqual(stray, [],
+    'these files would be published and are not part of the product — add them to ' +
+    '.vercelignore, or to SERVED above if they genuinely belong on the site: ' +
+    stray.join(', '));
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

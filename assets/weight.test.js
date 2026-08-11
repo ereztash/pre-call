@@ -74,15 +74,23 @@ const BUDGETS = {
   'index.html':     16 * 1024,
   'privacy.html':   16 * 1024,
   'pre-call.html':  48 * 1024,
-  /* 120 → 128KB, raised on purpose when the transition journal landed and cost
-     2.5KB over the wire. Nobody reaches this page cold: index.html and
-     pre-call.html are what a first visit pays for, and both keep their tight
-     ceilings. Raising a budget is the wrong move when the growth is accidental
-     — a duplicated block, a library, an unminified copy — and the right one
-     when a page genuinely does more than it did. Trimming 200 bytes of
-     comments to hold a round number would have bought nothing and cost the
-     reason the code is the way it is. */
-  'post-call.html': 128 * 1024
+  /* 120 → 128 → 136KB, and the second raise happened the same day as the first,
+     which is worth saying plainly rather than burying: a budget moved twice in a
+     day by 13% is not holding anything back yet.
+
+     What landed in between, all of it real: three journal verbs and the funnel
+     derivation, the panel that reads them, the parser for the date the client
+     named, and the iCalendar split. That last one is the reason to trust the
+     rest — pre-call.html was over its own budget at 48.7KB, and instead of
+     raising it the module it was loading for one function got split, which took
+     that page to 45.4KB. Splitting is what the accidental case looks like when
+     it is found; raising is for the case where the page does more.
+
+     The line to hold: if this page needs a third raise without a matching
+     capability, the growth has stopped being features and the trim is overdue.
+     index.html and pre-call.html keep their tight ceilings either way — they are
+     what a first visit pays for. */
+  'post-call.html': 136 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

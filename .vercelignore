@@ -12,7 +12,11 @@
 #
 # There is no build step here, so this list is the only thing separating
 # what is written from what is served. markup.test.js asserts it stays
-# complete.
+# complete — and it now asserts the whole rule rather than half of it: every
+# file in the repository is either matched here or matched by an allowlist of
+# what the product actually is. The earlier version only checked test files,
+# and a docs/ directory added later was about to be published with every
+# check green.
 
 # tests — every suite, wherever it lives
 *.test.js
@@ -22,6 +26,11 @@
 # that mints licence-shaped keys has no reason to be reachable from the
 # internet, and with no build step it would sit at a public URL.
 tools/
+
+# Research method, not product. The protocol for the first ten participants is
+# written to be run by the operator, and a page describing how the product will
+# be tested has no reason to answer 200 to the people being tested.
+docs/
 
 # repository furniture
 .github/

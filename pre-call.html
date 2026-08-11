@@ -238,6 +238,40 @@
     <button class="ghost" data-act="go3">חזרה לעריכה</button>
     <span class="copied" id="c3">הועתק</span>
   </div>
+
+  <!-- The one trigger this product can build without a channel of its own. It
+       has no server, no email and no push, so the only way to reach the operator
+       once the tab is closed is to put something where they already look — their
+       calendar. Two reminders on one event: one before, and one anchored to the
+       END of the call, which is the moment the scope is still remembered and the
+       price has not yet been guessed.
+
+       The fields are hidden until asked for, because a date and a time on screen
+       during step 4 are two more things to read while preparing for a call. -->
+  <details class="callcal">
+    <summary>תזכורת ליומן לשיחה הזאת</summary>
+    <p class="hint-p">
+      אירוע אחד ביומן שלכם עם שתי תזכורות: אחת חצי שעה לפני, ואחת
+      <b>רבע שעה אחרי שהשיחה נגמרת</b> — לתמחר בעודה באוזניים. שם הלקוח נכתב
+      בכותרת האירוע, כדי שהתזכורת תדע על מה היא.
+    </p>
+    <div class="callcal-f">
+      <div>
+        <label for="cal_date">תאריך</label>
+        <input type="date" id="cal_date">
+      </div>
+      <div>
+        <label for="cal_time">שעה</label>
+        <input type="time" id="cal_time" value="10:00">
+      </div>
+      <div>
+        <label for="cal_len">אורך בדקות</label>
+        <input type="number" id="cal_len" value="45" min="5" max="480" step="5">
+      </div>
+      <button type="button" class="ghost" data-act="cal-dl">הורד קובץ יומן</button>
+    </div>
+    <p class="hint-p" id="calMsg" aria-live="polite"></p>
+  </details>
   <div class="callbar hidden" id="callbar">
     <button class="ghost" data-act="callmode-off">יציאה ממצב שיחה</button>
     <button class="ghost" data-act="to-card">השיחה נגמרה · לכרטיס הקריאה</button>
@@ -292,7 +326,21 @@
      a second parser of the same storage key. PRE-CALL still works with no ledger
      at all: every read of it is guarded, and an empty or corrupt store lands on
      the first-timer line, which is the right answer for it. -->
+<!-- Before deals.js, which takes the journal as its second constructor argument
+     and captures it at load. Loaded here too, not only on POST-CALL: without it
+     PC.deals means one thing on one page of this product and another thing on
+     the other, and the page that loses is the one holding the moment after the
+     call. assets/markup.test.js asserts it for every page that loads the ledger. -->
+<script src="assets/pc-journal.js"></script>
 <script src="assets/deals.js"></script>
+<!-- callIcs(): the calendar file for the call this page is preparing you for.
+     pc-ical.js and not pc-followup.js, measured rather than assumed — the
+     follow-up module is 6.76KB over the wire and its other half is about
+     proposals already sent, which this page cannot do anything with. Half of
+     this page's budget was going on code it cannot run. The escaping, folding
+     and stamps still have exactly one implementation; it lives in pc-ical.js
+     and POST-CALL borrows it from there. -->
+<script src="assets/pc-ical.js"></script>
 <script src="assets/pc-backup.js"></script>
 <script src="assets/pre-call-content.js"></script>
 <script src="assets/pre-call.js"></script>
