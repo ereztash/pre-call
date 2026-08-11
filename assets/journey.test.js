@@ -557,6 +557,73 @@ async function journey(engineName, base) {
      from decoding a lit chip seventeen times. This holds the shape: the
      three groups must exist, and no row may offer a move to where it
      already is. */
+  /* How many choices are in front of you AT ONE DECISION — which is a different
+     number from how many are on the page, and the difference is the whole point.
+
+     This used to be a page total with a ceiling of 95, tacked onto the tail of
+     the scope test. Two things were wrong with that. It measured the wrong thing:
+     Hick's law is about the size of the choice set at a decision, and the
+     research qualifying it is explicit that option complexity, relevance and
+     presentation all confound a raw count — so 91 controls spread across seven
+     sections is not the same situation as 91 in one place, and only the second is
+     a problem. And the lineage the ceiling implied was worse than no lineage:
+     Miller's 7±2 is the usual justification for capping visible items, Miller
+     never studied menus, and the actual working-memory limit is nearer four
+     (Cowan 2001) or three (LeCompte 1999). Nothing in this repo ever encoded a
+     7-item rule, and nothing should.
+
+     So: the primary ceiling is the busiest single section, measured at 44 on the
+     form — the section where the operator is actually deciding. The page total
+     stays as a looser second guard, because a page that grows without bound is
+     still worse than one that does not, but it is no longer the headline. */
+  const SECTION_CONTROL_CEILING = 48;   // measured 44 in the proposal form
+  const PAGE_CONTROL_CEILING = 95;      // measured 91 across the whole page
+
+  await test(label('no single section puts more choices in front of you than it has to'), async () => {
+    /* Its own context at a pinned viewport, because the number is meaningless
+       without one — the same page measured 91 at 390px and 98 at whatever size
+       the shared context happened to be, and the old ceiling was set against an
+       inherited size nobody had chosen. 390x844 is the size the perf harness
+       already uses, for the reason written there: the target user is on a phone
+       right after a meeting, not on the machine this was written on. */
+    const own = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const fresh = await own.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'מעקב אחרי לקוחות בגוגל שיטס');
+    await fresh.waitForTimeout(400);
+    const m = await fresh.evaluate(() => {
+      const SEL = 'button,a,input,select,textarea,[tabindex]';
+      /* checkVisibility, not a bounding rect: Chromium renders a closed
+         <details> with content-visibility on the slot, which PRESERVES the
+         layout boxes of its contents — so a rect filter counts controls that
+         are not painted, cannot take focus and cannot be hit-tested, and the
+         advice "move something behind a disclosure" could not reduce the number
+         by one. */
+      const vis = e => e.checkVisibility
+        ? e.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true,
+                              visibilityProperty: true })
+        : (() => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })();
+      const count = el => [...el.querySelectorAll(SEL)].filter(vis).length;
+      return {
+        total: [...document.querySelectorAll(SEL)].filter(vis).length,
+        sections: [...document.querySelectorAll('main > .sec')]
+          .map(s => ({ head: ((s.querySelector('h2') || {}).textContent || s.id || '?').trim().slice(0, 40),
+                       n: count(s) }))
+          .filter(x => x.n > 0).sort((a, b) => b.n - a.n)
+      };
+    });
+    const worst = m.sections[0] || { head: 'none', n: 0 };
+    const shown = m.sections.map(x => x.n + ' · ' + x.head).join(' | ');
+    assert.ok(worst.n <= SECTION_CONTROL_CEILING,
+      'one section paints ' + worst.n + ' controls at once ("' + worst.head + '"), over the ' +
+      SECTION_CONTROL_CEILING + ' ceiling. That is the number a person faces at a ' +
+      'single decision. Split it, or put part of it behind a disclosure. Sections: ' + shown);
+    assert.ok(m.total <= PAGE_CONTROL_CEILING,
+      'the page paints ' + m.total + ' controls in total, over the ' + PAGE_CONTROL_CEILING +
+      ' ceiling. Sections: ' + shown);
+    await own.close();
+  });
+
   await test(label('the scope reads as three lists, not as seventeen questions'), async () => {
     const c = await browser.newContext();
     const fresh = await c.newPage();
@@ -612,18 +679,10 @@ async function journey(engineName, base) {
 
        Re-baselined on the corrected filter rather than carried over: the old
        numbers (137, then 125) counted a different population and comparing across
-       the change would be meaningless. */
-    const total = await fresh.evaluate(() =>
-      [...document.querySelectorAll('button,a,input,select,textarea,[tabindex]')]
-        .filter(e => e.checkVisibility
-          ? e.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true,
-                                visibilityProperty: true })
-          : (() => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })())
-        .length);
-    assert.ok(total <= 95,
-      'POST-CALL paints ' + total + ' controls (ceiling 95, measured 92 on the corrected ' +
-      'filter, where the same page measured 128 on the old one). ' +
-      'Raise this deliberately or move something behind a disclosure.');
+       the change would be meaningless.
+
+       The count itself moved out of this test's tail and into one of its own
+       below, where it also stopped being a page total. */
 
     /* What the grouping cost, and had to give back. Moving an item is now
        a structural change instead of a chip lighting up, and the first

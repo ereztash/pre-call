@@ -1055,5 +1055,45 @@ test('every test file in the repository is covered by the ignore list', () => {
     'these test files would be deployed: ' + uncovered.join(', '));
 });
 
+/* The rule the test above only half states. It covers test files, and the
+   comment on .vercelignore claims this file "asserts it stays complete" — which
+   was not true: a docs/ directory added later was about to be published, and
+   every check passed. A guard that advertises completeness has to enforce it.
+
+   So the rule is inverted. Instead of naming what must not ship, name what may:
+   anything outside that set is either deliberately served and belongs on the
+   list here, or accidentally served and belongs in .vercelignore. There is no
+   build step, so there is no third possibility. */
+test('every file in the repository is either served on purpose or ignored on purpose', () => {
+  const patterns = fs.readFileSync(path.join(root, '.vercelignore'), 'utf8')
+    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const ignored = f => patterns.some(p =>
+    p === '*.test.js' ? f.endsWith('.test.js')
+      : f === p || f.startsWith(p.replace(/\/$/, '') + '/'));
+
+  /* What the product is. Anything that answers 200 in production and is not in
+     here is an accident — the class of accident that served every test file in
+     this repo from the first deploy until somebody fetched one. */
+  const SERVED = [
+    /^[a-z-]+\.html$/,                      // the four pages
+    /^assets\/[\w.-]+\.(js|css|svg|png|woff2?)$/,
+    /^api\/[\w.-]+\.js$/,                   // the optional serverless functions
+    /^(robots\.txt|sitemap\.xml|vercel\.json|\.vercelignore)$/,
+    /^\.gitignore$/
+  ];
+  const walk = d => fs.readdirSync(path.join(root, d), { withFileTypes: true })
+    .flatMap(e => e.name === '.git' || e.name === 'node_modules' ? []
+      : e.isDirectory() ? walk(path.join(d, e.name))
+      : [path.join(d, e.name)]);
+
+  const stray = walk('.').map(f => f.replace(/^\.\//, ''))
+    .filter(f => !ignored(f))
+    .filter(f => !SERVED.some(re => re.test(f)));
+  assert.deepStrictEqual(stray, [],
+    'these files would be published and are not part of the product — add them to ' +
+    '.vercelignore, or to SERVED above if they genuinely belong on the site: ' +
+    stray.join(', '));
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
