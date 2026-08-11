@@ -244,6 +244,22 @@ test('the two answers are stored as given', () => {
     assert.strictEqual(d.get(a.id).outcome.concession, v);
   });
 });
+test('an outcome note survives the next save that does not re-send it', () => {
+  /* The same defect `concession` was already fixed for, one field over. The
+     outcome form re-renders after every save, and a field that is not on screen
+     is not re-sent — so a value that is overwritten with '' rather than carried
+     over is a value the operator loses by saving again. Nothing in the product
+     sends this field today, which is exactly why it went unnoticed. */
+  const d = make(mem());
+  const a = d.save({ client: 'a', priceQuoted: 10000 });
+  d.setStatus(a.id, 'won');
+  d.recordOutcome(a.id, { closedPrice: 9000, outcomeNote: 'ביקש לפרוס לשלושה' });
+  assert.strictEqual(d.get(a.id).outcome.note, 'ביקש לפרוס לשלושה');
+  d.recordOutcome(a.id, { actualHours: 22 });          // a second save, hours only
+  assert.strictEqual(d.get(a.id).outcome.note, 'ביקש לפרוס לשלושה',
+    'saving the hours wiped the note the operator had already written');
+  assert.strictEqual(d.get(a.id).outcome.actualHours, 22, 'and the hours still land');
+});
 test('a value outside the three falls back to unknown', () => {
   const d = make(mem());
   const a = d.save({ client: 'a', priceQuoted: 10000 });

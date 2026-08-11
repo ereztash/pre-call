@@ -270,13 +270,22 @@
 
       /* actualHours is the only field that can decalcify the effort model.
          closedPrice tells you whether the price survived contact. */
-      recordOutcome(id, { closedPrice, actualHours, note, concession } = {}) {
+      /* `outcomeNote`, not `note`: the module-level note() above is the journal
+         helper, and a parameter of that name shadows it for this whole body — so
+         journalling from in here would have called the operator's string and
+         thrown. Renamed before anything was wired, rather than discovered by the
+         TypeError. */
+      recordOutcome(id, { closedPrice, actualHours, outcomeNote, concession } = {}) {
         const d = api.get(id); if (!d) return null;
         const prev = d.outcome || {};
         d.outcome = {
           closedPrice: num(closedPrice),
           actualHours: num(actualHours),
-          note: note || '',
+          /* Carried over, for the same reason concession is: the outcome form
+             re-renders after every save, and a field that is not on screen is
+             not re-sent. Overwriting with '' means saving the hours erases a
+             note the operator already wrote. */
+          note: outcomeNote !== undefined ? String(outcomeNote || '') : (prev.note || ''),
           /* Carried over when the caller does not send one. The outcome form
              re-renders after every save and the hours field is the one an
              operator comes back to — dropping the answer they already gave,
