@@ -234,5 +234,49 @@ test('a ramp step is named for its own lightness', () => {
   assert.deepStrictEqual(wrong, [], 'steps whose name lies about their lightness: ' + wrong.join(', '));
 });
 
+console.log('\nthe ramp is the only place a colour is written down');
+/* Everything above this line tested the ramp. None of it tested whether the
+   ramp is used, and it was not: the palette was declared once and then
+   bypassed 239 times, every rule naming its colour in hex as if the ramp
+   were documentation. Both facts were true at once — 44 tidy steps, and a
+   stylesheet where changing --nt-9 changed nothing.
+
+   That is worse than no ramp, because it reads as one. It means every
+   answer this file gives about the palette is an answer about a block of
+   declarations rather than about the product, and a rebrand would still be
+   239 manual edits.
+
+   The rule: if a colour has a name, write the name. #fff and #000 are the
+   exception the palette comment already carves out — paper and ink in the
+   print sheet, deliberately not UI colour. */
+const rampByHex = (() => {
+  const out = {};
+  for (const m of strip(read(FILES[2])).matchAll(/(--(?:nt|cu|tq|rd)-\d+)\s*:\s*(#[0-9a-fA-F]{6})\s*;/g))
+    if (!out[m[2].toLowerCase()]) out[m[2].toLowerCase()] = m[1];
+  return out;
+})();
+
+FILES.forEach(f => {
+  test(f + ' writes the token name, not the colour behind it', () => {
+    const text = read(f);
+    /* Comments quote hex on purpose — the palette block explains itself in
+       the values it replaced, and the contrast notes name what they measured.
+       The ramp declaration is the one place a hex is the point. */
+    const masked = strip(text)
+      .replace(/--(?:nt|cu|tq|rd)-\d+\s*:\s*#[0-9a-fA-F]{3,6}\s*;/g, m => m.replace(/[^\n]/g, ' '));
+    const bad = [];
+    masked.split('\n').forEach((ln, i) => {
+      for (const m of ln.matchAll(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g)) {
+        const h = '#' + m[1].toLowerCase();
+        if (PAPER_AND_INK.has(h)) continue;
+        if (rampByHex[h]) bad.push(f + ':' + (i + 1) + '  ' + h + ' is var(' + rampByHex[h] + ')');
+        else bad.push(f + ':' + (i + 1) + '  ' + h + ' has no name on the ramp at all');
+      }
+    });
+    assert.deepStrictEqual(bad, [],
+      'colours written as literals where the ramp already answers:\n       ' + bad.join('\n       '));
+  });
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

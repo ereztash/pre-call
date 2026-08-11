@@ -144,20 +144,20 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 
 /* ---- picking up where you left off ---- */
 .resume{
-  background:#1d2126;border:1px solid #2d5c53;border-right:3px solid var(--turq);
+  background:var(--nt-13);border:1px solid var(--tq-27);border-right:3px solid var(--turq);
   border-radius:var(--r-md);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-7);
 }
 .resume-h{font-size:var(--fs-xs);font-weight:700;color:var(--turq);letter-spacing:.4px;margin-bottom:var(--sp-3)}
 .resume-row{
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4) var(--sp-5);
-  padding:var(--sp-2) 0;font-size:var(--fs-md);color:#cae2dd;
+  padding:var(--sp-2) 0;font-size:var(--fs-md);color:var(--tq-84);
 }
 .resume-t{flex:1 1 auto}
 .resume-go{
   flex:0 0 auto;color:var(--turq);text-decoration:underline;font-size:var(--fs-sm);
   min-height:32px;display:inline-flex;align-items:center;
 }
-.resume-go:hover{color:#3dc2a7}
+.resume-go:hover{color:var(--tq-50)}
 
 /* ---- the four situations ---- */
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);margin-bottom:var(--sp-8)}
@@ -170,7 +170,7 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 .card:hover{border-color:var(--copper-dim);transform:translateY(-2px)}
 .card:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
 /* the one most people arrive for — marked by weight, not by shouting */
-.card-hot{border-color:var(--copper-dim);background:#28221b}
+.card-hot{border-color:var(--copper-dim);background:var(--cu-13)}
 .card-quiet{background:transparent}
 
 .card-when{
@@ -217,7 +217,7 @@ footer{
 }
 footer a{color:var(--copper);text-decoration:underline;
   min-height:32px;display:inline-block;line-height:32px}
-footer a:hover{color:#cf9554}
+footer a:hover{color:var(--cu-57)}
 
 /* see the note in post-call.css — a utility whose job is to win */
 .hidden{display:none !important}
