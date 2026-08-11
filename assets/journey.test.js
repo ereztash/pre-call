@@ -431,6 +431,68 @@ async function journey(engineName, base) {
     await c.close();
   });
 
+  /* The price used to move on every keystroke, and the cost was never the
+     problem — 14.8ms median on a throttled phone. What it produced was. Typing
+     "120" into "how often" showed ₪7,390, then ₪9,930, then ₪99,280; typing "45"
+     into "minutes each" showed ₪49,640 and then ₪558,450. Three confident,
+     fully formatted, wrong prices, with the document rebuilt around each. For an
+     audience the product itself describes as having low numerical literacy, half
+     a million shekels flashing past is worse than a blank.
+
+     Numbers only. A truncated number is a different number; a truncated sentence
+     is a shorter sentence, and the document showing less text as you type is
+     honest. */
+  await test(label('a half-typed number never becomes a price'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'הזמנות מגיעות בוואטסאפ ומוקלדות ידנית לגיליון');
+    await fresh.fill('#q_minutes', '8');
+    await fresh.selectOption('#q_freq_unit', '365');
+    await fresh.fill('#q_freq', '40');
+    await fresh.click('#sysChips .chip >> nth=0');
+    await fresh.waitForTimeout(700);
+    const settled = await fresh.textContent('#s_price_top');
+    assert.ok(/₪[\d,]+/.test(settled), 'no starting price to compare against: ' + settled);
+
+    // type a three-digit number the way a person does, and watch the price
+    const seen = await fresh.evaluate(async () => {
+      const f = document.getElementById('q_freq');
+      f.value = '';
+      f.dispatchEvent(new Event('input', { bubbles: true }));
+      const out = [];
+      for (const ch of '120') {
+        f.value += ch;
+        f.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 130));
+        out.push(document.getElementById('s_price_top').textContent.trim());
+      }
+      await new Promise(r => setTimeout(r, 800));      // the pause after typing
+      out.push(document.getElementById('s_price_top').textContent.trim());
+      return out;
+    });
+    const during = seen.slice(0, 3), after = seen[3];
+    assert.deepStrictEqual([...new Set(during)], [settled.trim()],
+      'the price moved while a number was still being typed: ' + JSON.stringify(during));
+    assert.notStrictEqual(after, settled.trim(),
+      'it never settled on the finished number either: ' + after);
+
+    /* And the timer must never be the only way through. `change` fires when a
+       field loses focus, so moving on has to settle it at once — otherwise the
+       delay is felt by anyone who types and immediately looks up. */
+    const instant = await fresh.evaluate(async () => {
+      const f = document.getElementById('q_freq');
+      f.value = '200';
+      f.dispatchEvent(new Event('input', { bubbles: true }));
+      f.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 80));       // far inside the debounce
+      return document.getElementById('s_price_top').textContent.trim();
+    });
+    assert.notStrictEqual(instant, after,
+      'leaving the field did not settle the price immediately: ' + instant);
+    await c.close();
+  });
+
   /* Question 12's own help text promises the answer "goes into the proposal as a
      timeline and as a decision date". Measured across eleven layers, it reached
      the document and one confidence counter — the decision date did not exist.

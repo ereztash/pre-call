@@ -202,5 +202,98 @@ test('both lists stay distinguishable without colour', () => {
     'so do exclusions');
 });
 
+console.log('\nthe payback picture, in the copy the client actually reads');
+/* The product's own README argues for this and then aimed it at the wrong
+   person: 52 squares, one per week, filled to the point the investment is back —
+   "easier to grasp, faster to process, and the benefit is largest for people with
+   low numerical literacy, which is exactly the audience here". It rendered into
+   the tool, for the operator. The operator computed the number. The restaurant
+   owner is the one who has to believe it, and they got "31.4 weeks" as text.
+
+   It lives inside the rationale block and therefore under the rationale's own
+   suppression rule: the picture makes the same claim the sentence makes, so it
+   must live and die with the sentence rather than get a rule of its own. */
+require('./pc-viz.js');
+const vizFor = m => globalThis.PC.viz.forModel(m, {});
+
+test('the grid is drawn, and drawn to the number the sentence states', () => {
+  const h = P.build(ctx({ viz: vizFor(M) }));
+  const cells = (h.match(/class="pbk-c/g) || []).length;
+  assert.strictEqual(cells, 52, 'one cell per week of the year, got ' + cells);
+  const filled = (h.match(/pbk-c on/g) || []).length;
+  const v = vizFor(M).payback;
+  assert.strictEqual(filled, v.filled,
+    'the picture and the sentence disagree: ' + filled + ' filled vs ' + v.filled + ' weeks');
+  assert.ok(h.includes(String(v.weeks)), 'the number itself is still written out');
+});
+test('the picture carries its meaning in words, not only in colour', () => {
+  /* pc-viz.js states the rule it was built to: hue only ever repeats a meaning
+     that already exists as a word. A client printing this in greyscale, or one
+     who cannot separate the two tones, has to get the same claim. */
+  const h = P.build(ctx({ viz: vizFor(M) }));
+  const v = vizFor(M).payback;
+  assert.ok(h.includes(v.label), 'the label that explains the grid is missing');
+  assert.ok(/role="img"/.test(h) && /aria-label="/.test(h),
+    'a grid of 52 divs with no accessible name is 52 announcements of nothing');
+  assert.ok(/aria-hidden="true"/.test(h), 'the individual cells must not be announced');
+});
+test('no picture where there is no claim to picture', () => {
+  // every other method states no payback, so there is nothing honest to draw
+  ['cost', 'market', 'comparable'].forEach(method => {
+    const m2 = compute({ freq: 20, freqUnit: 52, minutes: 7, rate: 60, capture: 0.7,
+      errFreq: 3, errCost: 400, systemCount: 2, integration: 1, edge: 1,
+      myRate: 250, maintPct: 0, method });
+    const h = P.build(ctx({ m: m2, viz: vizFor(m2) }));
+    if (m2.method !== 'value')
+      assert.ok(!/pbk-c/.test(h), method + ' drew a payback grid with no payback claim');
+  });
+});
+test('the picture is suppressed exactly when the sentence is', () => {
+  /* The rationale is withheld when the numbers came from the operator rather
+     than the client — the rule that keeps an invented figure out of a
+     client-facing document. A picture of that same figure is the same claim, in
+     a form that is harder to argue with, so it cannot outlive the sentence. */
+  const h = P.build(ctx({ viz: vizFor(M), adapt: { suppressRoi: true } }));
+  assert.ok(!/מאיפה המחיר/.test(h), 'the rationale should be suppressed here');
+  assert.ok(!/pbk-c/.test(h),
+    'the grid survived a suppressed rationale — it is the same claim, drawn');
+});
+test('no viz in the context changes nothing at all', () => {
+  // the document has to keep building for any caller that has not been updated
+  const h = P.build(ctx());
+  assert.ok(h.includes('מאיפה המחיר'), 'the sentence must still be there');
+  assert.ok(!/pbk-c/.test(h));
+});
+
+test('the drawn payback survives a print that drops backgrounds', () => {
+  /* Browsers do not print background colour unless asked, so a grid whose filled
+     state is only a fill comes out of a printer as fifty-two identical empty
+     squares — no information at all, in the one artefact the client keeps. Two
+     independent channels: print-color-adjust asks for the fill, and the filled
+     cell also carries a heavier border so the picture reads if a printer or a
+     PDF pipeline refuses anyway. Same rule as the ✓ and — markers below. */
+  const css = require('fs').readFileSync(__dirname + '/post-call.css', 'utf8');
+  const on = (css.match(/\.out \.pbk-c\.on\{([^}]+)\}/) || [])[1] || '';
+  const base = (css.match(/\.out \.pbk-c\{([^}]+)\}/) || [])[1] || '';
+  assert.ok(/print-color-adjust:\s*exact/.test(base),
+    'without print-color-adjust the fill is dropped by every printer');
+  assert.ok(/border:\s*2px/.test(on) && /border:\s*1px/.test(base),
+    'the filled state must differ by more than a background, or greyscale loses it');
+});
+
+console.log('\nthe three moments read as moments');
+test('the price, the timeline and the decision are marked apart from the rest', () => {
+  /* Measured before this: two type sizes in the whole document — 22px for the
+     title and 12px for all eleven section headings. Eleven sections at identical
+     weight in a 2,250px document means the price and "access and permissions"
+     are typographically equal, and nothing tells the eye where to stop. */
+  const h = P.build(ctx({ viz: vizFor(M) }));
+  ['המחיר', 'לוח זמנים', 'ההחלטה'].forEach(t =>
+    assert.ok(new RegExp('<h4 class="moment">' + t + '</h4>').test(h),
+      t + ' is not marked as a moment'));
+  const plain = (h.match(/<h4>/g) || []).length;
+  assert.ok(plain >= 5, 'the ordinary sections must stay ordinary, found ' + plain);
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
