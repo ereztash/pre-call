@@ -24,12 +24,38 @@
   /* The rationale is the part the client actually argues with, so it has to
      match the method the price came from. A value number pasted under a
      cost-based price invites "so why is it not just your hours?" */
-  function rationaleFor(m, ils) {
+  /* ---------- the payback, drawn ----------
+
+     Fifty-two cells, one per week of the first year, filled to the point the
+     investment is back. The README argues for exactly this and then aimed it at
+     the wrong person: visual aids are easier to grasp and faster to process, and
+     the benefit is largest for people with low numerical literacy — which is the
+     audience — so it rendered into the tool, for the operator. The operator
+     computed the number. The client is the one who has to believe it, and they
+     were handed "31.4 שבועות" as text.
+
+     Not decoration, on the rule pc-viz.js sets out: the whole is meaningful
+     because 52 is the denominator being argued about, and the hue only ever
+     repeats a claim that is also written in words. One role="img" with the
+     label as its name, and the cells hidden — fifty-two divs with no accessible
+     name would otherwise be fifty-two announcements of nothing. */
+  function paybackGrid(v) {
+    if (!v || !v.payback || v.payback.beyond) return '';
+    const p = v.payback;
+    const cells = Array.from({ length: p.cells }, (_, i) =>
+      `<i class="pbk-c${i < p.filled ? ' on' : ''}" aria-hidden="true"></i>`).join('');
+    return `<div class="pbk" role="img" aria-label="${escape(p.label)}">
+        <div class="pbk-g">${cells}</div>
+        <div class="pbk-l">${escape(p.label)}</div>
+      </div>`;
+  }
+
+  function rationaleFor(m, ils, viz) {
     if (m.method === 'value' && m.annualValue) {
       return `<div class="rationale"><b>מאיפה המחיר.</b> התהליך עולה כ-${ils(m.annualValue)} בשנה.
         המחיר הוא ${Math.round(m.price / m.annualValue * 100)}% מהערך של השנה הראשונה,
         וההשקעה מחזירה את עצמה תוך כ-${m.payback.toFixed(1)} שבועות.
-        משנה שנייה ואילך זה חיסכון מלא.</div>`;
+        משנה שנייה ואילך זה חיסכון מלא.${paybackGrid(viz)}</div>`;
     }
     if (m.method === 'market' && m.M.market) {
       return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.M.market.basis} לעבודה בהיקף הזה.
@@ -194,14 +220,14 @@ ${scope.extra.length ? `<h4>זמין בתוספת תשלום</h4>
      marks — a plus, because that is exactly what this one is. -->
 <ul class="plus">${scope.extra.map(i => `<li>${escape(i.t)}</li>`).join('')}</ul>` : ''}
 
-<h4>המחיר</h4>
+<h4 class="moment">המחיר</h4>
 <div class="pricebox">
   <div class="amt">${ils(m.price)}</div>
   <div class="fine mt4">${escape(terms)}</div>
 </div>
-${a.suppressRoi ? '' : rationaleFor(m, ils)}
+${a.suppressRoi ? '' : rationaleFor(m, ils, ctx.viz)}
 
-<h4>לוח זמנים</h4>
+<h4 class="moment">לוח זמנים</h4>
 <table>
   <tr><th>שלב</th><th>מה קורה</th><th>משך</th></tr>
   <tr><td>מיפוי</td><td>ישיבה אחת, ואני חוזר עם תרשים התהליך לאישור</td><td>שבוע</td></tr>
@@ -228,7 +254,7 @@ ${clauses.map(c => `<h4>${escape(c.h)}</h4><p>${escape(c.p)}</p>`).join('\n')}
 
 ${f.prev ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${escape(f.prev)}. ההצעה הזו נבדלת בכך שהמסירה כוללת תיעוד והדרכה, והאחריות על ההטמעה היא שלי ולא שלכם.</p>` : ''}
 
-<h4>ההחלטה</h4>
+<h4 class="moment">ההחלטה</h4>
 <p>ההצעה בתוקף עד ${vstr}.${f.decider ? ' מי שצריך לאשר: ' + escape(f.decider) + '.' : ''}
 כדי להתחיל, אישור בכתב על ההצעה הזו והתשלום הראשון.</p>
 ${sender ? `<p class="signoff">${escape(sender.name)}${sender.contact.length ? ' · ' + escape(sender.contact[0]) : ''}</p>` : ''}

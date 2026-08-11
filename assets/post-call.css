@@ -332,7 +332,26 @@
              border-bottom:1px solid #e3d7c9;padding-bottom:var(--sp-4)}
   .out h4{font-size:var(--fs-xs);letter-spacing:1.1px;text-transform:uppercase;color:var(--copper-dim);
           font-weight:700;margin:var(--sp-7) 0 var(--sp-3)}
-  .out p,.out li{font-size:var(--fs-md);color:#2e353d;line-height:1.7}
+  /* ---- three levels, where there were two ----
+     Measured: the whole document used exactly two type sizes — 22px for the
+     title and 12px for all eleven section headings. Eleven sections at identical
+     size and weight, down 2,250px, means the price and "access and permissions"
+     are typographically equal and nothing tells the eye where to stop.
+
+     Three of those sections are the ones the client acts on: what it costs, when
+     it happens, and what they have to do. They get their own level — larger, in
+     sentence case rather than the small-caps label treatment, with a rule above
+     that does the work of a page break in a document that has none. The other
+     eight stay exactly as they were, which is what makes the distinction read. */
+  .out h4.moment{font-size:var(--fs-lg);letter-spacing:normal;text-transform:none;
+                 color:#14171a;margin:var(--sp-8) 0 var(--sp-3);
+                 padding-top:var(--sp-4);border-top:1px solid #e3d7c9}
+  /* 34em ≈ 68 characters at this size. Measured at 109 before, which is about
+     45% past the range a reader tracks comfortably; the tool's own pages have
+     been checked for this since the journey suite existed and the document —
+     the thing that leaves the building — never was.
+     Only prose is capped. Tables, the price and the grid need the full column. */
+  .out p,.out li{font-size:var(--fs-md);color:#2e353d;line-height:1.7;max-width:34em}
   .out ul{padding:0 var(--sp-6) 0 0;margin:var(--sp-2) 0}
   .out li{margin-bottom:var(--sp-2)}
 
@@ -349,11 +368,53 @@
      their colour independently of the text. */
   .out ul.incl,.out ul.excl{list-style:none;padding:0;margin:var(--sp-3) 0}
   .out ul.incl li,.out ul.excl li{position:relative;padding-right:var(--sp-7)}
+  /* The comment above says the weight matches the meaning. It did not. Removing
+     red from the exclusions fixed the alarm and left the mass untouched, and
+     measuring it found the boundary list still occupying 230px against the
+     inclusions' 153px — half again as much space for what the client is not
+     buying, in a document written to persuade them to buy.
+     Nine items will always outnumber six. So the inclusions carry more weight
+     per line and the exclusions carry less: what they get reads first and
+     largest, and the boundary is present, legible, and quiet. */
   .out ul.incl li::before{content:"✓";position:absolute;right:0;top:0;
     color:#2d5c53;font-weight:700}
-  .out ul.incl li{color:#2e353d}
-  .out ul.excl li::before{content:"—";position:absolute;right:0;top:0;color:#5a6777}
-  .out ul.excl li{color:#4b5563}
+  .out ul.incl li{color:#22282e;font-size:var(--fs-md);line-height:1.75;
+                  margin-bottom:var(--sp-3)}
+  .out ul.excl li::before{content:"—";position:absolute;right:0;top:0;color:#6b7787}
+  .out ul.excl li{color:#5a6777;font-size:var(--fs-sm);line-height:1.5;
+                  margin-bottom:var(--sp-1)}
+  .out ul.excl{margin:var(--sp-2) 0}
+
+  /* ---- the payback, drawn ----
+     52 cells, one per week, filled to the point the investment is back. The
+     grid is one role="img" with the label as its name and the cells hidden, so
+     a screen reader gets the sentence rather than fifty-two nothings.
+
+     Both states carry a border, and the filled one is solid — so the picture
+     survives greyscale printing and colour vision deficiency, where a fill-only
+     distinction would not. That is the same rule pc-viz.js sets out for hue. */
+  /* Thirteen columns, four rows: each row is a quarter, which is the meaningful
+     decomposition of fifty-two and makes "it pays back in the third quarter"
+     something you can see rather than count. Twenty-six columns was two
+     half-years and read as a bar chart of nothing.
+
+     No direction:ltr here, unlike the price amount above it. A price is a number
+     and reads left to right in any language; a sequence of weeks is a timeline,
+     and in an RTL document it starts on the right like the sentences around it. */
+  .out .pbk{margin:var(--sp-4) 0 0}
+  .out .pbk-g{display:grid;grid-template-columns:repeat(13,1fr);gap:var(--sp-1);
+              max-width:17em}
+  /* Two independent signals, and the second one is why this works on paper.
+     Browsers drop background colour when printing unless told otherwise, so a
+     grid whose filled state is only a fill prints as fifty-two identical empty
+     squares — no information at all, in the one artefact the client keeps.
+     print-color-adjust asks for the fill; the heavier border means the picture
+     still reads if a printer or a PDF pipeline refuses. Same rule as the ✓ and —
+     markers on the lists above: never one channel. */
+  .out .pbk-c{display:block;aspect-ratio:1;border:1px solid #b9c6c2;border-radius:1px;
+              background:transparent;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .out .pbk-c.on{background:#2d5c53;border:2px solid #2d5c53}
+  .out .pbk-l{font-size:var(--fs-xs);color:#29423d;margin-top:var(--sp-3);max-width:34em}
   .out ul.plus{list-style:none;padding:0;margin:var(--sp-3) 0}
   .out ul.plus li{position:relative;padding-right:var(--sp-7);color:#5f472b}
   .out ul.plus li::before{content:"+";position:absolute;right:0;top:0;

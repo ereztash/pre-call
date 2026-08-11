@@ -1147,6 +1147,17 @@ const renderProposal = guard('proposal', function (){
     m: model(),
     ils,
     sender: readSender(),
+    /* The same descriptions the numbers panel draws for the operator, handed to
+       the document so the client gets the picture too. pc-viz.js returns
+       descriptions rather than markup, which is exactly what lets it be drawn
+       twice for two audiences without a second implementation.
+       The document only uses `payback`; the cost-of-waiting line stays on this
+       side, because a division of the client's own number is ammunition for a
+       conversation, not a paragraph to put in front of them. */
+    viz: PC.viz.forModel(model(), {
+      numbersAreMine: el('q_provenance').value === 'mine',
+      numbersUnset: el('q_provenance').value === 'unset'
+    }),
     adapt: PC.client.adapt(clientProfile()),
     scope: { in: scopeList('in'), out: scopeList('out'), extra: scopeList('extra') },
     systems: [...chosenSystems],

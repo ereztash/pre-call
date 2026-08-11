@@ -207,6 +207,20 @@ async function scan(page, label) {
     await p.evaluate(() => document.querySelectorAll('details').forEach(d => { d.open = true; }));
     await p.waitForTimeout(200);
     await scan(p, 'post-call.html · every drawer open');
+
+    /* The payback grid, which the scans above never reached. It only renders
+       once the provenance question says the client produced the number — the
+       rule that keeps an invented figure out of a client-facing document — so
+       the fixture has to answer it. Fifty-two elements is the largest single
+       piece of generated markup in the document, and a scan that silently skips
+       it reports a clean bill for markup it never saw. */
+    await p.selectOption('#q_provenance', 'unprompted');
+    await p.fill('#a_myrate', '280');
+    await p.waitForTimeout(400);
+    const drawn = await p.evaluate(() => document.querySelectorAll('.pbk-c').length);
+    assert.strictEqual(drawn, 52,
+      'the fixture did not produce the payback grid, so this scan proves nothing about it');
+    await scan(p, 'post-call.html · the payback drawn in the document');
     await p.close();
   });
 
