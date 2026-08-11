@@ -28,22 +28,34 @@
    and the range is printed for exactly that reason — read the spread, not only
    the verdict.
 
-   What the spread revealed the first time it existed is worth writing down,
-   because it was the opposite of what this change was built expecting. TBT on
-   post-call.html had been recorded at 228ms and 275ms against the 200ms budget,
-   and that was taken as a real defect. Measured properly it is not one:
+   What the spread revealed about TBT on post-call.html is worth writing down in
+   full, including the part that took two wrong conclusions to reach.
+
+   First reading, on a busy machine: 228ms and 275ms against the 200ms budget,
+   taken as a real defect. Then, measured on a quiet one:
 
      one browser, six sequential samples   176 173 167 158 167 141
      a fresh browser for each sample       167 156 167 186
 
-   Warm-up inside a browser process is real and mild — about 20% across six runs
-   — and the cold numbers sit in the same band as the warm ones. Both bands are
-   inside the budget. The earlier readings were taken while several other
-   Chromium instances and test suites were running on the same machine, so they
-   measured the machine's load and not the page.
+   which was taken as proof there was no defect. Both conclusions were the same
+   mistake — picking the reading that suited the conclusion already formed. Later
+   the same day, on identical code, the same page measured 215–288 again, and the
+   untouched commit from before any of that work measured 252ms on the same host
+   within the same hour.
 
-   The practical rule that follows: a TBT failure here is worth re-running on an
-   idle machine before it is believed. LCP and CLS are far less load-sensitive.
+   So the honest statement is neither "defect" nor "fine": on identical code this
+   page measured anywhere from 141ms to 288ms in one day, and the host's state
+   decides which side of 200 it lands on. The budget is not comfortably met; it is
+   met or missed depending on the machine.
+
+   Two things follow, and the second is the important one. A TBT failure here is
+   worth re-running before it is believed — but a TBT PASS is worth just as little,
+   and that is why the range is printed rather than only the verdict. And a metric
+   whose answer is set by the container it runs in cannot be settled by any harness
+   on shared hardware; settling it needs field data from real devices, which is the
+   measurement this product does not yet collect.
+
+   LCP and CLS are far less load-sensitive and their verdicts here mean more.
 
      PW_ROOT=/path    where to resolve playwright from
 

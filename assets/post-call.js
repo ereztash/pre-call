@@ -475,7 +475,19 @@ function readInputs(){
     method: el('methodChips').dataset.sel || 'value',
     compLast: num('c_last'),
     compScale: parseFloat(el('c_scale').value),
-    compScaleLabel: el('c_scale').selectedOptions[0].text,
+    /* selectedOptions is EMPTY, not a one-element list, whenever a select holds a
+       value none of its options carry — selectedIndex goes to -1 and .value goes
+       to ''. Reading [0].text then throws, and it throws inside readInputs, which
+       feeds model(), which feeds the price, the document, the guide and the save.
+       One stale string in one dropdown produced no price, a zero-character
+       document and a save button that silently did nothing, on every load.
+
+       Nothing needs to be corrupt for that. applyDraft restores whatever a draft
+       holds, so it is enough for this option list to change in a future version,
+       or for a backup from an older one to be restored. The guard below is the
+       local fix; the general one is in applyDraft, which now refuses a value an
+       element cannot hold. */
+    compScaleLabel: (el('c_scale').selectedOptions[0] || {}).text || '',
     deals: parseInt(el('c_deals').value, 10)
   };
 }
@@ -1222,7 +1234,26 @@ const PRISTINE = (() => {
    restoring different subsets of the same state. */
 function applyDraft(d){
   if (!d) return;
-  Object.entries(d.fields || {}).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
+  /* A stored value is only applied if the element can actually hold it. For an
+     input that is always true; for a <select> it is not, and assigning a value
+     none of the options carry leaves selectedIndex at -1 with an empty
+     selectedOptions — a state the reading code did not survive.
+
+     The draft is restored at boot with no button and no confirmation, so a value
+     that cannot be held would poison the first render of every visit. The option
+     list changing in a future version is enough to cause it, as is a backup file
+     written by an older one, and the operator would meet a page with no price and
+     no document.
+
+     Skipped rather than coerced: falling back to the first option would put a
+     number in front of the operator that they never chose, on a form they are
+     about to send. The default the markup already carries is the honest answer. */
+  Object.entries(d.fields || {}).forEach(([id, v]) => {
+    const f = el(id);
+    if (!f) return;
+    if (f.tagName === 'SELECT' && ![...f.options].some(o => o.value === String(v))) return;
+    f.value = v;
+  });
   /* Reopening a draft or a saved deal used to restore the old default verbatim,
      so the ROI paragraph went back into a client-facing document on the strength
      of a question nobody had answered — the exact thing the new default exists

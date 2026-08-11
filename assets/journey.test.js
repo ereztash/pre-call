@@ -465,6 +465,102 @@ async function journey(engineName, base) {
     await c.close();
   });
 
+  /* A draft is restored automatically at boot — no button, no confirmation — and
+     applyDraft writes every stored value straight onto its element with no check
+     that the element can hold it. Give a <select> a value that is not among its
+     options and selectedIndex becomes -1, selectedOptions becomes empty, and
+     readInputs() throws reading .text off undefined.
+
+     readInputs() feeds model(), and model() feeds the price, the document, the
+     guide and the save. So one stale string in one dropdown produces: no price,
+     a document of zero characters, and a save button that silently does nothing
+     — on load, every load, because the draft persists.
+
+     Worse than the crash is what the operator is told. The error boundary
+     catches it and says "the rest of the tool keeps working, and your saved data
+     is intact", which is reassuring and, here, false.
+
+     The realistic trigger is not corruption. It is the option list changing in
+     any future version, or a backup file restored from an older one — and every
+     operator holding a draft would then open a dead page. */
+  await test(label('a dropdown value the page no longer offers does not kill the page'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/privacy.html');
+    await fresh.evaluate(() => localStorage.setItem('postcall_draft_v1', JSON.stringify({
+      at: new Date().toISOString(),
+      fields: { q_process: 'הזמנות מגיעות בוואטסאפ ומוקלדות ידנית לגיליון',
+                q_freq: '40', q_freq_unit: '365', q_minutes: '8', q_client: 'מסעדת הדר',
+                c_scale: '3' },     // 0.7 / 1 / 1.5 / 2.2 are the options
+      systems: [], scope: {}
+    })));
+    await fresh.goto(base + '/post-call.html');
+    await fresh.waitForTimeout(700);
+    const state = await fresh.evaluate(() => ({
+      price: (document.getElementById('s_price_top') || {}).textContent.trim(),
+      docChars: (document.getElementById('proposal').innerText || '').length,
+      boundary: (document.getElementById('errBoundary') || {}).textContent.trim(),
+      selectedIndex: document.getElementById('c_scale').selectedIndex
+    }));
+    /* Both mechanisms, pinned separately on purpose. Either guard alone makes the
+       page survive, so asserting only "the page still works" would let a future
+       edit delete one of them silently — the shape of test that passes for the
+       wrong reason. This line pins applyDraft: the select must never be left in
+       the unselectable state at all. The price and document below pin the
+       defensive read, which has to hold whatever the cause. */
+    assert.notStrictEqual(state.selectedIndex, -1,
+      'the draft was applied to a select that cannot hold the value, leaving ' +
+      'selectedIndex at -1 — every reader of that element is now one line from throwing');
+    assert.ok(/₪[\d,]+/.test(state.price),
+      'a stale dropdown value left the page with no price at all: ' + JSON.stringify(state));
+    assert.ok(state.docChars > 200,
+      'the document came back empty (' + state.docChars + ' chars) from one stale value');
+    assert.strictEqual(state.boundary, '',
+      'the error boundary fired on a plain page load: ' + state.boundary);
+    await fresh.click('[data-act="save"]');
+    await fresh.waitForTimeout(500);
+    assert.strictEqual(await fresh.evaluate(() => PC.deals.list().length), 1,
+      'the save button did nothing, and said nothing');
+    await c.close();
+  });
+
+  /* The same state, reached without going through applyDraft — because the guard
+     in readInputs exists to survive it whatever produced it, and with applyDraft
+     filtering, that guard is never exercised by the test above. Forced here
+     deliberately: a browser extension, a future feature that writes to the form,
+     or any code path that has not learned this lesson gets the same one line
+     wrong, and the page must still price and still save. */
+  await test(label('an unselectable dropdown, however it got that way, still prices'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'הזמנות מגיעות בוואטסאפ ומוקלדות ידנית לגיליון');
+    await fresh.fill('#q_freq', '40');
+    await fresh.selectOption('#q_freq_unit', '365');
+    await fresh.fill('#q_minutes', '8');
+    await fresh.waitForTimeout(400);
+    const forced = await fresh.evaluate(() => {
+      const s = document.getElementById('c_scale');
+      s.value = 'nonsense-no-option-has-this';
+      s.dispatchEvent(new Event('change', { bubbles: true }));
+      // and nudge the chain, the way any edit would
+      const t = document.getElementById('q_minutes');
+      t.value = '9'; t.dispatchEvent(new Event('input', { bubbles: true }));
+      return s.selectedIndex;
+    });
+    assert.strictEqual(forced, -1, 'the fixture failed to create the state under test');
+    await fresh.waitForTimeout(600);
+    const after = await fresh.evaluate(() => ({
+      price: (document.getElementById('s_price_top') || {}).textContent.trim(),
+      docChars: (document.getElementById('proposal').innerText || '').length,
+      boundary: (document.getElementById('errBoundary') || {}).textContent.trim()
+    }));
+    assert.ok(/₪[\d,]+/.test(after.price), 'no price: ' + JSON.stringify(after));
+    assert.ok(after.docChars > 200, 'the document emptied: ' + after.docChars + ' chars');
+    assert.strictEqual(after.boundary, '', 'the error boundary fired: ' + after.boundary);
+    await c.close();
+  });
+
   await test(label('a draft of numbers alone is still offered back'), async () => {
     const c = await browser.newContext();
     const fresh = await c.newPage();
