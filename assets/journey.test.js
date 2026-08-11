@@ -365,7 +365,23 @@ async function journey(engineName, base) {
     ]);
     const ics = require('fs').readFileSync(await dl.path(), 'utf8');
     assert.ok(ics.startsWith('BEGIN:VCALENDAR'), 'the calendar file is not a calendar file');
-    assert.ok(/שעות עבודה/.test(ics), 'the reminder must ask for the hours, or calibration never fills');
+    /* Unfolded first, as any real calendar client does. RFC 5545 breaks long
+       lines with CRLF plus a space and these lines are Hebrew, so this passing
+       on the raw text would only mean a fold happened not to land inside the
+       phrase — luck rather than a test. */
+    assert.ok(/שעות עבודה/.test(ics.replace(/\r\n[ \t]/g, '')),
+      'the reminder must ask for the hours, or calibration never fills');
+    /* The filename as the BROWSER resolved it, which is the only place this
+       could be checked. Chromium discards an <a download> value containing any
+       non-ASCII character and saves the file as "download" with no extension —
+       so the Hebrew name this used to build never once reached a real download,
+       and what the operator got would not open in a calendar. Node cannot see
+       that; a real download can. */
+    const name = dl.suggestedFilename();
+    assert.ok(name.endsWith('.ics'),
+      'a calendar file without the extension opens nothing: ' + name);
+    assert.ok(!/[^\x00-\x7F]/.test(name),
+      'a non-ASCII filename is dropped whole by the browser: ' + name);
     await c.close();
   });
 

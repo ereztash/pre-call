@@ -238,6 +238,40 @@
     <button class="ghost" data-act="go3">חזרה לעריכה</button>
     <span class="copied" id="c3">הועתק</span>
   </div>
+
+  <!-- The one trigger this product can build without a channel of its own. It
+       has no server, no email and no push, so the only way to reach the operator
+       once the tab is closed is to put something where they already look — their
+       calendar. Two reminders on one event: one before, and one anchored to the
+       END of the call, which is the moment the scope is still remembered and the
+       price has not yet been guessed.
+
+       The fields are hidden until asked for, because a date and a time on screen
+       during step 4 are two more things to read while preparing for a call. -->
+  <details class="callcal">
+    <summary>תזכורת ליומן לשיחה הזאת</summary>
+    <p class="hint-p">
+      אירוע אחד ביומן שלכם עם שתי תזכורות: אחת חצי שעה לפני, ואחת
+      <b>רבע שעה אחרי שהשיחה נגמרת</b> — לתמחר בעודה באוזניים. שם הלקוח נכתב
+      בכותרת האירוע, כדי שהתזכורת תדע על מה היא.
+    </p>
+    <div class="callcal-f">
+      <div>
+        <label for="cal_date">תאריך</label>
+        <input type="date" id="cal_date">
+      </div>
+      <div>
+        <label for="cal_time">שעה</label>
+        <input type="time" id="cal_time" value="10:00">
+      </div>
+      <div>
+        <label for="cal_len">אורך בדקות</label>
+        <input type="number" id="cal_len" value="45" min="5" max="480" step="5">
+      </div>
+      <button type="button" class="ghost" data-act="cal-dl">הורד קובץ יומן</button>
+    </div>
+    <p class="hint-p" id="calMsg" aria-live="polite"></p>
+  </details>
   <div class="callbar hidden" id="callbar">
     <button class="ghost" data-act="callmode-off">יציאה ממצב שיחה</button>
     <button class="ghost" data-act="to-card">השיחה נגמרה · לכרטיס הקריאה</button>
@@ -299,6 +333,10 @@
      call. assets/markup.test.js asserts it for every page that loads the ledger. -->
 <script src="assets/pc-journal.js"></script>
 <script src="assets/deals.js"></script>
+<!-- Loaded here for callIcs(): the calendar file for the call itself. Kept in
+     the same module as the follow-up generator so the iCalendar escaping, UTC
+     stamps, CRLF and 75-octet folding have one tested implementation. -->
+<script src="assets/pc-followup.js"></script>
 <script src="assets/pc-backup.js"></script>
 <script src="assets/pre-call-content.js"></script>
 <script src="assets/pre-call.js"></script>

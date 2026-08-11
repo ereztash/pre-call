@@ -27,7 +27,50 @@ function callMode(on){
 }
 /* The reading card is hidden while the call is running, so the way to it is
    also the way out — one button, at the moment the call ends. */
+/* The calendar file for the call itself. The generator lives in pc-followup.js
+   next to the follow-up one, so all the iCalendar knowledge — the escaping, the
+   UTC stamps, the CRLF, the 75-octet folding — stays in one tested place rather
+   than getting a second implementation here. */
+/* The business first, the person second. A calendar three days later is read at
+   a glance, and "מסעדת הדר" locates the call where "דנה" does not.
+
+   This is the one place a step-3 detail leaves the tab, and it leaves it into the
+   operator's own calendar, by their own click, in a file they hold. Nothing is
+   stored and nothing is sent. privacy.html says exactly that, because the
+   sentence there used to read "nowhere at all" and a downloaded file is
+   somewhere. */
+function callWho(){
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  return v('p_co') || v('p_name');
+}
+
+function downloadCallIcs(){
+  const msg = document.getElementById('calMsg');
+  const say = t => { if (msg) msg.textContent = t; };
+  const val = id => (document.getElementById(id) || {}).value || '';
+  const text = PC.followup && PC.followup.callIcs
+    ? PC.followup.callIcs({ date: val('cal_date'), time: val('cal_time'),
+                            minutes: val('cal_len'), client: callWho() })
+    : null;
+  /* Refused rather than half-built. A subtly malformed .ics does not error when
+     tapped — it does nothing, and the operator concludes the tool is broken. */
+  if (!text) { say('חסר תאריך, שעה או אורך — בלעדיהם אין לאירוע מתי, ולא נוצר קובץ.'); return; }
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  // the call's date, not today's — the filename is how it is found later
+  a.download = PC.followup.callFilename({ date: val('cal_date'), client: callWho() });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  say('הקובץ ירד. פתחו אותו והאירוע ייכנס ליומן עם שתי התזכורות.');
+}
+
 function toReadingCard(){
+  /* The moment after the call, which is the transition this product scores
+     worst on — and it has existed as a button here the whole time, recording
+     nothing. One line, so the funnel on the other side can tell a visit that
+     followed a real call from a visit that followed nothing. */
+  if (window.PC && PC.journal) PC.journal.append({ what: 'session', to: 'call-ended' });
   callMode(false);
   const el=document.getElementById('afterCall');
   if(el && el.scrollIntoView) el.scrollIntoView({behavior:
@@ -619,6 +662,7 @@ const ACTIONS = {
   'callmode-on':  () => callMode(true),
   'callmode-off': () => callMode(false),
   'to-card':      toReadingCard,
+  'cal-dl':       downloadCallIcs,
   print:          () => window.print(),
   'backup-export': downloadBackup,
   'backup-import': pickBackupFile
