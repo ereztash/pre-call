@@ -36,6 +36,22 @@ function dealSnapshot(){
        Stored with the deal because it is a property of the document that
        was sent, not of the form as it stands today. */
     validityDays: (PC.client.adapt(clientProfile()) || {}).validityDays || 14,
+    /* The date the client named, when they named one that can be read. Question
+       12's own help text promises the answer becomes "a decision date", and it
+       had never become anything but a line in the document — measured: it reached
+       the document and one confidence counter, out of eleven layers that could
+       have used it.
+
+       Stored as a date rather than re-parsed on every read, for the same reason
+       validityDays above is stored: it is a property of the conversation that
+       happened, and the form may say something else next week. Absent when the
+       answer was "as soon as possible" — most answers will be, and a date nobody
+       named is worse here than no date at all. */
+    clientDeadline: (function () {
+      const d = PC.followup && PC.followup.deadlineDate
+        ? PC.followup.deadlineDate(txt('q_deadline')) : null;
+      return d ? d.toISOString().slice(0, 10) : undefined;
+    })(),
     systems: [...chosenSystems],
     /* The full form, so a saved deal can be opened again.
        Without this the ledger stored a summary and nothing else, which meant

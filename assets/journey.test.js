@@ -267,6 +267,52 @@ async function journey(engineName, base) {
      min-height added to stop a layout shift turned a varying height into
      a fixed one. This holds the collapsed state to something a phone can
      afford. */
+  /* The only trigger this product can build without a channel of its own, and it
+     had no test driving it. Splitting the calendar module moved callIcs from
+     PC.followup to PC.ical, PRE-CALL kept reaching for the old name, and the
+     button silently produced nothing — found by a probe, not by this suite. The
+     download is the whole feature, so the download is what gets asserted. */
+  await test(label('PRE-CALL builds the calendar file for the call it is preparing you for'), async () => {
+    const c = await browser.newContext({ acceptDownloads: true });
+    const fresh = await c.newPage();
+    const errs = [];
+    fresh.on('pageerror', e => errs.push(e.message));
+    await fresh.goto(base + '/pre-call.html');
+    await fresh.click('.stepbtn[data-s="2"]');
+    await fresh.fill('#f_what', 'מסדר תהליכי גבייה');
+    await fresh.click('[data-act="go3"]');
+    await fresh.fill('#p_co', 'מסעדת הדר');
+    await fresh.click('[data-act="build"]');
+    await fresh.waitForTimeout(400);
+    await fresh.evaluate(() => { document.querySelector('.callcal').open = true; });
+
+    // refuses before it has a date, rather than producing a file that opens nothing
+    await fresh.click('[data-act="cal-dl"]');
+    await fresh.waitForTimeout(250);
+    assert.ok(/חסר/.test(await fresh.textContent('#calMsg')),
+      'with no date it should say so, not silently do nothing');
+
+    await fresh.fill('#cal_date', '2026-08-20');
+    await fresh.fill('#cal_time', '14:30');
+    await fresh.fill('#cal_len', '45');
+    const [dl] = await Promise.all([
+      fresh.waitForEvent('download'), fresh.click('[data-act="cal-dl"]')
+    ]);
+    const ics = fs.readFileSync(await dl.path(), 'utf8');
+    const unfolded = ics.replace(/\r\n[ \t]/g, '');
+    assert.ok(/TRIGGER;RELATED=END:PT15M/.test(unfolded),
+      'the alarm is not anchored to the end of the call, which is the entire point');
+    assert.strictEqual((ics.match(/BEGIN:VALARM/g) || []).length, 2, 'expected two alarms');
+    assert.ok(/מסעדת הדר/.test(unfolded), 'the reminder does not say which call it is about');
+    const name = dl.suggestedFilename();
+    assert.ok(name.endsWith('.ics') && !/[^\x00-\x7F]/.test(name),
+      'a non-ASCII filename is dropped whole by the browser: ' + name);
+    assert.deepStrictEqual(ics.split('\r\n').filter(l => Buffer.byteLength(l, 'utf8') > 75), [],
+      'lines over 75 octets — some calendar clients render those as mojibake');
+    assert.deepStrictEqual(errs, [], 'the page threw while building the file');
+    await c.close();
+  });
+
   await test(label('the pinned guide collapses instead of owning a third of the phone'), async () => {
     const c = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const fresh = await c.newPage();
@@ -382,6 +428,61 @@ async function journey(engineName, base) {
       'a calendar file without the extension opens nothing: ' + name);
     assert.ok(!/[^\x00-\x7F]/.test(name),
       'a non-ASCII filename is dropped whole by the browser: ' + name);
+    await c.close();
+  });
+
+  /* Question 12's own help text promises the answer "goes into the proposal as a
+     timeline and as a decision date". Measured across eleven layers, it reached
+     the document and one confidence counter — the decision date did not exist.
+     This drives the whole chain in the running page: a date typed into the form,
+     read at save, stored on the record, and used by the panel that chases. */
+  await test(label('the date the client named reaches the panel that chases, not only the page'), async () => {
+    const c = await browser.newContext();
+    const fresh = await c.newPage();
+    await fresh.goto(base + '/post-call.html');
+    await fresh.fill('#q_process', 'הזמנות מגיעות בוואטסאפ ומוקלדות ידנית לגיליון');
+    await fresh.fill('#q_freq', '40');
+    await fresh.selectOption('#q_freq_unit', '365');
+    await fresh.fill('#q_minutes', '8');
+    await fresh.fill('#q_client', 'מסעדת הדר');
+    /* Two days out, inside the closing window, and written the way somebody
+       answers out loud rather than as an ISO string. */
+    // question 12 lives behind the "the rest of the questions" drawer, which is
+    // closed at rest on purpose — so it has to be opened, exactly as a person would
+    await fresh.evaluate(() => {
+      const d = [...document.querySelectorAll('details')]
+        .find(x => x.querySelector('#q_deadline'));
+      if (d) d.open = true;
+    });
+    await fresh.waitForTimeout(200);
+    const soon = new Date(Date.now() + 2 * 864e5);
+    const p2 = n => String(n).padStart(2, '0');
+    const soonISO = soon.getFullYear() + '-' + p2(soon.getMonth() + 1) + '-' + p2(soon.getDate());
+    await fresh.fill('#q_deadline', 'צריך שזה יעבוד עד ' + soon.getDate() + '/' + (soon.getMonth() + 1));
+    await fresh.waitForTimeout(400);
+    await fresh.click('[data-act="save"]');
+    await fresh.waitForTimeout(400);
+
+    const stored = await fresh.evaluate(() => {
+      const d = PC.deals.list()[0] || {};
+      return { deadline: d.clientDeadline || null, id: d.id };
+    });
+    assert.ok(stored.deadline,
+      'the deadline was typed and read and still never reached the record');
+    assert.strictEqual(stored.deadline, soonISO,
+      'the stored date is not the one that was typed: ' + stored.deadline);
+
+    await fresh.click('.sbtn[data-status="sent"]');
+    await fresh.waitForTimeout(500);
+    const row = await fresh.evaluate(() => {
+      const el = document.querySelector('.deal-due');
+      return { label: el ? el.textContent.trim() : '', state: el ? el.className : '' };
+    });
+    assert.ok(/closing/.test(row.state),
+      'a proposal the client needs working in two days reads as fresh: ' + JSON.stringify(row));
+    assert.ok(/הלקוח/.test(row.label),
+      'the row says the offer is lapsing when what is closing is the client\'s own ' +
+      'date — two different facts: ' + row.label);
     await c.close();
   });
 

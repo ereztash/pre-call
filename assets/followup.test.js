@@ -7,6 +7,9 @@
    the tab is closed — a calendar file that has to be correct, because a
    subtly malformed .ics does not error, it simply does nothing when
    tapped, and the operator concludes the feature is broken. */
+/* pc-ical.js first: pc-followup.js borrows the escaping, folding and stamps from
+   it rather than keeping a second copy, and PRE-CALL loads only that half. */
+require('./pc-ical.js');
 const F = require('./pc-followup.js');
 const assert = require('assert');
 
@@ -212,6 +215,112 @@ test('DTEND stays exactly one day after DTSTART, in the same calendar', () => {
 test('DTSTAMP is still an instant in UTC, as the spec requires', () => {
   assert.ok(/DTSTAMP:\d{8}T\d{6}Z/.test(F.icsFor(sentDaysAgo(0), { now: NOW })),
     'DTSTAMP is a timestamp, not a calendar date — it keeps the Z form');
+});
+
+console.log('\nthe date the client themselves named');
+/* Question 12 asks "by when do you need this working", and its own help text
+   promises the answer "goes into the proposal as a timeline AND as a decision
+   date". Measured: the answer reached the document and one confidence counter,
+   and nothing else — the decision date it promised did not exist. A field the
+   client answered out loud, typed in by hand, feeding one layer.
+
+   The parse is deliberately narrow. Free text cannot be guessed at, and a
+   reminder that fires on a date nobody named is worse than no reminder: it is
+   the failure that teaches an operator to ignore the panel. So anything not
+   unambiguous returns null and changes nothing. */
+test('a numeric date the client named is read, in the forms people write', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  const iso = d => d && d.toISOString().slice(0, 10);
+  assert.strictEqual(iso(F.deadlineDate('15/10/2026', at)), '2026-10-15');
+  assert.strictEqual(iso(F.deadlineDate('15.10.2026', at)), '2026-10-15');
+  assert.strictEqual(iso(F.deadlineDate('2026-10-15', at)), '2026-10-15');
+  assert.strictEqual(iso(F.deadlineDate('15/10', at)), '2026-10-15', 'the year is implied');
+  assert.strictEqual(iso(F.deadlineDate('צריך את זה עד 15/10, אחרי החגים', at)), '2026-10-15',
+    'the date is inside a sentence, because that is how people answer');
+});
+test('a month with no day resolves to the part of it that was said', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  const iso = d => d && d.toISOString().slice(0, 10);
+  assert.strictEqual(iso(F.deadlineDate('אמצע ספטמבר', at)), '2026-09-15');
+  assert.strictEqual(iso(F.deadlineDate('תחילת אוקטובר', at)), '2026-10-01');
+  assert.strictEqual(iso(F.deadlineDate('סוף אוקטובר', at)), '2026-10-31');
+  assert.strictEqual(iso(F.deadlineDate('ספטמבר', at)), '2026-09-15',
+    'a bare month is the middle of it, which is the honest midpoint of what was said');
+});
+test('a month already past this year means next year, not a date behind us', () => {
+  const at = new Date('2026-11-20T10:00:00Z');
+  const iso = d => d && d.toISOString().slice(0, 10);
+  assert.strictEqual(iso(F.deadlineDate('אמצע מרץ', at)), '2027-03-15');
+  assert.strictEqual(iso(F.deadlineDate('15/3', at)), '2027-03-15');
+});
+test('anything that is not a date returns nothing, and changes nothing', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  ['בהקדם האפשרי', 'כשיהיה מוכן', 'לפני עונת החגים', 'אין דדליין', '', null, undefined,
+   'רבעון שלישי', '40'].forEach(v =>
+    assert.strictEqual(F.deadlineDate(v, at), null, 'guessed a date from: ' + JSON.stringify(v)));
+  // and an impossible date is not silently rolled into the next month
+  assert.strictEqual(F.deadlineDate('31/2/2026', at), null, '31 February is not a date');
+});
+test('the clock closes on the client\'s date when it comes first', () => {
+  /* A proposal cannot sensibly stay "fresh" past the day the client said they
+     need the thing working. Today the clock runs on the document's own validity
+     — 14 days by default — so a client who needs it live in five days is chased
+     on the same schedule as one with no deadline at all. */
+  const at = new Date('2026-08-20T10:00:00Z');
+  const deal = extra => Object.assign({ status: 'sent', client: 'א',
+    sentAt: '2026-08-19T09:00:00.000Z' }, extra);
+
+  /* The client's date replaces the expiry date and the SAME closing window
+     applies to it — three days. Widening the window because the date came from
+     the client rather than the document would be a guess about how long the work
+     takes after a yes, and there is nothing here to support one. */
+  const s = F.dueState(deal({ clientDeadline: '2026-08-23' }), at);
+  assert.strictEqual(s.daysLeft, 3, 'counted to the date the client named');
+  assert.strictEqual(s.state, 'closing',
+    'one day after sending, with the client needing it in three, this is not "fresh"');
+  assert.ok(/הלקוח/.test(s.label),
+    'the label must say whose date this is, or it reads as the offer lapsing: ' + s.label);
+
+  // and the threshold is the existing one, pinned rather than assumed
+  assert.strictEqual(F.dueState(deal({ clientDeadline: '2026-08-24' }), at).state, 'fresh',
+    'four days out is outside the three-day window, exactly as it is for the document');
+});
+test('a deadline later than the validity does not extend the offer', () => {
+  /* The clamp is one-directional on purpose. The document promised 14 days and
+     the client's own need being further out does not make the price hold longer
+     — that would be the tool quietly re-writing what was sent. */
+  const at = new Date('2026-08-20T10:00:00Z');
+  const deal = { status: 'sent', client: 'א', sentAt: '2026-08-19T09:00:00.000Z',
+                 clientDeadline: '2027-01-01' };
+  assert.strictEqual(F.dueState(deal, at).daysLeft, 13, 'the 14-day validity still governs');
+});
+test('the calendar file and the panel agree about when it is closing', () => {
+  /* Two artefacts describing one deal. If the file fires against the document's
+     fourteen days while the panel counts to the client's date, the operator gets
+     a reminder that contradicts their own screen — worse than either being wrong
+     alone, because now neither can be trusted. */
+  const NOWX = new Date('2026-08-20T10:00:00Z');
+  const deal = { status: 'sent', client: 'מסעדת הדר', sentAt: '2026-08-19T09:00:00.000Z',
+                 priceQuoted: 12000, clientDeadline: '2026-08-25' };
+  const ics = unfold(F.icsFor(deal, { now: NOWX }));
+  const start = (ics.match(/DTSTART;VALUE=DATE:(\d{8})/) || [])[1];
+  assert.ok(start, 'no start date in the file');
+  const toD = t => new Date(+t.slice(0,4), +t.slice(4,6) - 1, +t.slice(6,8));
+  assert.ok(toD(start) <= new Date(2026, 7, 25),
+    'the reminder lands after the day the client said they need it working: ' + start);
+  assert.ok(/25\.8\.2026|25\/8\/2026/.test(ics),
+    'the file never says the date the client named, so the operator cannot see why ' +
+    'it fired when it did: ' + ics);
+  // and it still says what the document promised, because both facts matter
+  assert.ok(/2\.9\.2026|2\/9\/2026/.test(ics),
+    'the document validity vanished from the description: ' + ics);
+});
+test('no deadline on the record behaves exactly as before', () => {
+  const at = new Date('2026-08-20T10:00:00Z');
+  const plain = { status: 'sent', client: 'א', sentAt: '2026-08-19T09:00:00.000Z' };
+  assert.strictEqual(F.dueState(plain, at).daysLeft, 13);
+  assert.strictEqual(F.dueState(Object.assign({ clientDeadline: 'לא תאריך' }, plain), at).daysLeft, 13,
+    'an unparseable value stored by mistake must not move the clock');
 });
 
 console.log('\nthe call itself, which is the only trigger that needs no channel');

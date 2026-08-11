@@ -27,10 +27,6 @@ function callMode(on){
 }
 /* The reading card is hidden while the call is running, so the way to it is
    also the way out — one button, at the moment the call ends. */
-/* The calendar file for the call itself. The generator lives in pc-followup.js
-   next to the follow-up one, so all the iCalendar knowledge — the escaping, the
-   UTC stamps, the CRLF, the 75-octet folding — stays in one tested place rather
-   than getting a second implementation here. */
 /* The business first, the person second. A calendar three days later is read at
    a glance, and "מסעדת הדר" locates the call where "דנה" does not.
 
@@ -44,13 +40,22 @@ function callWho(){
   return v('p_co') || v('p_name');
 }
 
+/* The calendar file for the call itself. The generator lives in pc-ical.js, which
+   is the only calendar module this page loads — the follow-up half is about
+   proposals already sent and has nothing to do here. All the iCalendar knowledge
+   (escaping, UTC stamps, CRLF, 75-octet folding) has one implementation there,
+   and POST-CALL borrows it from the same place.
+
+   PC.ical, not PC.followup: reaching for the latter is what broke this the moment
+   the split happened, silently, because no test drove this download. One does now. */
 function downloadCallIcs(){
   const msg = document.getElementById('calMsg');
   const say = t => { if (msg) msg.textContent = t; };
   const val = id => (document.getElementById(id) || {}).value || '';
-  const text = PC.followup && PC.followup.callIcs
-    ? PC.followup.callIcs({ date: val('cal_date'), time: val('cal_time'),
-                            minutes: val('cal_len'), client: callWho() })
+  const cal = window.PC && PC.ical;
+  const text = cal && cal.callIcs
+    ? cal.callIcs({ date: val('cal_date'), time: val('cal_time'),
+                    minutes: val('cal_len'), client: callWho() })
     : null;
   /* Refused rather than half-built. A subtly malformed .ics does not error when
      tapped — it does nothing, and the operator concludes the tool is broken. */
@@ -59,7 +64,7 @@ function downloadCallIcs(){
   const a = document.createElement('a');
   a.href = url;
   // the call's date, not today's — the filename is how it is found later
-  a.download = PC.followup.callFilename({ date: val('cal_date'), client: callWho() });
+  a.download = cal.callFilename({ date: val('cal_date'), client: callWho() });
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   say('הקובץ ירד. פתחו אותו והאירוע ייכנס ליומן עם שתי התזכורות.');

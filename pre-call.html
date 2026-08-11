@@ -333,10 +333,14 @@
      call. assets/markup.test.js asserts it for every page that loads the ledger. -->
 <script src="assets/pc-journal.js"></script>
 <script src="assets/deals.js"></script>
-<!-- Loaded here for callIcs(): the calendar file for the call itself. Kept in
-     the same module as the follow-up generator so the iCalendar escaping, UTC
-     stamps, CRLF and 75-octet folding have one tested implementation. -->
-<script src="assets/pc-followup.js"></script>
+<!-- callIcs(): the calendar file for the call this page is preparing you for.
+     pc-ical.js and not pc-followup.js, measured rather than assumed — the
+     follow-up module is 6.76KB over the wire and its other half is about
+     proposals already sent, which this page cannot do anything with. Half of
+     this page's budget was going on code it cannot run. The escaping, folding
+     and stamps still have exactly one implementation; it lives in pc-ical.js
+     and POST-CALL borrows it from there. -->
+<script src="assets/pc-ical.js"></script>
 <script src="assets/pc-backup.js"></script>
 <script src="assets/pre-call-content.js"></script>
 <script src="assets/pre-call.js"></script>
