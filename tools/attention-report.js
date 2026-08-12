@@ -18,7 +18,14 @@ const fs = require('fs');
 const path = require('path');
 const A = require('./attention.js');
 
-const root = path.join(__dirname, '..');
+/* Normally this repository. PRECALL_ROOT points it at another checkout, which
+   is what makes a before/after honest: the comparison has to be the CURRENT
+   measurement method applied to the OLD content. Running the old tool against
+   the old files compares two methods as well as two designs, and then any
+   change to the tool shows up as a product improvement. */
+const root = process.env.PRECALL_ROOT
+  ? path.resolve(process.env.PRECALL_ROOT)
+  : path.join(__dirname, '..');
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 
 /* ---------- text extraction ---------- */
@@ -162,14 +169,31 @@ function scopeStepCost() {
   const cat = read('assets/pc-catalog.js').replace(/\/\*[\s\S]*?\*\//g, ' ');
   const block = cat.slice(cat.indexOf('SCOPE_ITEMS = ['), cat.indexOf('];', cat.indexOf('SCOPE_ITEMS = [')));
   const labels = [...block.matchAll(/\bt:\s*'((?:[^'\\]|\\.)*)'/g)].map(m => words(m[1]));
-  /* one template note, since the reader applies at most one */
-  const note = [...cat.matchAll(/note:\s*\{[\s\S]*?\n      \}/g)]
-    .map(m => words(m[0])).sort((a, b) => a - b);
-  const median = note.length ? note[Math.floor(note.length / 2)] : 0;
+  const whys   = [...block.matchAll(/\bwhy:\s*'((?:[^'\\]|\\.)*)'/g)].map(m => words(m[1]));
+
+  /* Whether the row reasons are on screen at rest is a fact about the CSS, and
+     it has to be READ rather than assumed. The first version of this function
+     assumed they were hidden — true of this checkout, false of every earlier
+     one — so pointed at the pre-cut commit it under-counted that page by 145
+     words and reported the cut as a 21% regression. A before/after tool that
+     bakes in the "after" cannot measure the "before". */
+  const css = read('assets/post-call.css');
+  const hidden = /\.scope-why\s*\{[^}]*display:\s*none/.test(css);
+
+  /* one template note, since the reader applies at most one. Both shapes are
+     understood: prose strings, and the structured form that replaced them. */
+  const noteSizes = [
+    ...[...cat.matchAll(/note:\s*\{[\s\S]*?\n      \}/g)].map(m => words(m[0])),
+    ...[...cat.matchAll(/note:\s*'((?:[^'\\]|\\.)*)'/g)].map(m => words(m[1]))
+  ].sort((a, b) => a - b);
+  const median = noteSizes.length ? noteSizes[Math.floor(noteSizes.length / 2)] : 0;
+
+  const whyWords = hidden ? 0 : whys.reduce((a, b) => a + b, 0);
   return {
-    words: labels.reduce((a, b) => a + b, 0) + median,
-    /* three group headings, the reasons toggle, and one row per item */
-    blocks: labels.length + 4,
+    words: labels.reduce((a, b) => a + b, 0) + whyWords + median,
+    /* three group headings, one row per item, plus the reasons toggle if the
+       reasons are behind one */
+    blocks: labels.length + 3 + (hidden ? 1 : 0),
     choices: labels.length
   };
 }
@@ -386,11 +410,22 @@ function report(name, funnel, page, optional) {
   return { name, sim: r, value: v, sens: s };
 }
 
-const out = [report('POST-CALL', postCallFunnel(), 'post-call.html', POST_CALL_OPTIONAL),
-             report('PRE-CALL',  preCallFunnel(),  'pre-call.html',  PRE_CALL_OPTIONAL)];
+/* Importable so a comparison script can build both funnels with one method.
+   Auto-runs only when this file is the entry point. */
+module.exports = { postCallFunnel, preCallFunnel, report, scopeStepCost };
 
-if (process.argv.includes('--json')) {
-  fs.writeFileSync(path.join(root, 'attention.json'), JSON.stringify(out, null, 2));
-  console.log('\nwrote attention.json');
+if (require.main === module) {
+  const out = [report('POST-CALL', postCallFunnel(), 'post-call.html', POST_CALL_OPTIONAL),
+               report('PRE-CALL',  preCallFunnel(),  'pre-call.html',  PRE_CALL_OPTIONAL)];
+
+  const at = process.argv.indexOf('--json');
+  if (at > -1) {
+    const dest = process.argv[at + 1] || path.join(root, 'attention.json');
+    /* the funnel itself, not only the verdict — a comparison has to re-simulate
+       both sides at one fixed patience, which needs the inputs */
+    fs.writeFileSync(dest, JSON.stringify(
+      out.map((o, i) => ({ ...o, funnel: i ? preCallFunnel() : postCallFunnel() })), null, 2));
+    console.log('\nwrote ' + dest);
+  }
+  console.log('');
 }
-console.log('');

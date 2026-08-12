@@ -34,7 +34,12 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const root = path.join(__dirname, '..');
+/* PRECALL_ROOT points this at another checkout, so a redesign can be scored
+   against the commit before it with one method. Same reason as in
+   tools/attention-report.js. */
+const root = process.env.PRECALL_ROOT
+  ? path.resolve(process.env.PRECALL_ROOT)
+  : path.join(__dirname, '..');
 const PAGES = ['index.html', 'post-call.html', 'pre-call.html'];
 
 /* Thresholds, each with the practitioner it comes from. They are opinions —
