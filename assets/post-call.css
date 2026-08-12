@@ -777,7 +777,15 @@
     display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-5);
     border-radius:0 0 var(--r-lg) var(--r-lg);margin-top:0;
   }
-  @media(max-width:640px){ .guide.stuck{width:min(920px, 100% - 28px)} }
+  /* nowrap here too, not only on .guide-top. With the larger type the title
+     and the action stopped fitting on one line of a 375px screen, the flex
+     container wrapped to two rows, and the pinned bar went from 68px to
+     107px — 16% of the screen against a 15% budget. The title already
+     truncates; letting the row wrap instead just spends the height the
+     collapse exists to save. */
+  @media(max-width:640px){
+    .guide.stuck{width:min(920px, 100% - 28px);flex-wrap:nowrap;padding:var(--sp-3) var(--sp-4)}
+  }
   .guide.stuck .guide-ask,
   .guide.stuck .guide-why,
   .guide.stuck .guide-sug,
