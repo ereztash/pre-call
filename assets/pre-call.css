@@ -196,13 +196,13 @@
   .blk{margin-bottom:var(--sp-7)}
   .blk-h{font-size:var(--fs-xs);letter-spacing:1.2px;text-transform:uppercase;color:var(--copper-dim);
          font-weight:700;margin-bottom:var(--sp-2)}
-  .blk-t{font-size:var(--fs-md);font-weight:700;color:var(--nt-90);margin-bottom:var(--sp-2)}
-  .blk-d{font-size:var(--fs-xs);color:var(--nt-50);margin-bottom:var(--sp-4)}
+  .blk-t{font-size:var(--fs-md);font-weight:700;color:var(--nt-9);margin-bottom:var(--sp-2)}
+  .blk-d{font-size:var(--fs-xs);color:var(--nt-41);margin-bottom:var(--sp-4)}
   .q{background:#fff;border-right:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);
-     border-radius:var(--r-sm);font-size:var(--fs-md);color:var(--nt-90);box-shadow:0 1px 2px rgba(0,0,0,.05)}
-  .q .qn{display:inline-block;background:var(--nt-90);color:var(--cu-9);font-size:var(--fs-xs);padding:1px var(--sp-3);
+     border-radius:var(--r-sm);font-size:var(--fs-md);color:var(--nt-9);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .q .qn{display:inline-block;background:var(--nt-9);color:var(--cu-95);font-size:var(--fs-xs);padding:1px var(--sp-3);
          border-radius:var(--r-sm);margin-left:var(--sp-2);font-weight:600;vertical-align:middle}
-  .q .why{display:block;font-size:var(--fs-xs);color:var(--nt-50);margin-top:var(--sp-3);font-weight:400}
+  .q .why{display:block;font-size:var(--fs-xs);color:var(--nt-41);margin-top:var(--sp-3);font-weight:400}
   /* .gap shares this exactly, and shares it on purpose: both say "do not go
      forward from here yet". A gap is the softer case — something that was
      supposed to be prepared before the call and was not, so the script is
@@ -219,14 +219,14 @@
      and arrives here finished, which is why it gets the weight of a thing
      you read verbatim rather than the weight of a question. */
   .say{background:#fff;border-right:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);
-       border-radius:var(--r-sm);font-size:var(--fs-md);font-weight:600;color:var(--nt-90);
+       border-radius:var(--r-sm);font-size:var(--fs-md);font-weight:600;color:var(--nt-9);
        margin-bottom:var(--sp-3);box-shadow:0 1px 2px rgba(0,0,0,.05)}
   /* the table keeps a sane minimum width for its Hebrew sentences; the wrapper
      is what scrolls at 320px, so the page itself never gains a horizontal bar */
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:var(--sp-3)}
   table.read{width:100%;min-width:480px;border-collapse:collapse;font-size:var(--fs-xs)}
-  table.read th{background:var(--nt-90);color:var(--cu-9);padding:var(--sp-3) var(--sp-4);text-align:right;font-size:var(--fs-xs);font-weight:600}
-  table.read td{border-bottom:1px solid var(--cu-27);padding:var(--sp-3) var(--sp-4);vertical-align:top;color:var(--nt-71)}
+  table.read th{background:var(--nt-9);color:var(--cu-95);padding:var(--sp-3) var(--sp-4);text-align:right;font-size:var(--fs-xs);font-weight:600}
+  table.read td{border-bottom:1px solid var(--cu-84);padding:var(--sp-3) var(--sp-4);vertical-align:top;color:var(--nt-21)}
   table.read td.no{color:var(--red)}
   /* ---- the same card at 390px ----
      The decision here used to be that three or four columns of full Hebrew
@@ -250,15 +250,15 @@
     table.read,table.read tbody,table.read tr,table.read th,table.read td{display:block}
     table.read{min-width:0}
     table.read tr:first-child{display:none}   /* the heading row; data-l carries it instead */
-    table.read tr{border-bottom:1px solid var(--cu-27);padding:var(--sp-3) 0}
+    table.read tr{border-bottom:1px solid var(--cu-84);padding:var(--sp-3) 0}
     table.read tr:last-child{border-bottom:0}
     table.read td{border-bottom:0;padding:var(--sp-1) 0}
-    table.read td::before{content:attr(data-l) " — ";color:var(--nt-50);font-size:var(--fs-xs)}
+    table.read td::before{content:attr(data-l) " — ";color:var(--nt-41);font-size:var(--fs-xs)}
   }
   .rule{background:var(--tq-9);border-right:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
         font-size:var(--fs-xs);color:var(--tq-84);margin:var(--sp-4) 0}
   ul.prep{margin:var(--sp-3) 0 0;padding:0 var(--sp-6) 0 0;list-style:disc}
-  ul.prep li{font-size:var(--fs-xs);color:var(--nt-71);margin-bottom:var(--sp-2);line-height:1.55}
+  ul.prep li{font-size:var(--fs-xs);color:var(--nt-21);margin-bottom:var(--sp-2);line-height:1.55}
   /* Screen-only. Holds your own numbers (last deal, price floor) — the things the
      script itself tells you not to say out loud. Deliberately outside #outArea so
      "copy as text" and print can never carry them into the room. */
@@ -269,7 +269,7 @@
   .priv ul{margin:0;padding:0 var(--sp-6) 0 0}
   .priv li{font-size:var(--fs-xs);color:var(--nt-17);margin-bottom:var(--sp-3);line-height:1.6}
   .priv .seal{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3)}
-  .empty{color:var(--nt-50);font-size:var(--fs-md);text-align:center;padding:var(--sp-7) var(--sp-4);line-height:1.7}
+  .empty{color:var(--nt-41);font-size:var(--fs-md);text-align:center;padding:var(--sp-7) var(--sp-4);line-height:1.7}
   .err{background:var(--rd-13);border:1px solid var(--rd-27);color:var(--rd-78);padding:var(--sp-4) var(--sp-5);
        border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-4)}
   /* visibility, not opacity alone. An element at opacity:0 is still in the
