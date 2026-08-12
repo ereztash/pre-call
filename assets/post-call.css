@@ -820,7 +820,7 @@
      than the page. On it the brand step measures 4.17:1 and this one
      6.45:1. The ramp makes that a choice of number rather than a new
      colour invented at the point of failure. */
-  .guide-step{font-size:var(--fs-xs);letter-spacing:.6px;color:var(--tq-41);font-weight:700}
+  .guide-step{font-size:var(--fs-xs);letter-spacing:.6px;color:var(--tq-27);font-weight:700}
   .guide-t{font-size:var(--fs-md);font-weight:700;color:var(--cu-9);flex:1 1 100%}
   .guide-ask{font-size:var(--fs-xs);color:var(--nt-13);line-height:1.6}
   .guide-why{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin-top:var(--sp-2)}

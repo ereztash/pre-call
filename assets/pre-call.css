@@ -396,11 +396,11 @@
   .note a:not(.act):not(.ghost),
   .box a:not(.act):not(.ghost),
   .body-p a:not(.act):not(.ghost),
-  .hint-p a:not(.act):not(.ghost){color:var(--cu-64);text-decoration:underline}
+  .hint-p a:not(.act):not(.ghost){color:var(--cu-27);text-decoration:underline}
   .note a:not(.act):not(.ghost):hover,
   .box a:not(.act):not(.ghost):hover,
   .body-p a:not(.act):not(.ghost):hover,
-  .hint-p a:not(.act):not(.ghost):hover{color:var(--cu-57)}
+  .hint-p a:not(.act):not(.ghost):hover{color:var(--cu-34)}
 
   /* ---- a table on a dark page ----
      table.read is the reading card inside the generated script, and it is
