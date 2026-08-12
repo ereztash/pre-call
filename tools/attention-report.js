@@ -148,6 +148,32 @@ const POST_CALL_OPTIONAL = {
   backupFile: 'backup restore'
 };
 
+/* The scope step renders entirely from the catalog, so its cost is computed
+   from the catalog rather than from the markup.
+
+   Only what is on screen AT REST is charged. The nineteen row labels are; the
+   twelve `why` sentences behind the reasons toggle are not, and neither is
+   the reasoning inside a template note the reader has not triggered. This
+   distinction is the whole point of the step — an earlier version of this
+   function multiplied the catalog's entire word count by a guessed 0.25 and
+   called it 255 words, which was a number with no referent. Charging what
+   renders means the report moves when the product moves. */
+function scopeStepCost() {
+  const cat = read('assets/pc-catalog.js').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const block = cat.slice(cat.indexOf('SCOPE_ITEMS = ['), cat.indexOf('];', cat.indexOf('SCOPE_ITEMS = [')));
+  const labels = [...block.matchAll(/\bt:\s*'((?:[^'\\]|\\.)*)'/g)].map(m => words(m[1]));
+  /* one template note, since the reader applies at most one */
+  const note = [...cat.matchAll(/note:\s*\{[\s\S]*?\n      \}/g)]
+    .map(m => words(m[0])).sort((a, b) => a - b);
+  const median = note.length ? note[Math.floor(note.length / 2)] : 0;
+  return {
+    words: labels.reduce((a, b) => a + b, 0) + median,
+    /* three group headings, the reasons toggle, and one row per item */
+    blocks: labels.length + 4,
+    choices: labels.length
+  };
+}
+
 function postCallFunnel() {
   const html = read('post-call.html').replace(/<!--[\s\S]*?-->/g, ' ');
   const qa = blocksOf(html, 'qa');
@@ -189,8 +215,8 @@ function postCallFunnel() {
     { id: 'systems', label: 'שלב 3 · תוכנות',        words: 0, fields: 0, ids: [],
       choices: sysChoices, blocks: 2, rendered: true },
     { id: 'breaks',  label: 'שלב 4 · תקלות',         ...forIds('q_err_freq', 'q_err_cost') },
-    { id: 'scope',   label: 'שלב 5 · מה כלול',       words: Math.round(jsCopy('assets/pc-catalog.js') * 0.25),
-      fields: 0, ids: [], choices: 12, blocks: 12, rendered: true },
+    { id: 'scope',   label: 'שלב 5 · מה כלול',       ...scopeStepCost(),
+      fields: 0, ids: [], rendered: true },
     { id: 'sender',  label: 'שלב 6 · מי שולח (פעם אחת)',
       ...forIds('s_name', 's_business', 's_phone', 's_email', 's_attr') },
     { id: 'client',  label: 'שלב 7 · הלקוח',         ...forIds('q_client', 'q_phone', 'q_email', 'q_decider') },

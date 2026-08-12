@@ -212,7 +212,17 @@
   .scope-row:last-child{border-bottom:0}
   .scope-t{flex:1 1 210px;font-size:var(--fs-md);color:var(--nt-90);line-height:1.5;
            max-width:var(--measure)}
-  .scope-why{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-2)}
+  /* Hidden at rest, shown when the reader asks. display:none rather than a
+     clip, because a reason that is present-but-invisible is still read aloud
+     by a screen reader and still found by in-page search — which would make
+     the button a lie for exactly the users least able to tell. */
+  .scope-why{display:none;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-2)}
+  .show-why .scope-why{display:block}
+  .scope-whyt{display:inline-flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-5);
+              background:none;border:0;padding:var(--sp-2) 0;cursor:pointer;
+              font-size:var(--fs-xs);color:var(--turq);font-family:inherit}
+  .scope-whyt:hover{text-decoration:underline}
+  .scope-whyt:focus-visible{outline:2px solid var(--turq);outline-offset:3px;border-radius:var(--r-sm)}
   .scope-btns{display:flex;gap:var(--sp-2);flex:0 0 auto}
 
   /* A move is an action on one item, not a third of a choice. Quiet until
@@ -630,6 +640,27 @@
   .tpl-b{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
   .tpl-note{background:var(--nt-13);border-right:3px solid var(--turq);border-radius:var(--r-sm);
             padding:var(--sp-4) var(--sp-5);margin-top:var(--sp-4);font-size:var(--fs-sm);color:var(--nt-78);line-height:1.65}
+  /* The note is a list of scope decisions, not a paragraph about them. Each
+     row is: what it is, where it landed, why. Laid out so the first two read
+     as one scannable column and the reasoning sits under them quietly —
+     the reader who already knows why can skim the labels and stop.
+
+     No borders here on purpose. The rows are separated by rhythm, which is
+     what docs/design-persona.md asks for everywhere else in this product. */
+  .tpl-note-h{display:block;font-size:var(--fs-md);margin-bottom:var(--sp-3)}
+  .tpl-moves{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-4)}
+  .tpl-move-t{font-weight:600;color:var(--nt-90)}
+  .tpl-move-s{margin-inline-start:var(--sp-3);font-size:var(--fs-xs);
+              padding:1px var(--sp-3);border-radius:var(--r-pill);white-space:nowrap}
+  .tpl-s-in{background:var(--tq-21);color:var(--tq-84)}
+  .tpl-s-extra{background:var(--cu-27);color:var(--cu-84)}
+  .tpl-s-out{background:var(--nt-21);color:var(--nt-78)}
+  .tpl-move-w{display:block;margin-top:var(--sp-2);font-size:var(--fs-xs);color:var(--muted);line-height:1.6}
+  /* rows that did not move but are worth a second look — quieter than a move */
+  .tpl-watch{margin-top:var(--sp-4)}
+  .tpl-watch .tpl-move-t{font-weight:500;color:var(--nt-78)}
+  .tpl-tip{margin:var(--sp-4) 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.6}
+
   /* the caveat is part of the note, never a separate thing to dismiss —
      numbers that arrive prefilled are read as measured unless told otherwise */
   .tpl-caveat{display:block;margin-top:var(--sp-3);font-size:var(--fs-xs);color:var(--muted)}

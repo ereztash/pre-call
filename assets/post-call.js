@@ -25,6 +25,23 @@ const ils = PC.model.ils;
 /* ---------- selection state ---------- */
 const chosenSystems = new Set();
 let scopeState = defaultScopeState();
+
+/* Twelve of the nineteen scope rows carry a `why` — a sentence teaching the
+   seller why the default is what it is. That teaching is the product's whole
+   differentiation and none of it is deleted. It is just no longer all on
+   screen at once.
+
+   Every row arrives already decided, and the instruction for this step is
+   "change only what does not fit". So at rest the reader needs nineteen short
+   labels to skim, not nineteen labels plus a hundred and fifty words of
+   argument — and this is the step where the median user leaves, measured in
+   docs/words.md. The reasons appear on one button, for whoever is deciding
+   rather than confirming.
+
+   One control for all of them rather than a disclosure per row: nineteen
+   triangles would replace the words with the same amount of chrome, which is
+   the trade docs/design-persona.md exists to refuse. */
+let scopeWhy = false;
 let activeTemplate = null;
 
 function clearSystems(){
@@ -86,6 +103,34 @@ const renderTemplates = guard('templates', function (){
   });
 });
 
+/* One row of the note: what moved, where it landed, and why — the label read
+   out of SCOPE_ITEMS rather than retyped, so renaming a row cannot leave the
+   note describing a name that no longer exists. */
+function noteRow(id, state, why, kind){
+  const item = SCOPE_ITEMS.find(x => x.id === id);
+  return '<li class="tpl-move tpl-move-' + kind + '">' +
+    '<span class="tpl-move-t">' + esc(item ? item.t : id) + '</span>' +
+    '<span class="tpl-move-s tpl-s-' + esc(state) + '">' + esc(SCOPE_LABEL[state] || state) + '</span>' +
+    '<span class="tpl-move-w">' + esc(why) + '</span></li>';
+}
+
+function templateNote(t){
+  const n = t.note || {};
+  const moves = Object.entries(n.moves || {})
+    .map(([id, why]) => noteRow(id, t.scope[id], why, 'moved'));
+  /* rows that did NOT move and are worth a second look anyway — the premium
+     surcharge, the policy change a client will try to call a bug */
+  const watch = Object.entries(n.watch || {})
+    .map(([id, why]) => {
+      const item = SCOPE_ITEMS.find(x => x.id === id);
+      return noteRow(id, item ? item.d : '', why, 'watch');
+    });
+  return '<b class="tpl-note-h">' + esc(t.name) + '</b>' +
+    (moves.length ? '<ul class="tpl-moves">' + moves.join('') + '</ul>' : '') +
+    (watch.length ? '<ul class="tpl-moves tpl-watch">' + watch.join('') + '</ul>' : '') +
+    (n.tip ? '<p class="tpl-tip">' + esc(n.tip) + '</p>' : '');
+}
+
 function applyTemplate(id){
   const t = TEMPLATES.find(x => x.id === id);
   if (!t) return;
@@ -97,9 +142,21 @@ function applyTemplate(id){
   // applied over the defaults, never over whatever the last template left
   scopeState = scopeStateFor(t);
 
+  /* The template note used to be one paragraph of 48-70 words explaining two
+     or three scope decisions in prose. Every one of them opened by naming the
+     row it was about — "מקרי קצה עברו לבתוספת" — which is a sentence spent
+     restating something the row itself already says, and which drifts the
+     first time a row is renamed in SCOPE_ITEMS.
+
+     It is now the same decisions as a list keyed by scope id: the label comes
+     from SCOPE_ITEMS, the destination comes from the template's own scope
+     object, and the note carries only the reasoning. Half the words, none of
+     the reasoning lost, and catalog.test.js can now assert that the note
+     explains exactly the moves the template actually makes — which the old
+     `note.length > 60` could never do. */
   const note = el('tplNote');
   if (note) {
-    note.innerHTML = '<b>' + esc(t.name) + '.</b> ' + esc(t.note) +
+    note.innerHTML = templateNote(t) +
       '<span class="tpl-caveat">המספרים כאן טיפוסיים, לא נמדדו אצל הלקוח שלך. ' +
       'תקן אותם מולו — הם קיימים כדי שיהיה מה לתקן, לא כדי להישלח כמו שהם.</span>';
     show('tplNote', true);
@@ -339,7 +396,15 @@ const renderScope = guard('scope', function (){
   const box = el('scopeBox');
   const items = visibleScope(chosenSystems);
 
-  box.innerHTML = SCOPE_GROUPS.map(g => {
+  const withWhy = items.filter(i => i.why).length;
+  const toggle = withWhy
+    ? `<button type="button" class="scope-whyt" id="scopeWhyT"
+         aria-pressed="${scopeWhy}" aria-controls="scopeBox"
+       >${scopeWhy ? 'הסתר נימוקים' : 'למה ההמלצות האלה'}<span class="scope-n">${withWhy}</span></button>`
+    : '';
+
+  box.classList.toggle('show-why', scopeWhy);
+  box.innerHTML = toggle + SCOPE_GROUPS.map(g => {
     const rows = items.filter(i => scopeState[i.id] === g.s);
     if (!rows.length) return '';
     return `<section class="scope-g scope-g-${g.s}" aria-labelledby="sg-${g.s}">
@@ -364,6 +429,16 @@ const renderScope = guard('scope', function (){
     </section>`;
   }).join('') ||
     '<p class="lead nomargin">אין עדיין פריטי סקופ — בחר את המערכות למעלה.</p>';
+
+  const wt = el('scopeWhyT');
+  if (wt) wt.onclick = () => {
+    scopeWhy = !scopeWhy;
+    renderScope();
+    /* focus follows the control across the re-render, or the keyboard user is
+       returned to the top of the document by their own button press */
+    const again = el('scopeWhyT');
+    if (again) again.focus();
+  };
 
   box.querySelectorAll('.smove').forEach(b => b.onclick = () => {
     const id = b.dataset.i, to = b.dataset.s;

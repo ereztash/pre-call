@@ -162,8 +162,9 @@ Ranked by what they replace, not by fashion.
 
 | technique | what it removes | where it applies |
 |---|---|---|
-| **Delete happy talk** (Krug) | introductory sociable text carrying no content | the largest single block in POST-CALL is `שלב 5 · מה כלול` at **255 words** — the `note` prose in `pc-catalog.js` explaining scope decisions. It is the top cut target in the product by a factor of three. |
-| **Table instead of comparative prose** | the connective tissue between compared items | that same `note`: a 58-word paragraph about three scope rows moving becomes a 3-row table of item → where it moved → why, in about 12 words. |
+| **Delete happy talk** (Krug) | introductory sociable text carrying no content | **done.** `שלב 5 · מה כלול` was the largest block in the product: 307 words at rest — 100 of row labels, 145 of inline `why` coaching, 62 of template prose. |
+| **Table instead of comparative prose** | the connective tissue between compared items | **done.** The template note was a 48–70 word paragraph opening by naming the row it was about. It is now a list keyed by scope id: the label comes from `SCOPE_ITEMS`, the destination from the template's own `scope`, and the note carries only the reasoning. Median 62 → 29 words, and `catalog.test.js` can now assert the note explains exactly the moves the template makes — which `note.length > 60` never could. |
+| **Progressive disclosure, one control not nineteen** | coaching the reader does not need while confirming a default | **done.** The 12 inline `why` sentences sit behind one "למה ההמלצות האלה" button. Nothing is deleted; 145 words leave the resting page. A disclosure per row would have swapped the words for the same mass of chrome. |
 | **Number as the message** | the sentence wrapped around the number | the pricing flow already does this. |
 | **Sparkline / dataword** (Tufte) | a sentence describing a trend | `pc-viz.js` is the place. |
 | **Diagram instead of describing a flow** | ordered prose | the README uses mermaid for exactly this; the product does not. |
@@ -194,6 +195,31 @@ and the answer is narrower than it looks:
 
 `<details>`/`<summary>` — already used 7 times here — remains the right default
 for "most people don't need this", and it survives in-page search.
+
+---
+
+## What the first cut actually bought
+
+The scope step, measured at rest — what is on screen before the reader asks
+for anything:
+
+| | before | after |
+|---|---|---|
+| row labels (19) | 100 | 100 |
+| inline `why` coaching (12) | 145 | 0 — behind one button |
+| template note (median) | 62 | 29 |
+| **total** | **307** | **129** (−58%) |
+
+Held at the same visitor patience — the only comparison that means anything,
+see below — that is **+1.06 points of completion** and 14 seconds less
+attention across the funnel.
+
+**The trap in scoring your own cuts.** Completion is pinned to the benchmark by
+calibration, so a re-calibrated run cannot show a cut as a win: remove the words
+and the solver just returns a less patient visitor to hold completion at 32.1%,
+and the boundary can appear to move *earlier*. To score a change, calibrate on
+the old funnel and re-simulate the new one at that same patience. Same visitor,
+different funnel.
 
 ---
 

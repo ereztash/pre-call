@@ -110,7 +110,24 @@
 
      The absolute completion level is therefore an input, not a finding. What
      the model produces that the benchmark does not: the distribution across
-     steps, the boundary, and the price of a word. */
+     steps, the boundary, and the price of a word.
+
+     One consequence, and it is a trap. Because completion is pinned, a
+     re-calibrated run CANNOT show a content cut as a win — remove 178 words
+     and the solver simply returns a less patient visitor to hold completion
+     at the benchmark, and the boundary can even appear to move earlier. That
+     is the calibration doing its job, not the cut failing.
+
+     To score a change, hold the patience fixed at the value calibrated
+     BEFORE it and re-simulate:
+
+       const scale  = calibrate(oldFunnel);
+       const before = simulate(oldFunnel, { weibullScale: scale });
+       const after  = simulate(newFunnel, { weibullScale: scale });
+
+     Same visitor, different funnel. That is the comparison that means
+     something, and it is the only way this model should ever be used to
+     claim an improvement. */
   const BENCHMARK_COMPLETION = 0.321; // Baymard/HubSpot 2026: 67.9% abandonment
 
   function calibrate(funnel, target, over) {

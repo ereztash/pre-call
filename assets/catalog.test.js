@@ -47,8 +47,12 @@ test('each template is complete and uniquely identified', () => {
   const tids = C.TEMPLATES.map(t => t.id);
   assert.strictEqual(new Set(tids).size, tids.length);
   C.TEMPLATES.forEach(t => {
-    ['name','blurb','note'].forEach(k =>
+    ['name','blurb'].forEach(k =>
       assert.ok(t[k] && t[k].trim(), t.id + ' is missing ' + k));
+    /* note is structured rather than prose since the notes were cut — the
+       shape is asserted in full further down */
+    assert.ok(t.note && t.note.moves && Object.keys(t.note.moves).length,
+      t.id + ' has no note explaining its scope moves');
     assert.ok(t.systems.length, t.id + ' selects no systems');
     assert.ok(Object.keys(t.numbers).length, t.id + ' sets no numbers');
     assert.ok(Object.keys(t.fields).length, t.id + ' sets no text');
@@ -115,10 +119,47 @@ test('template numbers are plausible rather than placeholder', () => {
     assert.ok(hoursYear < 2000, t.id + ' implies ' + Math.round(hoursYear) + ' hours a year');
   });
 });
-test('every template says what it changed and why', () => {
-  C.TEMPLATES.forEach(t =>
-    assert.ok(t.note.length > 60,
-      t.id + ' note is too thin to explain a scope decision'));
+/* This used to assert t.note.length > 60 — which sixty-one characters of
+   anything would satisfy, and which said nothing about whether the note
+   explained the decisions the template actually makes. The note is now keyed
+   by scope id, so the real invariant is checkable: it explains every move,
+   invents none, and names rows that exist. */
+test('every template explains exactly the scope moves it makes', () => {
+  C.TEMPLATES.forEach(t => {
+    const moved = Object.keys(t.scope).sort();
+    const explained = Object.keys((t.note && t.note.moves) || {}).sort();
+    assert.deepStrictEqual(explained, moved,
+      t.id + ' moves [' + moved + '] but explains [' + explained + ']');
+  });
+});
+
+test('every row a note names is a row that exists', () => {
+  const ids = new Set(C.SCOPE_ITEMS.map(i => i.id));
+  C.TEMPLATES.forEach(t => {
+    const n = t.note || {};
+    [...Object.keys(n.moves || {}), ...Object.keys(n.watch || {})].forEach(id =>
+      assert.ok(ids.has(id), t.id + ' note names unknown scope row ' + id));
+  });
+});
+
+test('every reason a note gives is a reason, not a label', () => {
+  C.TEMPLATES.forEach(t => {
+    const n = t.note || {};
+    Object.entries({ ...(n.moves || {}), ...(n.watch || {}) }).forEach(([id, why]) =>
+      assert.ok(why && why.trim().length > 25,
+        t.id + '/' + id + ' has no reasoning, only a label'));
+  });
+});
+
+/* A watch row is one the note flags WITHOUT moving it. If it also appears in
+   scope, the template is telling the reader to look at something it already
+   changed, which is a contradiction rather than a second opinion. */
+test('watch rows are rows the template left alone', () => {
+  C.TEMPLATES.forEach(t => {
+    Object.keys((t.note && t.note.watch) || {}).forEach(id =>
+      assert.ok(!(id in t.scope),
+        t.id + ' flags ' + id + ' to watch but also moves it'));
+  });
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
