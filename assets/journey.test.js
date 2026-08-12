@@ -896,7 +896,11 @@ async function journey(engineName, base) {
         state: [...g.classList].find(c => c.startsWith('scope-g-')),
         rows: g.querySelectorAll('.scope-row').length,
         counted: +g.querySelector('.scope-n').textContent })),
-      controls: document.querySelectorAll('#scopeBox button').length,
+      /* .smove, not every button in the box. The reasons toggle lives here
+         too and is not a move — counting it made "two moves per row" read 37
+         against 36 and fail for a control that has nothing to do with the
+         claim. */
+      controls: document.querySelectorAll('#scopeBox .smove').length,
       rows: document.querySelectorAll('#scopeBox .scope-row').length,
       /* a row must never offer to send an item where it already is */
       selfMoves: [...document.querySelectorAll('#scopeBox .scope-g')].flatMap(g => {

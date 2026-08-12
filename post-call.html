@@ -79,7 +79,7 @@
        arrives with the sentence it came from. -->
   <div class="box trbox">
     <h3 class="tpl-h">יש לך תמלול של השיחה?</h3>
-    <p class="hint-p">הדבק אותו, והכלי יוציא ממנו את המספרים — כל אחד עם המשפט שממנו הוא נלקח ועם מי אמר אותו. שום דבר לא נכנס לטופס לפני שאתה מאשר.</p>
+    <p class="hint-p">הדבק — כל מספר יחולץ עם המשפט שממנו נלקח, ולא ייכנס לפני שאישרת.</p>
     <label for="trIn">תמלול השיחה</label>
     <textarea id="trIn" placeholder="הדבק כאן את התמלול המלא..."></textarea>
     <div class="tr-acts">
@@ -96,20 +96,29 @@
        of job — which is where the time actually goes. -->
   <div class="box tplbox">
     <h3 class="tpl-h">תהליך מוכר? התחל מכאן</h3>
-    <p class="hint-p">לחיצה אחת ממלאת את התוכנות, מספרים טיפוסיים, וגם את ההחלטות על מה נכלל ומה לא — לפי סוג העבודה. הכול ניתן לעריכה.</p>
+    <p class="hint-p">לחיצה ממלאת תוכנות, מספרים, ומה נכלל ומה לא. הכול ניתן לעריכה.</p>
     <div class="tpls" id="tplChips"></div>
     <div class="tpl-note hidden" id="tplNote"></div>
   </div>
 
   <div class="box">
+    <!-- The coaching that used to sit under each question (.why) is gone from
+         the on-path rows, not moved: the pinned guide narrates the SAME step
+         with the SAME advice at the moment the reader is on it, so every one
+         of those lines was paid twice. A .why survives only where it changes
+         the number typed and the guide does not carry it.
+
+         Questions 2 and 3 are one row now. Two headings for two numbers that
+         only exist multiplied together was a hierarchy claim the data does
+         not support; the badge keeps both script numbers so the count still
+         matches the call script the seller ran. -->
     <div class="qa">
-      <div class="qt" id="qt1"><span class="qn">1</span>איזה תהליך בדיוק? תאר לי אותו צעד-צעד.</div>
-      <div class="why">כדאי לתת לו לתאר עד הסוף. מה שהוא מספר כאן הופך למה שכתוב בהצעה שאתם מתחייבים לעשות.</div>
+      <div class="qt" id="qt1"><span class="qn">1</span>מה קורה אצלו היום?</div>
       <textarea aria-labelledby="qt1" id="q_process" placeholder="למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת"></textarea>
     </div>
     <div class="qa">
-      <div class="qt" id="qt2"><span class="qn">2</span>כמה פעמים זה קורה?</div>
-      <div class="why">אם הוא אומר "המון", בקש מספר. "בערך כמה ביום?"</div>
+      <div class="qt" id="qt2"><span class="qn">2–3</span>כמה פעמים, וכמה זמן כל פעם?</div>
+      <div class="why">דקות מהתחלה עד הסוף — לפתוח, לחפש, לוודא. לא רק ההקלדה.</div>
       <div class="row">
         <div><label for="q_freq">כמות</label><input type="number" id="q_freq" min="0" step="1" placeholder="20"></div>
         <div><label for="q_freq_unit">לכל</label>
@@ -119,17 +128,12 @@
             <option value="12">חודש</option>
           </select>
         </div>
+        <div><label for="q_minutes">דקות לכל פעם</label>
+          <input type="number" id="q_minutes" min="0" step="1" placeholder="7"></div>
       </div>
     </div>
     <div class="qa">
-      <div class="qt" id="qt3"><span class="qn">3</span>כמה זמן לוקח כל פעם, מהתחלה עד הסוף?</div>
-      <div class="why">כולל ההקשר: לפתוח מסך, לחפש, לוודא. לא רק ההקלדה עצמה.</div>
-      <label for="q_minutes">דקות לכל פעם</label>
-      <input type="number" id="q_minutes" min="0" step="1" placeholder="7">
-    </div>
-    <div class="qa">
-      <div class="qt" id="qt7"><span class="qn">7</span>אילו מערכות מעורבות בתהליך?</div>
-      <div class="why">מספר המערכות הוא מנוע האומדן העיקרי. סמן הכל.</div>
+      <div class="qt" id="qt7"><span class="qn">7</span>באילו תוכנות זה נוגע?</div>
       <div class="chips" id="sysChips"></div>
     </div>
     <!-- ============ מי שולח ============
