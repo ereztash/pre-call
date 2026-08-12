@@ -128,7 +128,7 @@
   h1{font-size:var(--fs-3xl);font-weight:600;letter-spacing:-.3px}
   h1 .mark{color:var(--copper)}
   .sub{color:var(--muted);font-size:var(--fs-md);margin-top:var(--sp-3);max-width:var(--measure);}
-  .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
+  .note{background:var(--charcoal-2);border-inline-start:3px solid var(--copper);
         padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);font-size:var(--fs-md);color:var(--nt-17);margin-top:var(--sp-6)}
 
   .steps{display:flex;gap:var(--sp-3);margin:var(--sp-7) 0 var(--sp-7);flex-wrap:wrap}
@@ -162,7 +162,7 @@
   pre.prompt{background:var(--nt-90);border:1px solid var(--line);border-radius:var(--r-md);
     padding:var(--sp-5);white-space:pre-wrap;word-wrap:break-word;font-size:var(--fs-xs);
     font-family:ui-monospace,"Consolas",monospace;color:var(--nt-13);max-height:340px;overflow:auto;
-    direction:rtl;text-align:right;line-height:1.7}
+    text-align:start;line-height:1.7}
 
   button.act,a.act{background:var(--copper);color:var(--nt-90);border:0;padding:var(--sp-4) var(--sp-6);border-radius:var(--r-md);
     font-size:var(--fs-md);font-weight:600;cursor:pointer;font-family:inherit;margin-top:var(--sp-4);min-height:44px}
@@ -181,7 +181,7 @@
   input[type=text],textarea,select{
     width:100%;background:var(--nt-90);border:1px solid var(--line);border-radius:var(--r-md);
     color:var(--ink);padding:var(--sp-4) var(--sp-4);font-size:var(--fs-md);font-family:inherit;min-height:44px;
-    direction:rtl;text-align:right}
+    text-align:start}
   input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
   :focus-visible{outline:3px solid var(--cu-50);outline-offset:2px;border-radius:var(--r-sm)}
   textarea{min-height:80px;resize:vertical;line-height:1.6}
@@ -192,23 +192,23 @@
   .out h3{color:var(--nt-9);font-size:var(--fs-xl);margin:0 0 var(--sp-2);font-weight:700}
   /* #5a6777 not #6b7280 — the obvious grey read at 4.43:1 on --paper, just under
      AA. Same fix already made once in post-call.css; it never made it back here. */
-  .out .meta{color:var(--nt-41);font-size:var(--fs-xs);margin-bottom:var(--sp-7);border-bottom:1px solid var(--cu-84);padding-bottom:var(--sp-5)}
+  .out .meta{color:var(--muted);font-size:var(--fs-xs);margin-bottom:var(--sp-7);border-bottom:1px solid var(--cu-84);padding-bottom:var(--sp-5)}
   .blk{margin-bottom:var(--sp-7)}
   .blk-h{font-size:var(--fs-xs);letter-spacing:1.2px;text-transform:uppercase;color:var(--copper-dim);
          font-weight:700;margin-bottom:var(--sp-2)}
   .blk-t{font-size:var(--fs-md);font-weight:700;color:var(--nt-9);margin-bottom:var(--sp-2)}
-  .blk-d{font-size:var(--fs-xs);color:var(--nt-41);margin-bottom:var(--sp-4)}
-  .q{background:#fff;border-right:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);
+  .blk-d{font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--sp-4)}
+  .q{background:var(--paper);border-inline-start:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);
      border-radius:var(--r-sm);font-size:var(--fs-md);color:var(--nt-9);box-shadow:0 1px 2px rgba(0,0,0,.05)}
   .q .qn{display:inline-block;background:var(--nt-9);color:var(--cu-95);font-size:var(--fs-xs);padding:1px var(--sp-3);
-         border-radius:var(--r-sm);margin-left:var(--sp-2);font-weight:600;vertical-align:middle}
-  .q .why{display:block;font-size:var(--fs-xs);color:var(--nt-41);margin-top:var(--sp-3);font-weight:400}
+         border-radius:var(--r-sm);margin-inline-end:var(--sp-2);font-weight:600;vertical-align:middle}
+  .q .why{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3);font-weight:400}
   /* .gap shares this exactly, and shares it on purpose: both say "do not go
      forward from here yet". A gap is the softer case — something that was
      supposed to be prepared before the call and was not, so the script is
      about to ask you to invent it while somebody waits. Same voice, because
      it is the same instruction. */
-  .stop,.gap{background:var(--rd-95);border-right:3px solid var(--red);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
+  .stop,.gap{background:var(--rd-95);border-inline-start:3px solid var(--red);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
         font-size:var(--fs-xs);color:var(--rd-27);margin:var(--sp-3) 0}
   .stop b,.gap b{color:var(--red)}
   /* The one line in the document whose whole job is to be said out loud.
@@ -218,14 +218,14 @@
      into somebody audibly reading off a page. It is written in step 3 now
      and arrives here finished, which is why it gets the weight of a thing
      you read verbatim rather than the weight of a question. */
-  .say{background:#fff;border-right:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);
+  .say{background:var(--paper);border-inline-start:3px solid var(--copper);padding:var(--sp-4) var(--sp-5);
        border-radius:var(--r-sm);font-size:var(--fs-md);font-weight:600;color:var(--nt-9);
        margin-bottom:var(--sp-3);box-shadow:0 1px 2px rgba(0,0,0,.05)}
   /* the table keeps a sane minimum width for its Hebrew sentences; the wrapper
      is what scrolls at 320px, so the page itself never gains a horizontal bar */
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:var(--sp-3)}
   table.read{width:100%;min-width:480px;border-collapse:collapse;font-size:var(--fs-xs)}
-  table.read th{background:var(--nt-9);color:var(--cu-95);padding:var(--sp-3) var(--sp-4);text-align:right;font-size:var(--fs-xs);font-weight:600}
+  table.read th{background:var(--nt-9);color:var(--cu-95);padding:var(--sp-3) var(--sp-4);text-align:start;font-size:var(--fs-xs);font-weight:600}
   table.read td{border-bottom:1px solid var(--cu-84);padding:var(--sp-3) var(--sp-4);vertical-align:top;color:var(--nt-21)}
   table.read td.no{color:var(--red)}
   /* ---- the same card at 390px ----
@@ -253,9 +253,9 @@
     table.read tr{border-bottom:1px solid var(--cu-84);padding:var(--sp-3) 0}
     table.read tr:last-child{border-bottom:0}
     table.read td{border-bottom:0;padding:var(--sp-1) 0}
-    table.read td::before{content:attr(data-l) " — ";color:var(--nt-41);font-size:var(--fs-xs)}
+    table.read td::before{content:attr(data-l) " — ";color:var(--muted);font-size:var(--fs-xs)}
   }
-  .rule{background:var(--tq-95);border-right:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
+  .rule{background:var(--tq-95);border-inline-start:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
         font-size:var(--fs-xs);color:var(--tq-21);margin:var(--sp-4) 0}
   ul.prep{margin:var(--sp-3) 0 0;padding:0 var(--sp-6) 0 0;list-style:disc}
   ul.prep li{font-size:var(--fs-xs);color:var(--nt-21);margin-bottom:var(--sp-2);line-height:1.55}
@@ -263,13 +263,13 @@
      script itself tells you not to say out loud. Deliberately outside #outArea so
      "copy as text" and print can never carry them into the room. */
   .priv{background:var(--charcoal-2);border:0;
-        border-right:3px solid var(--turq);border-radius:var(--r-md);padding:var(--sp-5) var(--sp-5);margin-top:var(--sp-5)}
+        border-inline-start:3px solid var(--turq);border-radius:var(--r-md);padding:var(--sp-5) var(--sp-5);margin-top:var(--sp-5)}
   .priv h4{font-size:var(--fs-xs);letter-spacing:1px;text-transform:uppercase;color:var(--turq);
            font-weight:700;margin-bottom:var(--sp-3)}
   .priv ul{margin:0;padding:0 var(--sp-6) 0 0}
   .priv li{font-size:var(--fs-xs);color:var(--nt-17);margin-bottom:var(--sp-3);line-height:1.6}
   .priv .seal{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3)}
-  .empty{color:var(--nt-41);font-size:var(--fs-md);text-align:center;padding:var(--sp-7) var(--sp-4);line-height:1.7}
+  .empty{color:var(--muted);font-size:var(--fs-md);text-align:center;padding:var(--sp-7) var(--sp-4);line-height:1.7}
   .err{background:var(--rd-95);border:1px solid var(--rd-84);color:var(--rd-34);padding:var(--sp-4) var(--sp-5);
        border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-4)}
   /* visibility, not opacity alone. An element at opacity:0 is still in the
@@ -279,7 +279,7 @@
      are the same underlying mistake: invisible-to-the-eye is not the same
      as not-there. Transitioning visibility alongside opacity keeps the
      fade and makes the hidden state genuinely hidden. */
-  .copied{color:var(--turq);font-size:var(--fs-xs);margin-right:var(--sp-4);
+  .copied{color:var(--turq);font-size:var(--fs-xs);margin-inline-start:var(--sp-4);
     opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
   .copied.on{opacity:1;visibility:visible}
   footer{margin-top:var(--sp-8);padding-top:var(--sp-6);border-top:1px solid var(--line);
@@ -299,7 +299,7 @@
     #errBoundary,.backupbox,.next-tool,
     #p4 .box:first-of-type{display:none!important}
     .out{padding:0}
-    .q{box-shadow:none;border-right:3px solid var(--nt-34)}
+    .q{box-shadow:none;border-inline-start:3px solid var(--nt-34)}
   }
 
   /* ---- call mode ----
@@ -410,7 +410,7 @@
      screen: same structure, colours that belong to the ground it sits on. */
   table.facts{width:100%;min-width:420px;border-collapse:collapse;font-size:var(--fs-xs)}
   table.facts th{background:var(--nt-90);color:var(--ink);padding:var(--sp-3) var(--sp-4);
-    text-align:right;font-size:var(--fs-xs);font-weight:600;border-bottom:1px solid var(--line)}
+    text-align:start;font-size:var(--fs-xs);font-weight:600;border-bottom:1px solid var(--line)}
   table.facts td{border-bottom:1px solid var(--line);padding:var(--sp-3) var(--sp-4);
     vertical-align:top;color:var(--nt-13)}
   table.facts code{color:var(--tq-27);font-size:var(--fs-xs);
@@ -430,7 +430,7 @@
   /* ---- error boundary ----
      Same rule, same colors, as .errbound in post-call.css — one failure
      appearance across both tools, not two that happen to look similar. */
-  .errbound{background:var(--rd-95);border:1px solid var(--rd-78);border-right:3px solid var(--red-text);
+  .errbound{background:var(--rd-95);border:1px solid var(--rd-78);border-inline-start:3px solid var(--red-text);
             border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin:var(--sp-4) 0;font-size:var(--fs-xs);
             color:var(--rd-27);line-height:1.65}
 

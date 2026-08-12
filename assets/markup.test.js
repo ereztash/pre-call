@@ -742,7 +742,20 @@ console.log('\nmodule loading');
 test('every module the assets directory defines is actually loaded', () => {
   const linked = PAGES.flatMap(p =>
     [...html[p].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1]));
-  const orphans = SCRIPTS.filter(f => !linked.includes(f));
+  /* The English dictionaries are loaded by assets/pc-boot.js via
+     document.write, and only when the visitor chose English — that is
+     what keeps a Hebrew visit paying zero bytes for the second
+     language. They are therefore invisible to the tag scan above, and
+     exempting them by name alone would let a renamed dictionary rot
+     unreferenced. So the exemption is earned, not granted: an en-*.js
+     file passes only if pc-boot.js still contains the loader that
+     reaches it. */
+  const boot = read('assets/pc-boot.js');
+  const bootLoads = f => /^assets\/en-[\w-]+\.js$/.test(f) &&
+    /document\.write\([\s\S]*assets\/en-/.test(boot) &&
+    (f === 'assets/en-common.js' ||
+     new RegExp("'" + f.replace('assets/en-', '').replace('.js', '') + "'").test(boot));
+  const orphans = SCRIPTS.filter(f => !linked.includes(f) && !bootLoads(f));
   assert.deepStrictEqual(orphans, [], 'written but never loaded by any page');
 });
 test('the shell loads after everything it depends on', () => {

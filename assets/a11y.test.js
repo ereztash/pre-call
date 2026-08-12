@@ -121,14 +121,23 @@ async function scan(page, label) {
   throw new Error('       ' + label + ': ' + result.length + ' violation type(s)\n' + lines.join('\n'));
 }
 
+/* PW_SCHEME=dark repaints every state below in the dark theme and holds
+   it to the same standard. A contrast ratio is a property of a pairing,
+   not of a page, and the dark ramp re-pairs every one of them — so a
+   scan that only ever ran in light mode has checked exactly half the
+   product. CI runs this file once per scheme. */
+const SCHEME = process.env.PW_SCHEME === 'dark' ? 'dark' : 'light';
+
 (async () => {
   const { srv, base } = await serve();
   const engineName = (process.env.PW_ENGINES || 'chromium').split(',')[0].trim();
   const engine = { chromium, firefox, webkit }[engineName] || chromium;
   const browser = await engine.launch();
-  console.log('\naxe-core · WCAG 2.1 A + AA · painted in ' + engineName + '\n');
+  console.log('\naxe-core · WCAG 2.1 A + AA · painted in ' + engineName +
+              ' · ' + SCHEME + ' scheme\n');
 
-  const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+  const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 },
+                                         colorScheme: SCHEME });
 
   console.log('the entry page');
   await test('as a first-time visitor sees it', async () => {
@@ -168,7 +177,8 @@ async function scan(page, label) {
        which is the other way to break a document: what is left has to still
        have a heading order, a focusable way out, and contrast against the
        ground it is now sitting on alone. */
-    const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 },
+                                             colorScheme: SCHEME });
     const p = await phone.newPage();
     await p.goto(base + '/pre-call.html');
     await p.click('.stepbtn[data-s="2"]');
@@ -321,7 +331,8 @@ async function scan(page, label) {
 
   console.log('\nnarrow viewport · 320px');
   await test('the entry and both tools at the narrowest phone width', async () => {
-    const narrow = await browser.newContext({ viewport: { width: 320, height: 720 } });
+    const narrow = await browser.newContext({ viewport: { width: 320, height: 720 },
+                                              colorScheme: SCHEME });
     for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
       const p = await narrow.newPage();
       await p.goto(base + page);

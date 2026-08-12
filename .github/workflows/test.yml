@@ -113,6 +113,14 @@ jobs:
         env:
           A11Y_REQUIRED: '1'
         run: node assets/a11y.test.js
+      # The same pages, repainted dark. A contrast ratio is a property of a
+      # pairing, and the dark ramp re-pairs all of them — light-only was
+      # half a scan.
+      - name: accessibility — the same states, dark theme
+        env:
+          A11Y_REQUIRED: '1'
+          PW_SCHEME: dark
+        run: node assets/a11y.test.js
       - name: core web vitals on a throttled phone
         run: node assets/perf.test.js
 

@@ -187,20 +187,27 @@ function probe() {
   const b = await chromium.launch(exec ? { executablePath: exec } : {});
   const findings = [];
 
+  /* Both themes, same thresholds. The dark ramp in assets/theme.css is a
+     mirror of the light one, which ARGUES it inherits the light theme's
+     discipline — this is what checks it. A theme that is only ever
+     audited in the mode the auditor's laptop happens to be in is the
+     axe-was-never-loaded failure again, one layer up. */
+  for (const scheme of ['light', 'dark'])
   for (const page of PAGES) {
-    const pg = await b.newPage({ viewport: { width: 1280, height: 900 } });
+    const pg = await b.newPage({ viewport: { width: 1280, height: 900 },
+                                 colorScheme: scheme });
     await pg.goto('http://localhost:8099/' + page, { waitUntil: 'networkidle' });
     await pg.waitForTimeout(400);
     const r = await pg.evaluate(probe);
     await pg.close();
 
     console.log('\n' + '='.repeat(74));
-    console.log(page + '   ' + r.total + ' visible elements');
+    console.log(page + ' · ' + scheme + '   ' + r.total + ' visible elements');
     console.log('='.repeat(74));
 
     const say = (ok, label, detail) => {
       console.log('  ' + (ok ? 'ok  ' : 'FAIL') + '  ' + label.padEnd(30) + detail);
-      if (!ok) findings.push({ page, label, detail });
+      if (!ok) findings.push({ page: page + ' (' + scheme + ')', label, detail });
     };
 
     // 1. how much of the page is in a box

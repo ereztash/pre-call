@@ -142,7 +142,7 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 
 /* ---- picking up where you left off ---- */
 .resume{
-  background:var(--charcoal-2);border:1px solid var(--tq-64);border-right:3px solid var(--turq);
+  background:var(--charcoal-2);border:1px solid var(--tq-64);border-inline-start:3px solid var(--turq);
   border-radius:var(--r-md);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-7);
 }
 .resume-h{font-size:var(--fs-xs);font-weight:700;color:var(--turq);letter-spacing:.4px;margin-bottom:var(--sp-3)}
@@ -206,7 +206,10 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
   display:inline-flex;align-items:center;justify-content:center;
 }
 .strip-steps li b{color:var(--ink);font-weight:600}
-.strip-steps li:not(:last-child)::after{content:"←";color:var(--line);margin-right:var(--sp-2)}
+.strip-steps li:not(:last-child)::after{content:"←";color:var(--line);margin-inline-start:var(--sp-2)}
+/* the arrow between steps points where the reading goes, which is a
+   property of the language, not of the design */
+html[dir="ltr"] .strip-steps li:not(:last-child)::after{content:"→"}
 .strip-n{font-size:var(--fs-xs);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--sp-4);max-width:var(--measure);}
 
 footer{

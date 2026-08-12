@@ -1,0 +1,96 @@
+/* ============================================================
+   The dark remix — one file, shared by every page.
+
+   The palette in each page's stylesheet is the light theme and stays
+   there; this file only says what the 44 ramp tokens resolve to on a
+   dark surface. The rule is a mirror: within each hue family the
+   lightness order reverses, and every dark value is a value the light
+   ramp already ships — the same vocabulary read from the other end.
+   That keeps two properties the audits care about: the contrast
+   between any two steps survives the flip, and no new colour literal
+   enters the product. The handful of places a mirror lands wrong
+   (paper, the warning chip) are re-pointed by name below, not patched
+   at the use site.
+
+   Both blocks are identical on purpose and assets/tokens.test.js
+   asserts it: the first serves people whose system asks for dark and
+   who never touched the toggle, the second serves an explicit choice.
+   Explicit light (`data-theme="light"`) simply matches neither.
+
+   Everything is @media screen. Print is paper, paper is light, and a
+   proposal printed from a dark screen must not come out dark — the
+   print sheets in the page stylesheets keep resolving the light ramp.
+   ============================================================ */
+
+@media screen and (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    /* neutral — mirrored: 5↔95, 9↔90, 13↔84, 17↔78, 21↔71, 27↔64, 34↔57, 41↔50 */
+    --nt-5:#f0f2f4; --nt-9:#e2e5e9; --nt-13:#d0d5dc; --nt-17:#bfc6cf; --nt-21:#abb4bf;
+    --nt-27:#96a1b0; --nt-34:#828fa1; --nt-41:#6e7d91; --nt-50:#5a6777; --nt-57:#4b5563;
+    --nt-64:#3b444e; --nt-71:#2e353d; --nt-78:#252b31; --nt-84:#1d2126; --nt-90:#14171a;
+    --nt-95:#0b0d0f;
+    /* copper — mirrored: 9↔95, 13↔90, 27↔84, 34↔78, 50↔71, 57↔64 */
+    --cu-9:#f6f3ee; --cu-13:#eee6dd; --cu-27:#e3d7c9; --cu-34:#dcc8b2; --cu-50:#d6b794;
+    --cu-57:#d2a674; --cu-64:#cf9554; --cu-71:#c88437; --cu-78:#7f592f; --cu-84:#5f472b;
+    --cu-90:#28221b; --cu-95:#1c1712;
+    /* turquoise — mirrored: 9↔95, 21↔84, 27↔64, 41↔50 */
+    --tq-9:#eff6f4; --tq-21:#cae2dd; --tq-27:#79cdbd; --tq-41:#3dc2a7; --tq-50:#379a86;
+    --tq-64:#2d5c53; --tq-84:#29423d; --tq-95:#131b19;
+    /* red — mirrored: 13↔95, 27↔84, 34↔78, 41↔64 */
+    --rd-13:#f6eeef; --rd-27:#e3cacd; --rd-34:#dbb3b8; --rd-41:#d07682; --rd-64:#9d3442;
+    --rd-78:#7d313b; --rd-84:#5e2b32; --rd-95:#271b1d;
+    /* The two places the mirror is not enough. --paper is a literal #fff
+       in the light theme, so nothing flips it; and a white sheet on a
+       near-black page is the exact fault the design audit exists to
+       catch (largest surface value jump ≤0.75). The document gets the
+       first surface step above the page instead. */
+    --paper:var(--nt-84);
+    /* The middle of the neutral ramp is safe as text on exactly one
+       side of the mirror. Light --muted is nt-41 (#5a6777), chosen at
+       4.5:1 on paper; its mirror reads 4.15:1 on the dark page — under
+       AA, and axe said so. One step outward clears it on every dark
+       surface without touching the light theme. */
+    --muted:var(--nt-34);
+  }
+}
+@media screen {
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --nt-5:#f0f2f4; --nt-9:#e2e5e9; --nt-13:#d0d5dc; --nt-17:#bfc6cf; --nt-21:#abb4bf;
+    --nt-27:#96a1b0; --nt-34:#828fa1; --nt-41:#6e7d91; --nt-50:#5a6777; --nt-57:#4b5563;
+    --nt-64:#3b444e; --nt-71:#2e353d; --nt-78:#252b31; --nt-84:#1d2126; --nt-90:#14171a;
+    --nt-95:#0b0d0f;
+    --cu-9:#f6f3ee; --cu-13:#eee6dd; --cu-27:#e3d7c9; --cu-34:#dcc8b2; --cu-50:#d6b794;
+    --cu-57:#d2a674; --cu-64:#cf9554; --cu-71:#c88437; --cu-78:#7f592f; --cu-84:#5f472b;
+    --cu-90:#28221b; --cu-95:#1c1712;
+    --tq-9:#eff6f4; --tq-21:#cae2dd; --tq-27:#79cdbd; --tq-41:#3dc2a7; --tq-50:#379a86;
+    --tq-64:#2d5c53; --tq-84:#29423d; --tq-95:#131b19;
+    --rd-13:#f6eeef; --rd-27:#e3cacd; --rd-34:#dbb3b8; --rd-41:#d07682; --rd-64:#9d3442;
+    --rd-78:#7d313b; --rd-84:#5e2b32; --rd-95:#271b1d;
+    --paper:var(--nt-84);
+    --muted:var(--nt-34);
+  }
+}
+
+/* ============================================================
+   The preferences strip — theme and language, rendered by
+   assets/pc-i18n.js into every page. Two small controls in the top
+   corner of the flow, styled with the same tokens as everything else
+   so they theme without being mentioned again in this file.
+   ============================================================ */
+/* min-height matches the buttons it will hold, so the space exists from
+   first paint and filling it shifts nothing — see strip() in pc-i18n.js. */
+.prefs{display:flex;gap:var(--sp-3);justify-content:flex-end;align-items:center;
+  max-width:920px;margin:0 auto;padding:var(--sp-3) var(--sp-6) 0;min-height:32px}
+/* A background step, not a border — the audit holds every page to
+   borders on ≤15% of elements, and two chrome buttons are exactly the
+   kind of thing that should not spend that budget. The step is
+   --charcoal-2, a surface every page already stacks, because the same
+   audit also caps distinct surfaces at four and a pill colour of its
+   own turned out to be a fifth. */
+.prefs button{background:var(--charcoal-2);border:0;color:var(--nt-27);
+  font:inherit;font-size:var(--fs-xs);padding:var(--sp-2) var(--sp-4);
+  border-radius:var(--r-pill);cursor:pointer;min-height:32px}
+.prefs button:hover{background:var(--cu-90);color:var(--ink)}
+@media print{ .prefs{display:none} }
