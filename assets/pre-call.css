@@ -208,8 +208,8 @@
      supposed to be prepared before the call and was not, so the script is
      about to ask you to invent it while somebody waits. Same voice, because
      it is the same instruction. */
-  .stop,.gap{background:var(--rd-13);border-right:3px solid var(--red);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
-        font-size:var(--fs-xs);color:var(--rd-84);margin:var(--sp-3) 0}
+  .stop,.gap{background:var(--rd-95);border-right:3px solid var(--red);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
+        font-size:var(--fs-xs);color:var(--rd-27);margin:var(--sp-3) 0}
   .stop b,.gap b{color:var(--red)}
   /* The one line in the document whose whole job is to be said out loud.
      Question 10 used to ask the operator to compose it live, mid-call, out
@@ -255,8 +255,8 @@
     table.read td{border-bottom:0;padding:var(--sp-1) 0}
     table.read td::before{content:attr(data-l) " — ";color:var(--nt-41);font-size:var(--fs-xs)}
   }
-  .rule{background:var(--tq-9);border-right:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
-        font-size:var(--fs-xs);color:var(--tq-84);margin:var(--sp-4) 0}
+  .rule{background:var(--tq-95);border-right:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);
+        font-size:var(--fs-xs);color:var(--tq-21);margin:var(--sp-4) 0}
   ul.prep{margin:var(--sp-3) 0 0;padding:0 var(--sp-6) 0 0;list-style:disc}
   ul.prep li{font-size:var(--fs-xs);color:var(--nt-21);margin-bottom:var(--sp-2);line-height:1.55}
   /* Screen-only. Holds your own numbers (last deal, price floor) — the things the
@@ -270,7 +270,7 @@
   .priv li{font-size:var(--fs-xs);color:var(--nt-17);margin-bottom:var(--sp-3);line-height:1.6}
   .priv .seal{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-3)}
   .empty{color:var(--nt-41);font-size:var(--fs-md);text-align:center;padding:var(--sp-7) var(--sp-4);line-height:1.7}
-  .err{background:var(--rd-13);border:1px solid var(--rd-27);color:var(--rd-78);padding:var(--sp-4) var(--sp-5);
+  .err{background:var(--rd-95);border:1px solid var(--rd-84);color:var(--rd-34);padding:var(--sp-4) var(--sp-5);
        border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-4)}
   /* visibility, not opacity alone. An element at opacity:0 is still in the
      accessibility tree, so "הועתק" was permanently present to a screen
