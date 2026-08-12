@@ -115,3 +115,10 @@ jobs:
         run: node assets/a11y.test.js
       - name: core web vitals on a throttled phone
         run: node assets/perf.test.js
+
+      # The four faults a designer named — crowded, harsh, no hierarchy, and a
+      # white sheet on a near-black page — as four numbers with thresholds and
+      # the practitioner each came from. It reported for exactly one commit,
+      # while the redesign was outstanding; it fails the build now.
+      - name: design — density, hierarchy, saturation, surfaces
+        run: node tools/design-audit.js

@@ -90,14 +90,12 @@
      twenty-five, and assets/tokens.test.js now fails the build if a
      future value invents a step instead of picking one.
      ============================================================ */
-  --fs-xs:12px;    /* captions, badges, the smallest legible label */
-  --fs-sm:13.5px;  /* hints, secondary rows, table cells */
-  --fs-md:15px;    /* body */
-  --fs-lg:16px;    /* emphasised body, list items in the document */
-  --fs-xl:19px;    /* section headings */
-  --fs-2xl:22px;   /* page headings */
-  --fs-3xl:26px;   /* the price, the product name */
-  --fs-4xl:32px;   /* the one display size */
+  --fs-xs:13px;    /* captions, badges, the smallest legible label */  /* hints, secondary rows, table cells */
+  --fs-md:16px;    /* body */    /* emphasised body, list items in the document */
+  --fs-xl:20px;    /* section headings */
+  --fs-2xl:25px;   /* page headings */
+  --fs-3xl:31px;   /* the price, the product name */
+  --fs-4xl:39px;   /* the one display size */
 
   --sp-1:2px;
   --sp-2:4px;
@@ -115,78 +113,78 @@
   --r-lg:8px;      /* panels */
   --r-pill:22px;   /* the selectable chips */
 
-  --charcoal:var(--nt-9);
-  --charcoal-2:var(--nt-13);
-  --line:var(--nt-21);
-  --copper:var(--cu-50);
-  --copper-dim:var(--cu-34);
-  --turq:var(--tq-41);
-  --ink:var(--cu-90);
-  --muted:var(--nt-64);
+  --charcoal:var(--nt-90);
+  --charcoal-2:var(--cu-95);
+  --line:var(--nt-84);
+  --copper:var(--cu-34);
+  --copper-dim:var(--cu-27);
+  --turq:var(--tq-27);
+  --ink:var(--nt-13);
+  --muted:var(--nt-41);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
   font-family:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
   background:var(--charcoal);color:var(--ink);
-  line-height:1.65;font-size:var(--fs-lg);
+  line-height:1.65;font-size:var(--fs-md);
   -webkit-font-smoothing:antialiased;
 }
 .wrap{max-width:820px;margin:0 auto;padding:var(--sp-8) var(--sp-6) var(--sp-9)}
 
 header{margin-bottom:var(--sp-8)}
 h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:var(--sp-4)}
-.sub{color:var(--muted);font-size:var(--fs-lg);max-width:56ch}
+.sub{color:var(--muted);font-size:var(--fs-md);max-width:56ch}
 
 .q{
-  font-size:var(--fs-sm);font-weight:600;color:var(--copper);
+  font-size:var(--fs-xs);font-weight:600;color:var(--copper);
   letter-spacing:.4px;margin-bottom:var(--sp-5);
 }
 
 /* ---- picking up where you left off ---- */
 .resume{
-  background:var(--nt-13);border:1px solid var(--tq-27);border-right:3px solid var(--turq);
+  background:var(--charcoal-2);border:1px solid var(--tq-64);border-right:3px solid var(--turq);
   border-radius:var(--r-md);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-7);
 }
 .resume-h{font-size:var(--fs-xs);font-weight:700;color:var(--turq);letter-spacing:.4px;margin-bottom:var(--sp-3)}
 .resume-row{
   display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4) var(--sp-5);
-  padding:var(--sp-2) 0;font-size:var(--fs-md);color:var(--tq-84);
+  padding:var(--sp-2) 0;font-size:var(--fs-md);color:var(--tq-21);
 }
 .resume-t{flex:1 1 auto}
 .resume-go{
-  flex:0 0 auto;color:var(--turq);text-decoration:underline;font-size:var(--fs-sm);
+  flex:0 0 auto;color:var(--turq);text-decoration:underline;font-size:var(--fs-xs);
   min-height:32px;display:inline-flex;align-items:center;
 }
-.resume-go:hover{color:var(--tq-50)}
+.resume-go:hover{color:var(--tq-41)}
 
 /* ---- the four situations ---- */
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);margin-bottom:var(--sp-8)}
 .card{
   display:flex;flex-direction:column;gap:var(--sp-3);
-  background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--charcoal-2);border:0;border-radius:var(--r-lg);
   padding:var(--sp-6) var(--sp-7) var(--sp-6);text-decoration:none;color:var(--ink);
   transition:border-color .15s,transform .15s;
 }
 .card:hover{border-color:var(--copper-dim);transform:translateY(-2px)}
 .card:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
 /* the one most people arrive for — marked by weight, not by shouting */
-.card-hot{border-color:var(--copper-dim);background:var(--cu-13)}
+.card-hot{border-color:var(--copper-dim);background:var(--cu-90)}
 .card-quiet{background:transparent}
 
 .card-when{
   font-size:var(--fs-xs);font-weight:700;letter-spacing:.7px;
   color:var(--copper);text-transform:uppercase;
 }
-.card-t{font-size:var(--fs-lg);font-weight:600;line-height:1.45}
-.card-d{font-size:var(--fs-sm);color:var(--muted);line-height:1.6}
+.card-t{font-size:var(--fs-md);font-weight:600;line-height:1.45}
+.card-d{font-size:var(--fs-xs);color:var(--muted);line-height:1.6}
 .card-go{
-  font-size:var(--fs-sm);color:var(--turq);margin-top:var(--sp-2);font-weight:600;
+  font-size:var(--fs-xs);color:var(--turq);margin-top:var(--sp-2);font-weight:600;
 }
 .card:hover .card-go{text-decoration:underline}
 
 /* ---- the shape of the whole thing ---- */
 .strip{
-  background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--charcoal-2);border:0;border-radius:var(--r-lg);
   padding:var(--sp-6) var(--sp-7);
 }
 .strip-h{font-size:var(--fs-xs);font-weight:700;color:var(--copper);letter-spacing:.4px;margin-bottom:var(--sp-4)}
@@ -197,7 +195,7 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
   list-style:none;counter-reset:s;margin-bottom:var(--sp-4);
 }
 .strip-steps li{
-  counter-increment:s;font-size:var(--fs-sm);color:var(--muted);
+  counter-increment:s;font-size:var(--fs-xs);color:var(--muted);
   display:flex;align-items:baseline;gap:var(--sp-3);
 }
 .strip-steps li::before{
@@ -209,15 +207,15 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 }
 .strip-steps li b{color:var(--ink);font-weight:600}
 .strip-steps li:not(:last-child)::after{content:"←";color:var(--line);margin-right:var(--sp-2)}
-.strip-n{font-size:var(--fs-sm);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--sp-4);max-width:var(--measure);}
+.strip-n{font-size:var(--fs-xs);color:var(--muted);border-top:1px solid var(--line);padding-top:var(--sp-4);max-width:var(--measure);}
 
 footer{
   margin-top:var(--sp-8);padding-top:var(--sp-6);border-top:1px solid var(--line);
-  font-size:var(--fs-sm);color:var(--muted);
+  font-size:var(--fs-xs);color:var(--muted);
 }
 footer a{color:var(--copper);text-decoration:underline;
   min-height:32px;display:inline-block;line-height:32px}
-footer a:hover{color:var(--cu-57)}
+footer a:hover{color:var(--cu-64)}
 
 /* see the note in post-call.css — a utility whose job is to win */
 .hidden{display:none !important}
@@ -227,7 +225,7 @@ footer a:hover{color:var(--cu-57)}
   h1{font-size:var(--fs-3xl)}
   .cards{grid-template-columns:1fr}
   .card{padding:var(--sp-5) var(--sp-6) var(--sp-5)}
-  .card-t{font-size:var(--fs-lg)}
+  .card-t{font-size:var(--fs-md)}
 }
 @media(prefers-reduced-motion:reduce){
   .card{transition:none}
@@ -240,7 +238,7 @@ footer a:hover{color:var(--cu-57)}
      5.48. With a ramp that names each step for its lightness, fixing a
      contrast failure is picking a different number rather than inventing
      a colour at the point of failure. */
-  .copy{white-space:nowrap;color:var(--nt-57)}
+  .copy{white-space:nowrap;color:var(--nt-34)}
 
   /* Present to assistive technology, absent from the page. clip-path with
      a 1px box rather than display:none, because a hidden element is not in

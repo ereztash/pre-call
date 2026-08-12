@@ -15,9 +15,11 @@
    The problem only appears once the rules are composed onto a page, and the
    only way to see it is to look at the page.
 
-   Reports, never fails. Every threshold below is currently violated, so
-   wiring this into CI today would just paint the build red and teach everyone
-   to ignore it. It flips to enforcing when the redesign lands.
+   This used to report and never fail, because every threshold below was
+   violated and a permanently red build teaches everyone to ignore it. The
+   redesign landed and all eighteen checks pass, so it enforces now: a finding
+   exits non-zero. That is the whole point of having written the thresholds
+   down before doing the work rather than after.
 
    Needs a browser, so it needs the one install step this repository allows:
 
@@ -71,19 +73,22 @@ const RULES = {
   },
   fillChroma: {
     max: 110,
-    why: 'Material dark-theme guidance: a colour that reads well on white ' +
-         'vibrates against a dark surface, so accents get desaturated for dark ' +
-         'themes rather than reused at full strength. This is the finding the ' +
-         'first pass of this file missed — it counted accent HUES, found one, ' +
-         'and passed the product. "Harsh" was never about how many hues were ' +
-         'on screen. It is about one hue at full chroma on a near-black page.'
+    why: 'The cap that named the "harsh" the designer saw. It was one hue at ' +
+         'full chroma (145) filling buttons on a near-black page — a colour ' +
+         'that reads well on white vibrates against a dark surface. The first ' +
+         'pass of this file counted accent HUES instead, found one, and passed ' +
+         'the product; variety was never the problem. The page is light now ' +
+         'and the fill is a deeper copper at 80, so the cap is slack — it ' +
+         'stays because full-chroma fills are the failure mode either way.'
   },
   valueJump: {
     max: 0.75,
-    why: 'A near-white panel dropped into a near-black page is the largest ' +
-         'value contrast available, spent on a container rather than on ' +
-         'meaning. Dark-theme guidance (Material) is to build elevation from ' +
-         'neighbouring greys, not from opposite ends of the ramp.'
+    why: 'Elevation is built from neighbouring tones, not from opposite ends ' +
+         'of the ramp. This caught the worst object in the old product: the ' +
+         'proposal sheet at #fff on a #14171a page, 0.99 — the largest ' +
+         'contrast available, spent on a container rather than on meaning. On ' +
+         'the light page the sheet is still white and the jump is 0.23, which ' +
+         'is the same design decision finally costing what it should.'
   }
 };
 
@@ -252,8 +257,9 @@ function probe() {
   srv.close();
 
   console.log('\n' + '='.repeat(74));
-  console.log(findings.length + ' finding(s). Reporting only — this does not fail the build yet.');
+  console.log(findings.length + ' finding(s).');
   console.log('='.repeat(74));
   for (const k in RULES) console.log('\n  ' + k + '\n    ' + RULES[k].why.replace(/(.{68}) /g, '$1\n    '));
   console.log('');
+  process.exit(findings.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
