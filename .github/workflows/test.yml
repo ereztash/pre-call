@@ -80,6 +80,16 @@ jobs:
       - name: issuing a licence key by hand
         run: node tools/mint-key.test.js
 
+      # The attention model decides where copy gets cut and where the product
+      # is allowed to end, so its arithmetic is worth pinning. Most of these
+      # assert properties rather than numbers — that completion depends only
+      # on the totals, that the one free parameter is solved against an
+      # external benchmark rather than swept, that a funnel can be
+      # structurally incapable of reaching a target no amount of editing
+      # would fix. Those are the claims the report is allowed to make.
+      - name: the attention model — what a word costs, and where the median leaves
+        run: node tools/attention.test.js
+
   # The whole product, in a real browser, in all three engines it will
   # actually be opened in. Separate job because it is the only thing here
   # that needs an install step — everything above runs on the standard
