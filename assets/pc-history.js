@@ -41,6 +41,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   /* Same five as deals.js calibration(), for the same reason: a ratio
      from two jobs is noise wearing a number. */
   const MIN_DELIVERIES = 5;
@@ -83,7 +86,7 @@
       .map(d => {
         const est = +d.estimatedHours, act = +d.outcome.actualHours;
         return {
-          id: d.id, client: d.client || 'ללא שם',
+          id: d.id, client: d.client || tr('ללא שם'),
           est, act,
           ratio: act / est,
           off: act / est - 1,
@@ -145,8 +148,10 @@
        which direction it moved. */
     const act = drifted ? recentMed : med;
     const alsoSay = drifted
-      ? ' (על פני כל ההיסטוריה זה ' + pct(Math.abs(med - 1)) + '%, ' +
-        (closer ? 'אבל המסירות האחרונות טובות יותר' : 'והמסירות האחרונות דווקא גרועות יותר') + ')'
+      ? tr(' (על פני כל ההיסטוריה זה {pct}%, {trend})', {
+          pct: pct(Math.abs(med - 1)),
+          trend: closer ? tr('אבל המסירות האחרונות טובות יותר') : tr('והמסירות האחרונות דווקא גרועות יותר')
+        })
       : '';
 
     if (typical && mostlyFine && Math.abs(out.worst.off) > CLOSE_ENOUGH * 2) {
@@ -154,30 +159,31 @@
          mean was not enough: the baseline is fine and one job broke. */
       out.verdict = {
         kind: 'outlier',
-        text: 'האומדן שלך מדויק ברוב המקרים — ' + out.within + ' מתוך ' + n +
-              ' בתוך ±' + pct(CLOSE_ENOUGH) + '%. מה שמושך את הממוצע הוא עבודה אחת: ' +
-              out.worst.client + ', ' + out.worst.est + ' שעות באומדן מול ' +
-              out.worst.act + ' בפועל. זו בעיית אפיון בסוג עבודה מסוים, לא בסיס שגוי.'
+        text: tr('האומדן שלך מדויק ברוב המקרים — {within} מתוך {n} בתוך ±{pct}%. מה שמושך את הממוצע הוא עבודה אחת: {client}, {est} שעות באומדן מול {act} בפועל. זו בעיית אפיון בסוג עבודה מסוים, לא בסיס שגוי.', {
+          within: out.within, n: n, pct: pct(CLOSE_ENOUGH),
+          client: out.worst.client, est: out.worst.est, act: out.worst.act
+        })
       };
     } else if (typical && mostlyFine) {
       out.verdict = {
         kind: 'holds',
-        text: 'האומדן שלך מחזיק: ' + out.within + ' מתוך ' + n +
-              ' בתוך ±' + pct(CLOSE_ENOUGH) + '%. אין כאן מה לתקן.'
+        text: tr('האומדן שלך מחזיק: {within} מתוך {n} בתוך ±{pct}%. אין כאן מה לתקן.', {
+          within: out.within, n: n, pct: pct(CLOSE_ENOUGH)
+        })
       };
     } else if (med > 1) {
       out.verdict = {
         kind: 'low',
-        text: 'האומדן שלך נמוך באופן שיטתי — ' + out.over + ' מתוך ' + n +
-              ' מסירות חרגו. הוספה של ' + pct(Math.abs(act - 1)) +
-              '% לאומדן תקרב אותו למציאות' + alsoSay + '.'
+        text: tr('האומדן שלך נמוך באופן שיטתי — {over} מתוך {n} מסירות חרגו. הוספה של {pct}% לאומדן תקרב אותו למציאות{alsoSay}.', {
+          over: out.over, n: n, pct: pct(Math.abs(act - 1)), alsoSay: alsoSay
+        })
       };
     } else {
       out.verdict = {
         kind: 'high',
-        text: 'האומדן שלך גבוה באופן שיטתי — ' + out.under + ' מתוך ' + n +
-              ' מסירות הסתיימו מתחת לאומדן, בפער טיפוסי של ' + pct(Math.abs(act - 1)) +
-              '%' + alsoSay + '. אתה כנראה מתמחר יותר שעות ממה שהעבודה לוקחת.'
+        text: tr('האומדן שלך גבוה באופן שיטתי — {under} מתוך {n} מסירות הסתיימו מתחת לאומדן, בפער טיפוסי של {pct}%{alsoSay}. אתה כנראה מתמחר יותר שעות ממה שהעבודה לוקחת.', {
+          under: out.under, n: n, pct: pct(Math.abs(act - 1)), alsoSay: alsoSay
+        })
       };
     }
     return out;
@@ -325,13 +331,12 @@
        The price evidence is untouched by this — no loss and no discount is real —
        so the finding still stands. What goes is the clause it cannot support. */
     const scopeKnown = (h.scopeTracked || 0) > 0 && h.widened !== null;
+    const scopeLine = scopeKnown ? tr(', ואף אחת לא קיבלה סעיף נוסף באותו מחיר') : '';
     return {
       n, lost, enough: true, untested: !moved, need: 0,
       text: moved ? null
-        : 'כל ' + n + ' ההצעות שהוכרעו נסגרו, אף אחת לא ירדה במחיר' +
-          (scopeKnown ? ', ואף אחת לא קיבלה סעיף נוסף באותו מחיר' : '') + '. ' +
-          'זה לא אומר שהמחיר נכון — זה אומר שהוא לא נבדק. ' +
-          'הקצה מתגלה בהצעה שלא נסגרה, ואין לך אחת כזאת.'
+        : tr('כל {n} ההצעות שהוכרעו נסגרו, אף אחת לא ירדה במחיר{scopeLine}. זה לא אומר שהמחיר נכון — זה אומר שהוא לא נבדק. הקצה מתגלה בהצעה שלא נסגרה, ואין לך אחת כזאת.',
+             { n: n, scopeLine: scopeLine })
     };
   }
 
@@ -349,10 +354,10 @@
       n: rows.length, early: +early.toFixed(2), late: +late.toFixed(2),
       improving: late < early,
       text: late < early
-        ? 'האומדן שלך משתפר: סטייה טיפוסית של ' + pct(early) + '% בהתחלה מול ' +
-          pct(late) + '% במסירות האחרונות.'
-        : 'האומדן שלך לא משתפר: סטייה טיפוסית של ' + pct(early) + '% בהתחלה מול ' +
-          pct(late) + '% במסירות האחרונות.'
+        ? tr('האומדן שלך משתפר: סטייה טיפוסית של {early}% בהתחלה מול {late}% במסירות האחרונות.',
+             { early: pct(early), late: pct(late) })
+        : tr('האומדן שלך לא משתפר: סטייה טיפוסית של {early}% בהתחלה מול {late}% במסירות האחרונות.',
+             { early: pct(early), late: pct(late) })
     };
   }
 
@@ -367,15 +372,15 @@
     const out = [];
 
     if (!acc.enough) out.push({
-      what: 'כמה מדויק האומדן שלך',
+      what: tr('כמה מדויק האומדן שלך'),
       need: MIN_DELIVERIES - acc.n,
-      text: 'צריך עוד ' + (MIN_DELIVERIES - acc.n) + ' מסירות עם שעות מדווחות. ' +
-            'עד אז טבלת האומדן נשארת מסומנת כלא-מכוילת.'
+      text: tr('צריך עוד {n} מסירות עם שעות מדווחות. עד אז טבלת האומדן נשארת מסומנת כלא-מכוילת.',
+               { n: MIN_DELIVERIES - acc.n })
     });
     if (acc.n < MIN_FOR_TREND) out.push({
-      what: 'האם האומדן שלך משתפר',
+      what: tr('האם האומדן שלך משתפר'),
       need: MIN_FOR_TREND - acc.n,
-      text: 'צריך ' + MIN_FOR_TREND + ' מסירות כדי להשוות את הראשונות לאחרונות.'
+      text: tr('צריך {n} מסירות כדי להשוות את הראשונות לאחרונות.', { n: MIN_FOR_TREND })
     });
 
     /* Same countdown shape as the two above, on the question the ledger can
@@ -384,23 +389,23 @@
        is on screen and a countdown beside it would contradict it. */
     const c = ceil || ceiling(list, null);
     if (!c.enough) out.push({
-      what: 'האם המחיר שלך נבדק בכלל',
+      what: tr('האם המחיר שלך נבדק בכלל'),
       need: c.need,
-      text: 'צריך ' + MIN_FOR_CEILING + ' הצעות שהוכרעו — נסגרו או נדחו. ' +
-            'הצעה שממתינה לתשובה עדיין לא אומרת כלום על המחיר.'
+      text: tr('צריך {n} הצעות שהוכרעו — נסגרו או נדחו. הצעה שממתינה לתשובה עדיין לא אומרת כלום על המחיר.',
+               { n: MIN_FOR_CEILING })
     });
 
     const short = m.rows.filter(r => !r.enough);
     if (!m.rows.length) out.push({
-      what: 'איזו שיטת תמחור עובדת לך',
+      what: tr('איזו שיטת תמחור עובדת לך'),
       need: MIN_PER_METHOD,
-      text: 'צריך לפחות ' + MIN_PER_METHOD + ' הצעות באותה שיטה.'
+      text: tr('צריך לפחות {n} הצעות באותה שיטה.', { n: MIN_PER_METHOD })
     });
     else if (short.length) out.push({
-      what: 'איזו שיטת תמחור עובדת לך',
+      what: tr('איזו שיטת תמחור עובדת לך'),
       need: Math.min(...short.map(r => MIN_PER_METHOD - r.quoted)),
       text: short.map(r => r.label + ' (' + r.quoted + '/' + MIN_PER_METHOD + ')').join(' · ') +
-            ' — עוד לא מספיק כדי לומר משהו.'
+            tr(' — עוד לא מספיק כדי לומר משהו.')
     });
 
     /* Same threshold, same sentence shape as the method countdown above. The
@@ -409,15 +414,15 @@
        only on enough rows. */
     const provShort = p.rows.filter(r => !r.enough);
     if (!p.rows.length) out.push({
-      what: 'מאיפה הגיע המספר בהצעות שנסגרו',
+      what: tr('מאיפה הגיע המספר בהצעות שנסגרו'),
       need: MIN_PER_METHOD,
-      text: 'צריך לפחות ' + MIN_PER_METHOD + ' הצעות שנרשם בהן מאיפה הגיע המספר.'
+      text: tr('צריך לפחות {n} הצעות שנרשם בהן מאיפה הגיע המספר.', { n: MIN_PER_METHOD })
     });
     else if (provShort.length) out.push({
-      what: 'מאיפה הגיע המספר בהצעות שנסגרו',
+      what: tr('מאיפה הגיע המספר בהצעות שנסגרו'),
       need: Math.min.apply(null, provShort.map(r => MIN_PER_METHOD - r.quoted)),
       text: provShort.map(r => r.label + ' (' + r.quoted + '/' + MIN_PER_METHOD + ')').join(' · ') +
-            ' — עוד לא מספיק כדי לומר משהו.'
+            tr(' — עוד לא מספיק כדי לומר משהו.')
     });
 
     /* A standing limitation, and the reason this list can never come back
@@ -429,20 +434,20 @@
        that stops qualifying itself once it has enough rows has learned
        the wrong lesson from having rows. */
     out.push({
-      what: 'מה זה לא',
+      what: tr('מה זה לא'),
       need: 0,
-      text: 'זה ' + count(acc.n, 'מסירה אחת שלך', 'מסירות שלך') +
-            ' — לא מדד שוק ולא השוואה לאף אחד אחר. ' +
-            'זה אומר לך אם האומדן שלך מדויק, לא אם המחיר שלך נכון.'
+      text: tr('זה {count} — לא מדד שוק ולא השוואה לאף אחד אחר. זה אומר לך אם האומדן שלך מדויק, לא אם המחיר שלך נכון.', {
+        count: count(acc.n, tr('מסירה אחת שלך'), tr('מסירות שלך'))
+      })
     });
 
     if (m.unattributed) out.push({
-      what: 'הצעות ישנות',
+      what: tr('הצעות ישנות'),
       need: 0,
-      text: count(m.unattributed, 'הצעה אחת נשמרה', 'הצעות נשמרו') +
-            ' לפני שהכלי תיעד איזו שיטה קבעה את המחיר בפועל, ולכן ' +
-            (m.unattributed === 1 ? 'היא לא נספרת' : 'הן לא נספרות') +
-            ' כאן. הצעות חדשות כן.'
+      text: tr('{count} לפני שהכלי תיעד איזו שיטה קבעה את המחיר בפועל, ולכן {clause} כאן. הצעות חדשות כן.', {
+        count: count(m.unattributed, tr('הצעה אחת נשמרה'), tr('הצעות נשמרו')),
+        clause: m.unattributed === 1 ? tr('היא לא נספרת') : tr('הן לא נספרות')
+      })
     });
 
     /* The same disclosure on the second axis, and it is not optional. Found by
@@ -463,12 +468,12 @@
        the ones that do. */
 
     if (p.unattributed) out.push({
-      what: 'הצעות בלי מקור למספר',
+      what: tr('הצעות בלי מקור למספר'),
       need: 0,
-      text: count(p.unattributed, 'הצעה אחת נשמרה', 'הצעות נשמרו') +
-            ' בלי שנרשם מאיפה הגיע המספר, ולכן ' +
-            (p.unattributed === 1 ? 'היא לא נספרת' : 'הן לא נספרות') +
-            ' בטבלה הזאת.'
+      text: tr('{count} בלי שנרשם מאיפה הגיע המספר, ולכן {clause} בטבלה הזאת.', {
+        count: count(p.unattributed, tr('הצעה אחת נשמרה'), tr('הצעות נשמרו')),
+        clause: p.unattributed === 1 ? tr('היא לא נספרת') : tr('הן לא נספרות')
+      })
     });
 
     return out;

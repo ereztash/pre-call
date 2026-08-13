@@ -32,7 +32,8 @@
       .replace(/\.html$/, '') || 'index';
     var dicts = { 'index': ['entry'], 'pre-call': ['pre-call'],
                   'post-call': ['post-call', 'post-call-tools'],
-                  'privacy': ['privacy'] }[page];
+                  'privacy': ['privacy'],
+                  'accessibility': ['accessibility'] }[page];
     if (dicts) document.write(['common'].concat(dicts).map(function(d){
       return '<script src="assets/en-' + d + '.js"><\/script>';
     }).join(''));

@@ -17,6 +17,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const escape = s => (s || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
   const he = d => d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear();
   const n0 = v => Math.round(v).toLocaleString('en-US');
@@ -51,27 +54,36 @@
   }
 
   function rationaleFor(m, ils, viz) {
+    const heading = tr('מאיפה המחיר.');
     if (m.method === 'value' && m.annualValue) {
-      return `<div class="rationale"><b>מאיפה המחיר.</b> התהליך עולה כ-${ils(m.annualValue)} בשנה.
-        המחיר הוא ${Math.round(m.price / m.annualValue * 100)}% מהערך של השנה הראשונה,
-        וההשקעה מחזירה את עצמה תוך כ-${m.payback.toFixed(1)} שבועות.
-        משנה שנייה ואילך זה חיסכון מלא.${paybackGrid(viz)}</div>`;
+      return `<div class="rationale"><b>${heading}</b> ` +
+        tr('התהליך עולה כ-{annual} בשנה. המחיר הוא {pct}% מהערך של השנה הראשונה, וההשקעה מחזירה את עצמה תוך כ-{payback} שבועות. משנה שנייה ואילך זה חיסכון מלא.', {
+          annual: ils(m.annualValue),
+          pct: Math.round(m.price / m.annualValue * 100),
+          payback: m.payback.toFixed(1)
+        }) + paybackGrid(viz) + `</div>`;
     }
     if (m.method === 'market' && m.M.market) {
-      return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.M.market.basis} לעבודה בהיקף הזה.
-        המחיר בטווח המקובל${m.annualValue ? `, והתהליך עולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
+      const annualPart = m.annualValue
+        ? tr(', והתהליך עולה לך כ-{annual} בשנה', { annual: ils(m.annualValue) }) : '';
+      return `<div class="rationale"><b>${heading}</b> ` +
+        tr('{basis} לעבודה בהיקף הזה. המחיר בטווח המקובל{annualPart}.',
+           { basis: m.M.market.basis, annualPart: annualPart }) + `</div>`;
     }
     if (m.method === 'cost') {
       // The hour breakdown stays out of the client's copy on purpose. Justifying a
       // price with hours invites a negotiation about hours, and the anchor is
       // supposed to be what the work is worth, not what it costs to produce.
-      return `<div class="rationale"><b>מאיפה המחיר.</b> ${m.annualValue
-        ? `התהליך עולה לך כ-${ils(m.annualValue)} בשנה. המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל".`
-        : 'המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל" ומהגבולות שמפורטים תחתיו.'}</div>`;
+      const costText = m.annualValue
+        ? tr('התהליך עולה לך כ-{annual} בשנה. המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל".', { annual: ils(m.annualValue) })
+        : tr('המחיר נגזר מההיקף שמפורט בסעיף "מה נכלל" ומהגבולות שמפורטים תחתיו.');
+      return `<div class="rationale"><b>${heading}</b> ${costText}</div>`;
     }
     if (m.method === 'comparable' && m.M.comparable) {
-      return `<div class="rationale"><b>מאיפה המחיר.</b> עבודה דומה שביצעתי, מותאמת להיקף כאן${
-        m.annualValue ? `. התהליך עולה לך כ-${ils(m.annualValue)} בשנה` : ''}.</div>`;
+      const annualPart = m.annualValue
+        ? tr('. התהליך עולה לך כ-{annual} בשנה', { annual: ils(m.annualValue) }) : '';
+      return `<div class="rationale"><b>${heading}</b> ` +
+        tr('עבודה דומה שביצעתי, מותאמת להיקף כאן{annualPart}.', { annualPart: annualPart }) + `</div>`;
     }
     return '';
   }
@@ -107,7 +119,7 @@
     return t;
   }
 
-  const DEFAULT_TERMS = 'תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.';
+  const DEFAULT_TERMS = tr('תשלום חד-פעמי, לא כולל מע"מ. 50% בהתחלה, 50% במסירה.');
 
   /* What stands where the document goes before there is a document.
      The page used to render a complete, official-looking proposal for a
@@ -119,9 +131,9 @@
   function blank(next) {
     return `
 <div class="doc-empty">
-  <div class="doc-empty-t">כאן תיכתב ההצעה</div>
-  <p>היא נבנית תוך כדי המילוי, ומתעדכנת אחרי כל שינוי. אין שלב נפרד של כתיבה.</p>
-  ${next ? `<p class="doc-empty-n"><b>הדבר הבא:</b> ${escape(next)}</p>` : ''}
+  <div class="doc-empty-t">${tr('כאן תיכתב ההצעה')}</div>
+  <p>${tr('היא נבנית תוך כדי המילוי, ומתעדכנת אחרי כל שינוי. אין שלב נפרד של כתיבה.')}</p>
+  ${next ? `<p class="doc-empty-n"><b>${tr('הדבר הבא:')}</b> ${escape(next)}</p>` : ''}
 </div>`;
   }
 
@@ -143,9 +155,9 @@
     // against a criterion the client wrote, which can be absolute ("nothing ever
     // slips") — an unbounded obligation for someone who won't spot it.
     const tuneCap = Math.max(4, Math.round(m.effort * 0.15));
-    const client = f.client || 'הלקוח';
+    const client = f.client || tr('הלקוח');
     const successLine = f.success ||
-      (m.hours ? 'החזרת כ-' + Math.round(m.hours / 52) + ' שעות עבודה בשבוע' : 'התהליך רץ בלי מגע יד');
+      (m.hours ? tr('החזרת כ-{h} שעות עבודה בשבוע', { h: Math.round(m.hours / 52) }) : tr('התהליך רץ בלי מגע יד'));
     const title = titleFrom(f.process);
 
     /* The letterhead. Absent for the whole life of the product until
@@ -183,26 +195,34 @@
        to the entry page rather than to either tool, because that page asks one
        question and routes, which is what a stranger needs. */
     const attribution = (ctx.sender && ctx.sender.attribution === false) ? '' : `
-<div class="madewith">נבנה עם POST-CALL · <a href="https://pre-call-swart.vercel.app/">pre-call-swart.vercel.app</a></div>`;
+<div class="madewith">${tr('נבנה עם POST-CALL')} · <a href="https://pre-call-swart.vercel.app/">pre-call-swart.vercel.app</a></div>`;
 
-    return `
-${from}
-<h3>הצעה · אוטומציה של ${escape(title || 'התהליך')}</h3>
-<div class="meta">${escape(client)} · ${dstr} · בתוקף עד ${vstr}</div>
+    /* Each fragment below is translated on its own, then spliced into the
+       document as an already-resolved string — never as a Hebrew literal
+       sitting inside a tr() call next to a ${}. Optional blocks (trigger,
+       deadline, decider, previous attempt) resolve to '' when absent, so
+       the surrounding layout does not have to know which language is
+       showing through it. */
+    const titleLine = tr('הצעה · אוטומציה של {title}', { title: escape(title || tr('התהליך')) });
+    const metaLine = tr('{client} · {date} · בתוקף עד {valid}', { client: escape(client), date: dstr, valid: vstr });
+    const triggerBlock = f.trigger ? `<h4>${tr('למה עכשיו')}</h4><p>${escape(f.trigger)}</p>` : '';
+    const processText = escape(f.process || tr('התהליך מתבצע ידנית.'));
 
-${f.trigger ? `<h4>למה עכשיו</h4><p>${escape(f.trigger)}</p>` : ''}
+    const runsPart = m.runs ? tr('התהליך רץ כ-{n} פעמים בשנה, ', { n: n0(m.runs) }) : '';
+    const hoursPart = m.hours ? tr('{n} שעות עבודה', { n: n0(m.hours) }) : '';
+    const errPart = m.errValue ? tr(', ובנוסף {v} בשנה בתקלות', { v: ils(m.errValue) }) : '';
+    const roiLine = (m.annualValue && !a.suppressRoi)
+      ? `<p><b>${tr('העלות של זה:')}</b> ${runsPart}${hoursPart}${errPart}. ` +
+        tr('סה"כ כ-<b>{total} בשנה</b>.', { total: ils(m.annualValue) }) + `</p>`
+      : '';
 
-<h4>מה קורה היום</h4>
-<p>${escape(f.process || 'התהליך מתבצע ידנית.')}</p>
-${m.annualValue && !a.suppressRoi ? `<p><b>העלות של זה:</b> ${m.runs ? 'התהליך רץ כ-' + n0(m.runs) + ' פעמים בשנה, ' : ''}${m.hours ? n0(m.hours) + ' שעות עבודה' : ''}${m.errValue ? ', ובנוסף ' + ils(m.errValue) + ' בשנה בתקלות' : ''}. סה"כ כ-<b>${ils(m.annualValue)} בשנה</b>.</p>` : ''}
-
-${scope.in.length ? `<h4>מה נכלל</h4>
+    const inclList = scope.in.length ? `<h4>${tr('מה נכלל')}</h4>
 <!-- This is what the client is buying, so it carries the weight the
      exclusions used to take. -->
 <ul class="incl">${scope.in.map((i, ix) =>
-  `<li>${escape(i.t)}${ix === 0 && systems.length ? ', כולל החיבורים בין ' + escape(systems.join(', ')) : ''}</li>`).join('')}</ul>` : ''}
+  `<li>${escape(i.t)}${ix === 0 && systems.length ? tr(', כולל החיבורים בין {systems}', { systems: escape(systems.join(', ')) }) : ''}</li>`).join('')}</ul>` : '';
 
-${scope.out.length ? `<h4>מה לא נכלל</h4>
+    const exclList = scope.out.length ? `<h4>${tr('מה לא נכלל')}</h4>
 <!-- These used to be red, and there were nine of them against six plain
      lines of what the client does get — which made the largest, loudest
      block on the page the list of what they are not buying. Red is the
@@ -212,25 +232,17 @@ ${scope.out.length ? `<h4>מה לא נכלל</h4>
      the emphasis matches the meaning and the distinction survives without
      colour (WCAG 1.4.1). -->
 <ul class="excl">${scope.out.map(i => `<li>${escape(i.t)}</li>`).join('')}</ul>
-<p class="fine">כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.</p>` : ''}
+<p class="fine">${tr('כל אחד מהסעיפים האלה ניתן לביצוע, ויתומחר בנפרד לפי אותו תעריף.')}</p>` : '';
 
-${scope.extra.length ? `<h4>זמין בתוספת תשלום</h4>
+    const extraList = scope.extra.length ? `<h4>${tr('זמין בתוספת תשלום')}</h4>
 <!-- The third of three lists, and it was the only one left on a default
      bullet once the other two got markers. Three categories, three
      marks — a plus, because that is exactly what this one is. -->
-<ul class="plus">${scope.extra.map(i => `<li>${escape(i.t)}</li>`).join('')}</ul>` : ''}
+<ul class="plus">${scope.extra.map(i => `<li>${escape(i.t)}</li>`).join('')}</ul>` : '';
 
-<h4 class="moment">המחיר</h4>
-<div class="pricebox">
-  <div class="amt">${ils(m.price)}</div>
-  <div class="fine mt4">${escape(terms)}</div>
-</div>
-${a.suppressRoi ? '' : rationaleFor(m, ils, ctx.viz)}
-
-<h4 class="moment">לוח זמנים</h4>
-<table>
-  <tr><th>שלב</th><th>מה קורה</th><th>משך</th></tr>
-  <tr><td>מיפוי</td><td>ישיבה אחת, ואני חוזר עם תרשים התהליך לאישור</td><td>שבוע</td></tr>
+    const timelineTable = `<table>
+  <tr><th>${tr('שלב')}</th><th>${tr('מה קורה')}</th><th>${tr('משך')}</th></tr>
+  <tr><td>${tr('מיפוי')}</td><td>${tr('ישיבה אחת, ואני חוזר עם תרשים התהליך לאישור')}</td><td>${tr('שבוע')}</td></tr>
   <!-- No hour count here. rationaleFor() above states the rule plainly —
        justifying a price with hours invites a negotiation about hours, and
        the anchor is meant to be what the work is worth rather than what it
@@ -239,24 +251,65 @@ ${a.suppressRoi ? '' : rationaleFor(m, ils, ctx.viz)}
        operator's screen and in the ledger, where it is theirs. What the
        client is owed here is how long it takes, which is the column beside
        it and is unchanged. -->
-  <tr><td>בנייה</td><td>פיתוח והטמעה של התהליך</td><td>${Math.max(1, Math.ceil(m.effort/12))} עד ${Math.max(2, Math.ceil(m.effort/8))} שבועות</td></tr>
-  <tr><td>בדיקה</td><td>הרצה על נתונים אמיתיים במקביל לתהליך הקיים</td><td>שבוע</td></tr>
-  <tr><td>מסירה</td><td>הדרכה, תיעוד, ואז שבועיים ליווי</td><td>שבועיים</td></tr>
-</table>
-${f.deadline ? `<p class="mt8">היעד שהגדרת: <b>${escape(f.deadline)}</b>.</p>` : ''}
+  <tr><td>${tr('בנייה')}</td><td>${tr('פיתוח והטמעה של התהליך')}</td><td>${
+    tr('{lo} עד {hi} שבועות', { lo: Math.max(1, Math.ceil(m.effort/12)), hi: Math.max(2, Math.ceil(m.effort/8)) })}</td></tr>
+  <tr><td>${tr('בדיקה')}</td><td>${tr('הרצה על נתונים אמיתיים במקביל לתהליך הקיים')}</td><td>${tr('שבוע')}</td></tr>
+  <tr><td>${tr('מסירה')}</td><td>${tr('הדרכה, תיעוד, ואז שבועיים ליווי')}</td><td>${tr('שבועיים')}</td></tr>
+</table>`;
+    const deadlineBlock = f.deadline
+      ? `<p class="mt8">${tr('היעד שהגדרת:')} <b>${escape(f.deadline)}</b>.</p>` : '';
 
-<h4>איך נדע שזה הצליח</h4>
-<p>${escape(successLine)}. נמדוד את זה 30 יום אחרי המסירה.
-אם לא הגענו לשם בגלל משהו בבנייה, אני מכוונן ללא תוספת תשלום, עד ${tuneCap} שעות עבודה.
-מעבר לזה, או אם נדרש שינוי בתהליך עצמו או במערכות, נתמחר בנפרד לפי אותו תעריף.</p>
+    const howPara = `<p>${escape(successLine)}. ` +
+      tr('נמדוד את זה 30 יום אחרי המסירה. אם לא הגענו לשם בגלל משהו בבנייה, אני מכוונן ללא תוספת תשלום, עד {cap} שעות עבודה. מעבר לזה, או אם נדרש שינוי בתהליך עצמו או במערכות, נתמחר בנפרד לפי אותו תעריף.',
+        { cap: tuneCap }) + `</p>`;
 
-${clauses.map(c => `<h4>${escape(c.h)}</h4><p>${escape(c.p)}</p>`).join('\n')}
+    const clausesBlock = clauses.map(c => `<h4>${escape(c.h)}</h4><p>${escape(c.p)}</p>`).join('\n');
 
-${f.prev ? `<h4>מה שונה הפעם</h4><p>ניסיתם כבר: ${escape(f.prev)}. ההצעה הזו נבדלת בכך שהמסירה כוללת תיעוד והדרכה, והאחריות על ההטמעה היא שלי ולא שלכם.</p>` : ''}
+    const prevBlock = f.prev ? `<h4>${tr('מה שונה הפעם')}</h4><p>` +
+      tr('ניסיתם כבר: {prev}. ההצעה הזו נבדלת בכך שהמסירה כוללת תיעוד והדרכה, והאחריות על ההטמעה היא שלי ולא שלכם.',
+         { prev: escape(f.prev) }) + `</p>` : '';
 
-<h4 class="moment">ההחלטה</h4>
-<p>ההצעה בתוקף עד ${vstr}.${f.decider ? ' מי שצריך לאשר: ' + escape(f.decider) + '.' : ''}
-כדי להתחיל, אישור בכתב על ההצעה הזו והתשלום הראשון.</p>
+    const deciderPart = f.decider ? tr(' מי שצריך לאשר: {decider}.', { decider: escape(f.decider) }) : '';
+    const decisionPara = `<p>` + tr('ההצעה בתוקף עד {valid}.{decider}\nכדי להתחיל, אישור בכתב על ההצעה הזו והתשלום הראשון.',
+      { valid: vstr, decider: deciderPart }) + `</p>`;
+
+    return `
+${from}
+<h3>${titleLine}</h3>
+<div class="meta">${metaLine}</div>
+
+${triggerBlock}
+
+<h4>${tr('מה קורה היום')}</h4>
+<p>${processText}</p>
+${roiLine}
+
+${inclList}
+
+${exclList}
+
+${extraList}
+
+<h4 class="moment">${tr('המחיר')}</h4>
+<div class="pricebox">
+  <div class="amt">${ils(m.price)}</div>
+  <div class="fine mt4">${escape(terms)}</div>
+</div>
+${a.suppressRoi ? '' : rationaleFor(m, ils, ctx.viz)}
+
+<h4 class="moment">${tr('לוח זמנים')}</h4>
+${timelineTable}
+${deadlineBlock}
+
+<h4>${tr('איך נדע שזה הצליח')}</h4>
+${howPara}
+
+${clausesBlock}
+
+${prevBlock}
+
+<h4 class="moment">${tr('ההחלטה')}</h4>
+${decisionPara}
 ${sender ? `<p class="signoff">${escape(sender.name)}${sender.contact.length ? ' · ' + escape(sender.contact[0]) : ''}</p>` : ''}
 ${attribution}
 `;

@@ -37,6 +37,9 @@
    The manual state is the one this product is actually in, and it is not a
    placeholder: taking money by hand for the first handful of buyers is a
    decision, not a gap. What it needs is a wall that says so. */
+var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+  : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
 const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
 
 /* Fill in ONE of these to start selling. `contact` is where a buyer asks for a
@@ -51,7 +54,7 @@ const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
    local number. gate.test.js pins the shape. */
 const SALES = {
   contact: 'https://wa.me/972524545963',
-  turnaround: 'בדרך כלל תוך כמה שעות, ולא יותר מיום עסקים אחד'
+  turnaround: tr('בדרך כלל תוך כמה שעות, ולא יותר מיום עסקים אחד')
 };
 const KEY_SHAPE = /^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const KEY_STORE = 'postcall_key';
@@ -105,7 +108,7 @@ async function tryUnlock(){
 
   // A malformed key never reaches the network — no point spending one of the
   // ten attempts per ten minutes on something the regex already rejected.
-  if (!KEY_SHAPE.test(raw)) return showKeyErr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.');
+  if (!KEY_SHAPE.test(raw)) return showKeyErr(tr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.'));
 
   unlockBusy = true;
   show('keyErr', false);
@@ -113,10 +116,10 @@ async function tryUnlock(){
   unlockBusy = false;
 
   if (remote === 'throttled')
-    return showKeyErr('יותר מדי ניסיונות. נסה שוב בעוד כמה דקות.');
+    return showKeyErr(tr('יותר מדי ניסיונות. נסה שוב בעוד כמה דקות.'));
   // remote === null means the server had no opinion; the checksum decides
   const ok = remote === null ? keyValid(raw) : remote;
-  if (!ok) return showKeyErr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.');
+  if (!ok) return showKeyErr(tr('המפתח לא תקין. בדוק שהעתקת אותו במלואו.'));
 
   unlocked = true;
   show('wall', false);
@@ -254,9 +257,9 @@ function renderBuyRoute(){
   if (route === 'manual') {
     // never "קנה" here: that promises a key on the spot, and this one arrives
     // when a person sends it
-    setText('payBtn', 'בקשו מפתח בהודעה');
-    setText('buyHow', 'התשלום נסגר איתי ישירות, והמפתח נשלח ביד — ' + SALES.turnaround +
-      '. בהודעה כתבו שם, ואת המייל שאליו לשלוח את המפתח.');
+    setText('payBtn', tr('בקשו מפתח בהודעה'));
+    setText('buyHow', tr('התשלום נסגר איתי ישירות, והמפתח נשלח ביד — {turnaround}. בהודעה כתבו שם, ואת המייל שאליו לשלוח את המפתח.',
+      { turnaround: SALES.turnaround }));
     /* The text under the button is the fallback for the case where the button
        did nothing — a blocked popup, no WhatsApp on this machine. So it has to
        be the thing itself and not a route to it: an email address reads as an
@@ -272,7 +275,7 @@ function renderBuyRoute(){
   // thing that still works — a key somebody already holds — stays.
   show('wallPrice', false);
   show('payBtn', false);
-  setText('buyHow', 'הכלי עוד לא נמכר, ואין כרגע דרך לקנות מפתח. אם כבר יש לכם מפתח, הפעילו אותו כאן.');
+  setText('buyHow', tr('הכלי עוד לא נמכר, ואין כרגע דרך לקנות מפתח. אם כבר יש לכם מפתח, הפעילו אותו כאן.'));
   setText('buyContact', '');
   show('buyRoute', true);
 }
@@ -305,9 +308,8 @@ function renderKeyAhead(hasRealPrice){
   const worth = keyAheadPriced && !unlocked && !keyAheadDismissed && salesRoute() !== 'none';
   if (!worth) { show('keyAhead', false); return; }
   setText('keyAheadText', salesRoute() === 'manual'
-    ? 'שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח, והוא נשלח ביד. ' +
-      'בקשו אותו עכשיו, בזמן שאתם עוד עובדים, כדי לא לחכות לו כשההצעה מוכנה לשליחה.'
-    : 'שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח. אפשר לסדר את זה עכשיו.');
+    ? tr('שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח, והוא נשלח ביד. בקשו אותו עכשיו, בזמן שאתם עוד עובדים, כדי לא לחכות לו כשההצעה מוכנה לשליחה.')
+    : tr('שלוש הפעולות שמוציאות את ההצעה — העתקה, PDF ושליחה — דורשות מפתח. אפשר לסדר את זה עכשיו.'));
   show('keyAhead', true);
 }
 

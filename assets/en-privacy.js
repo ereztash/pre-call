@@ -4,7 +4,8 @@
    shipped pages and modules and fails when a Hebrew string has no
    entry here, so a copy edit cannot silently ship untranslated. */
 if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
-
+  'טבלת המפתחות שנשמרים בדפדפן': 'Table of the keys stored in the browser',
+  'טבלת נקודות הקצה בשרת': 'Table of the server endpoints',
   /* ---------- head + header ---------- */
   'פרטיות · PRE-CALL / POST-CALL': 'Privacy · PRE-CALL / POST-CALL',
   'מה קורה בפועל עם המידע שעובר דרך PRE-CALL ו-POST-CALL':

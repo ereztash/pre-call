@@ -334,11 +334,20 @@ async function seedLang(ctx){
     await p.close();
   });
 
-  console.log('\nprivacy');
+  console.log('\nprivacy and the accessibility statement');
   await test('the privacy page', async () => {
     const p = await ctx.newPage();
     await p.goto(base + '/privacy.html');
     await scan(p, 'privacy.html');
+    await p.close();
+  });
+
+  await test('the accessibility statement itself', async () => {
+    /* A page that claims conformance and fails it would be the single
+       most embarrassing defect available here. */
+    const p = await ctx.newPage();
+    await p.goto(base + '/accessibility.html');
+    await scan(p, 'accessibility.html');
     await p.close();
   });
 
@@ -347,7 +356,7 @@ async function seedLang(ctx){
     const narrow = await browser.newContext({ viewport: { width: 320, height: 720 },
                                               colorScheme: SCHEME });
     await seedLang(narrow);
-    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html', '/accessibility.html']) {
       const p = await narrow.newPage();
       await p.goto(base + page);
       await p.waitForTimeout(200);
@@ -370,7 +379,7 @@ async function seedLang(ctx){
 
   console.log('\nkeyboard, before anything else');
   await test('the first Tab reaches a skip link, and it goes to the content', async () => {
-    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html', '/accessibility.html']) {
       const p = await ctx.newPage();
       await p.goto(base + page);
       await p.keyboard.press('Tab');
@@ -410,7 +419,7 @@ async function seedLang(ctx){
        button is focused programmatically, so a scripted loop reports
        every button in the product as unfocusable. The criterion is about
        the keyboard, so the test uses the keyboard. */
-    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html', '/accessibility.html']) {
       const p = await ctx.newPage();
       await p.goto(base + page);
       await p.waitForTimeout(300);
@@ -422,7 +431,8 @@ async function seedLang(ctx){
          value being measured, only about when it is safe to read. */
       await p.addStyleTag({ content: '*{transition:none !important;animation:none !important}' });
       const blind = [];
-      const seen = new Set();
+      const seen = new Set();     // one report per KIND, so a list of 40 links is one line
+      let stops = 0;              // and a separate count of actual tab stops
       for (let i = 0; i < 120; i++) {
         await p.keyboard.press('Tab');
         const at = await p.evaluate(() => {
@@ -438,11 +448,15 @@ async function seedLang(ctx){
           };
         });
         if (!at) break;
-        if (seen.has(at.id)) continue;          // one report per kind, not per instance
+        stops++;
+        if (seen.has(at.id)) continue;
         seen.add(at.id);
         if (!at.ring && !at.shadow && !at.bordered) blind.push(at.id);
       }
-      assert.ok(seen.size > 3, page + ': Tab reached only ' + seen.size + ' elements — is the page focusable at all?');
+      /* Guards the instrument, not the product: if Tab reaches almost
+         nothing the loop found no page rather than a clean one. Counted in
+         stops, because a page of links is many stops and one kind. */
+      assert.ok(stops > 3, page + ': Tab reached only ' + stops + ' elements — is the page focusable at all?');
       assert.deepStrictEqual(blind, [],
         page + ': focusable with no visible focus indicator:\n         ' + blind.join('\n         '));
       await p.close();
@@ -497,7 +511,7 @@ async function seedLang(ctx){
        the reader, with no loss of content or function. A fixed height
        anywhere turns that into clipped text, and it is invisible until
        somebody with dyslexia opens the page with their own stylesheet. */
-    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html', '/accessibility.html']) {
       const p = await ctx.newPage();
       await p.goto(base + page);
       await p.waitForTimeout(200);
@@ -533,7 +547,7 @@ async function seedLang(ctx){
     const zoom = await browser.newContext({ viewport: { width: 320, height: 512 },
                                             colorScheme: SCHEME });
     await seedLang(zoom);
-    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
+    for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html', '/accessibility.html']) {
       const p = await zoom.newPage();
       await p.goto(base + page);
       await p.waitForTimeout(300);
