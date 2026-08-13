@@ -177,7 +177,7 @@ console.log('\nlandmarks and the way past them');
    reports nothing because nothing is wrong — there is simply nothing
    there. A new page added to this product would arrive without either of
    these unless a test asks for them by name. */
-for (const f of ['index.html', 'pre-call.html', 'post-call.html', 'privacy.html']) {
+for (const f of ['index.html', 'pre-call.html', 'post-call.html', 'privacy.html', 'accessibility.html']) {
   test(f + ' opens with a skip link that points at a real landmark', () => {
     const page = read(f);
     const skip = page.match(/<a class="skip" href="#([\w-]+)"[^>]*>/);
@@ -504,9 +504,9 @@ console.log('\nhow a link to this looks when somebody sends it');
    into WhatsApp, and without these that link renders as a bare URL — no
    title, no picture, nothing saying what it is. Nothing was broken, which
    is exactly why nothing here ever caught it. */
-const SHARE_PAGES = [...PAGES, 'privacy.html'];
+const SHARE_PAGES = [...PAGES, 'privacy.html', 'accessibility.html'];
 for (const f of SHARE_PAGES) {
-  const src = f === 'privacy.html' ? read(f) : html[f];
+  const src = html[f] || read(f);
   test(f + ' can be shared as a link', () => {
     const need = ['og:title', 'og:description', 'og:image', 'og:url', 'og:type'];
     const absent = need.filter(t => !src.includes('property="' + t + '"'));
@@ -518,7 +518,7 @@ for (const f of SHARE_PAGES) {
   test(f + ' describes itself differently from the other pages', () => {
     const desc = (src.match(/<meta name="description" content="([^"]+)"/) || [])[1] || '';
     const others = SHARE_PAGES.filter(x => x !== f)
-      .map(x => ((x === 'privacy.html' ? read(x) : html[x])
+      .map(x => ((html[x] || read(x))
         .match(/<meta name="description" content="([^"]+)"/) || [])[1] || '');
     assert.ok(!others.includes(desc),
       'two pages share one description — a copied boilerplate line, not a description');
@@ -616,7 +616,8 @@ console.log('\nreachable from outside');
    checked for agreement — against the canonical tags, which are what the pages
    themselves claim. */
 const SITE_PAGES = { 'index.html': '/', 'post-call.html': '/post-call',
-                     'pre-call.html': '/pre-call', 'privacy.html': '/privacy' };
+                     'pre-call.html': '/pre-call', 'privacy.html': '/privacy',
+                     'accessibility.html': '/accessibility' };
 /* Read defensively, and not out of politeness. The first version of this block
    called read() at the top level, and with the files absent the suite died on
    require with a stack trace instead of reporting a failure — taking every
@@ -642,7 +643,7 @@ test('the sitemap is a sitemap — the namespace is the one crawlers look for', 
 });
 test('every address in the sitemap is the address its page calls canonical', () => {
   const canonical = Object.keys(SITE_PAGES).map(f =>
-    ((f === 'privacy.html' ? read(f) : html[f])
+    ((html[f] || read(f))
       .match(/<link rel="canonical" href="([^"]+)"/) || [])[1] || f + ': no canonical');
   assert.deepStrictEqual([...locs].sort(), [...canonical].sort(),
     'the sitemap and the canonical tags name different addresses — a crawler is ' +

@@ -108,7 +108,8 @@ const PAGE_DICT = {
   'index.html': ['assets/en-entry.js'],
   'pre-call.html': ['assets/en-pre-call.js'],
   'post-call.html': ['assets/en-post-call.js', 'assets/en-post-call-tools.js'],
-  'privacy.html': ['assets/en-privacy.js']
+  'privacy.html': ['assets/en-privacy.js'],
+  'accessibility.html': ['assets/en-accessibility.js']
 };
 
 function pagePlan() {

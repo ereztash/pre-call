@@ -4,6 +4,10 @@
    shipped pages and modules and fails when a Hebrew string has no
    entry here, so a copy edit cannot silently ship untranslated. */
 if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
+  'דלג לתוכן': 'Skip to content',
+  'נגישות': 'Accessibility',
+  'דף הפתיחה': 'Entry page',
+  'שלבי הכלי': 'Tool steps',
 
   /* ---------- entry.js ---------- */
   'יש הצעה שלא סיימתם, של {name}.': 'You have an unfinished proposal, for {name}.',

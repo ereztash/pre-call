@@ -873,7 +873,13 @@ async function journey(engineName, base) {
      stays as a looser second guard, because a page that grows without bound is
      still worse than one that does not, but it is no longer the headline. */
   const SECTION_CONTROL_CEILING = 48;   // measured 44 in the proposal form
-  const PAGE_CONTROL_CEILING = 95;      // measured 91 across the whole page
+  /* 95 → 97, and the two are named rather than absorbed: the theme toggle
+     and the language toggle, which sit on every page of the product. They
+     are real decisions and Hick's law does not care that they are chrome —
+     so the ceiling moves by exactly two and not by "a bit of room". The
+     section ceiling below is the one that matters and it did not move:
+     these two are not in any section. */
+  const PAGE_CONTROL_CEILING = 97;      // measured 91, then 93 across the whole page
 
   await test(label('no single section puts more choices in front of you than it has to'), async () => {
     /* Its own context at a pinned viewport, because the number is meaningless

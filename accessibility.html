@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הצהרת נגישות · PRE-CALL / POST-CALL</title>
+<meta name="description" content="מה נבדק, איך, ומה עוד לא — הצהרת נגישות שנגזרת מהבדיקות שרצות על כל דחיפה, לא מתבנית.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://pre-call-swart.vercel.app/accessibility">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PRE-CALL · POST-CALL">
+<meta property="og:locale" content="he_IL">
+<meta property="og:url" content="https://pre-call-swart.vercel.app/accessibility">
+<meta property="og:title" content="הצהרת נגישות · PRE-CALL / POST-CALL">
+<meta property="og:description" content="מה נבדק, איך, ומה עוד לא — הצהרת נגישות שנגזרת מהבדיקות שרצות על כל דחיפה, לא מתבנית.">
+<meta property="og:image" content="https://pre-call-swart.vercel.app/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="מהשיחה להצעה מתומחרת — PRE-CALL ו-POST-CALL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#e2e5e9">
+<script src="assets/pc-i18n.js"></script>
+<script src="assets/pc-boot.js"></script>
+<link rel="stylesheet" href="assets/pre-call.css">
+<link rel="stylesheet" href="assets/theme.css">
+</head>
+<body>
+<a class="skip" href="#main">דלג לתוכן</a>
+<div class="prefs" id="prefsBar"></div>
+<div class="wrap">
+
+<header>
+  <h1>הצהרת נגישות</h1>
+  <div class="sub">מה נבדק, באיזה כלי, ומה עוד לא</div>
+  <!-- ============ why this page reads the way it does ============
+       The template version of this page says "we are committed to
+       accessibility" and names a standard. That is a statement of
+       intent, and intent is not checkable — which is the one thing this
+       product's documents refuse to be. So this page says what runs, on
+       what, how often, and what it does not cover. Every claim below
+       corresponds to a step in .github/workflows/test.yml, and anyone
+       can open it. -->
+  <div class="note">
+    הדף הזה נגזר מהבדיקות שרצות בפועל, לא מתבנית משפטית. כל טענה כאן מתאימה לצעד בקובץ הבדיקות
+    של הפרויקט, וניתן לפתוח אותו ולראות. מה שעוד לא נבדק כתוב כאן באותה מידה של פירוט כמו מה שכן.
+  </div>
+</header>
+
+<main id="main" tabindex="-1">
+
+<div class="box">
+  <h3>רמת הנגישות</h3>
+  <p class="body-p" data-i18n>
+    האתר נבנה לעמידה ב-<b>WCAG 2.1 ברמה AA</b> — התקן שאליו מפנה התקן הישראלי ת"י 5568,
+    ושעליו נשענות תקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות).
+    ארבעת הדפים באתר נבדקים מול הרמה הזאת אוטומטית, בכל שינוי בקוד.
+  </p>
+</div>
+
+<div class="box">
+  <h3>מה נבדק אוטומטית, בכל דחיפה</h3>
+  <p class="body-p">
+    לא בדיקה חד-פעמית לפני השקה. הבדיקות האלה רצות על כל שינוי, וכישלון שלהן עוצר את הפריסה:
+  </p>
+  <ul class="points">
+    <li data-i18n><b>axe-core מול WCAG 2.1 A ו-AA</b> — על כל דף, ולא במצב הפתיחה שלו אלא במצבים שבהם
+      באמת משתמשים בו: טופס מלא, תסריט בנוי, הצעה מתומחרת, פנקס עם עסקאות, מסך התשלום.
+      מצב הפתיחה הוא המצב היחיד שאף אחד לא עובד בו.</li>
+    <li data-i18n><b>שלוש הרצות נפרדות</b> — בערכה בהירה, בערכה כהה, ובאנגלית. יחס ניגודיות הוא תכונה של
+      <em>צמד</em> צבעים, והערכה הכהה מזווגת מחדש את כולם; תרגום משנה אורכי תוויות ופריסה.
+      בדיקה שרצה רק במצב אחד בדקה שליש מהמוצר.</li>
+    <li data-i18n><b>ניווט מקלדת מקצה לקצה</b> — שה-Tab הראשון מגיע לקישור דילוג ושהוא באמת מעביר לתוכן,
+      שלכל אלמנט שאפשר להגיע אליו יש טבעת פוקוס נראית, שחצי המקלדת מפעילים את ניווט השלבים,
+      ושמעבר שלב מזיז את הפוקוס ולא רק את הגלילה.</li>
+    <li data-i18n><b>ריווח טקסט של הקורא (קריטריון 1.4.12)</b> — הדף נטען מחדש עם הריווח שהתקן מגדיר
+      (גובה שורה 1.5, ריווח אותיות 0.12em, ריווח מילים 0.16em), ונבדק שאף טקסט לא נחתך.</li>
+    <li data-i18n><b>זרימה מחדש בהגדלה של 400% (קריטריון 1.4.10)</b> — הדפים נבדקים ברוחב 320 פיקסלים,
+      ואסור שהמסמך יגלול לרוחב. תוכן רחב מטבעו, כמו טבלה, גולל בתוך אזור משלו שאפשר להגיע
+      אליו במקלדת.</li>
+    <li data-i18n><b>Core Web Vitals על טלפון מווסת</b> — דף שנטען לאט הוא דף פחות נגיש, במיוחד למי
+      שמשתמש בקורא מסך שממתין ל-DOM יציב.</li>
+  </ul>
+</div>
+
+<div class="box">
+  <h3>מה נבנה בכוונה בשביל זה</h3>
+  <ul class="points">
+    <li data-i18n><b>קישור דילוג בכל דף</b>, ראשון בסדר ה-Tab, שמעביר את הפוקוס עצמו לאזור התוכן.</li>
+    <li data-i18n><b>ניווט השלבים ב-PRE-CALL הוא tablist אמיתי</b> — עצירה אחת בסדר ה-Tab ולא שלוש,
+      חצים שנעים לפי כיוון הקריאה בעברית ובאנגלית, Home ו-End, ו-aria-selected שמדווח מה נבחר.
+      מעבר שלב מעביר את הפוקוס אל הפאנל, כדי שקורא מסך יקרא את השלב החדש ולא את זה שהוסתר.</li>
+    <li data-i18n><b>מצב כהה שהוא מראה של סולם הצבעים</b>, כך שהמרחק בין כל שני גוונים שורד את ההיפוך —
+      ולא ערכה שנייה שנבנתה בעין.</li>
+    <li data-i18n><b>תמיכה ב-prefers-contrast: more</b> — מי שביקש ניגודיות גבוהה במערכת ההפעלה מקבל
+      טקסט משני בעוצמת טקסט רגיל, קווי הפרדה נראים, וטבעת פוקוס עבה יותר.</li>
+    <li data-i18n><b>כיבוד prefers-reduced-motion</b> — גלילות ואנימציות נעצרות למי שביקש את זה במערכת.</li>
+    <li data-i18n><b>שני מסמכי התוצר עוברים לשפת הממשק</b> — מפעיל שעבד באנגלית שולח הצעה באנגלית,
+      ולא מסמך מעורב.</li>
+  </ul>
+</div>
+
+<div class="box">
+  <h3>מה עוד לא נבדק, ואיך זה משפיע</h3>
+  <!-- The part a template would not have. An accessibility statement that
+       lists only what passes is the same instrument as a test suite that
+       only asserts the happy path. -->
+  <p class="body-p">
+    בדיקה אוטומטית תופסת חלק מהקריטריונים ולא את כולם. אלה הפערים הידועים, בלי לרכך:
+  </p>
+  <ul class="points">
+    <li data-i18n><b>לא נערכה בדיקה עם משתמשים אמיתיים שמשתמשים בטכנולוגיה מסייעת.</b> זה הפער המשמעותי
+      ביותר כאן. הבדיקות מריצות מנוע דפדפן, לא אדם עם NVDA, JAWS או VoiceOver, ויש דברים
+      שרק שימוש אמיתי חושף.</li>
+    <li data-i18n><b>בדיקת קורא מסך ידנית לא בוצעה באופן שיטתי.</b> מבנה הכותרות, שמות האזורים והסדר
+      שבו הדברים מוקראים נבדקו מול הכללים, לא מול האוזן.</li>
+    <li data-i18n><b>המסמכים שהכלי מייצר</b> — התסריט וההצעה — נבדקים כפי שהם מוצגים במסך. קובץ PDF
+      שנוצר דרך הדפסת הדפדפן אינו מתויג (tagged PDF), ולכן נגישותו תלויה בדפדפן שהפיק אותו.</li>
+    <li data-i18n><b>ת"י 5568 דורש גם היבטים ארגוניים</b> — רכז נגישות, נהלים — שרלוונטיים לארגון ולא
+      לאתר סטטי המופעל על ידי יחיד. ההצהרה כאן מכסה את האתר.</li>
+  </ul>
+</div>
+
+<div class="box">
+  <h3>נתקלתם במשהו שלא עובד</h3>
+  <p class="body-p">
+    אם משהו באתר לא נגיש לכם — טקסט שלא נקרא, פעולה שאי אפשר להגיע אליה במקלדת, ניגודיות
+    שלא מספיקה — זה באג, ואפשר לדווח עליו כמו על כל באג אחר:
+  </p>
+  <ul class="points">
+    <li data-i18n>במייל: <a href="mailto:erez2812345@gmail.com">erez2812345@gmail.com</a></li>
+    <li>או כתקלה בפרויקט:
+      <a href="https://github.com/ereztash/pre-call/issues" target="_blank" rel="noopener">דיווח ב-GitHub</a></li>
+  </ul>
+  <p class="hint-p">
+    שווה לציין מה ניסיתם לעשות, באיזה דף, ובאיזו טכנולוגיה מסייעת — זה מה שהופך דיווח
+    למשהו שאפשר לשחזר ולתקן.
+  </p>
+</div>
+
+<div class="box">
+  <h3>איך לבדוק את מה שכתוב כאן</h3>
+  <p class="body-p" data-i18n>
+    כל הבדיקות שההצהרה הזאת מתארת נמצאות בקוד הפתוח לקריאה, ואפשר להריץ אותן:
+    <code>assets/a11y.test.js</code> מריץ את axe-core ואת בדיקות המקלדת, הריווח והזרימה מחדש;
+    <code>.github/workflows/test.yml</code> מראה מה רץ על כל דחיפה ובאילו שלוש הרצות.
+    <a href="https://github.com/ereztash/pre-call" target="_blank" rel="noopener">הקוד גלוי לקריאה כאן</a>.
+  </p>
+</div>
+
+</main>
+
+<footer>
+  עודכן לאחרונה: אוגוסט 2026 · ההצהרה מתייחסת לארבעת דפי האתר.<br>
+  <a href="index.html">דף הפתיחה</a>
+  · <a href="privacy.html">פרטיות</a>
+  · <a href="pre-call.html">PRE-CALL</a>
+  · <a href="post-call.html">POST-CALL</a>
+  <span class="copy">© 2026 ארז טל-שיר · כל הזכויות שמורות</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -81,10 +81,17 @@ function wire(f) {
    the translation. That split is the difference between a 5KB raise and
    a 15KB one, and it is asserted by the orphan-module test in
    assets/markup.test.js. */
+/* A third raise on the tools, and this one is named rather than absorbed:
+   the tr() seam and its Hebrew keys, the tablist wiring, the skip links and
+   the prefers-contrast block. The dictionaries themselves are still not in
+   any of these numbers — a Hebrew visit does not download them — so what
+   grew is the product, not the translation. accessibility.html is a new
+   page and gets the small-page ceiling the other static page has. */
 const BUDGETS = {
-  'index.html':     21 * 1024,
-  'privacy.html':   21 * 1024,
-  'pre-call.html':  54 * 1024,
+  'index.html':          21 * 1024,
+  'privacy.html':        21 * 1024,
+  'accessibility.html':  21 * 1024,
+  'pre-call.html':       58 * 1024,
   /* 120 → 128 → 136KB, and the second raise happened the same day as the first,
      which is worth saying plainly rather than burying: a budget moved twice in a
      day by 13% is not holding anything back yet.
@@ -101,7 +108,7 @@ const BUDGETS = {
      capability, the growth has stopped being features and the trim is overdue.
      index.html and pre-call.html keep their tight ceilings either way — they are
      what a first visit pays for. */
-  'post-call.html': 142 * 1024
+  'post-call.html':     146 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');
