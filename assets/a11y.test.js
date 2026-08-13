@@ -128,16 +128,27 @@ async function scan(page, label) {
    product. CI runs this file once per scheme. */
 const SCHEME = process.env.PW_SCHEME === 'dark' ? 'dark' : 'light';
 
+/* PW_LANG=en runs every scan over the English overlay: left-to-right
+   layout, translated labels, the same WCAG bar. Set through localStorage
+   before any page script runs, exactly the way a real visitor's choice
+   arrives. */
+const LANG = process.env.PW_LANG === 'en' ? 'en' : 'he';
+async function seedLang(ctx){
+  if (LANG === 'en')
+    await ctx.addInitScript(() => { try { localStorage.setItem('ui_lang', 'en'); } catch (e) {} });
+}
+
 (async () => {
   const { srv, base } = await serve();
   const engineName = (process.env.PW_ENGINES || 'chromium').split(',')[0].trim();
   const engine = { chromium, firefox, webkit }[engineName] || chromium;
   const browser = await engine.launch();
   console.log('\naxe-core · WCAG 2.1 A + AA · painted in ' + engineName +
-              ' · ' + SCHEME + ' scheme\n');
+              ' · ' + SCHEME + ' scheme · ' + LANG + '\n');
 
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 },
                                          colorScheme: SCHEME });
+  await seedLang(ctx);
 
   console.log('the entry page');
   await test('as a first-time visitor sees it', async () => {
@@ -181,6 +192,7 @@ const SCHEME = process.env.PW_SCHEME === 'dark' ? 'dark' : 'light';
        ground it is now sitting on alone. */
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 },
                                              colorScheme: SCHEME });
+    await seedLang(phone);
     const p = await phone.newPage();
     await p.goto(base + '/pre-call.html');
     await p.fill('#f_what', 'מסדר תהליכי גבייה לעסקים קטנים');
@@ -334,6 +346,7 @@ const SCHEME = process.env.PW_SCHEME === 'dark' ? 'dark' : 'light';
   await test('the entry and both tools at the narrowest phone width', async () => {
     const narrow = await browser.newContext({ viewport: { width: 320, height: 720 },
                                               colorScheme: SCHEME });
+    await seedLang(narrow);
     for (const page of ['/', '/pre-call.html', '/post-call.html', '/privacy.html']) {
       const p = await narrow.newPage();
       await p.goto(base + page);
