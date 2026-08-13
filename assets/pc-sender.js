@@ -42,9 +42,32 @@
      60KB of image is a bit over 80,000 characters. */
   const LOGO_MAX = 84000;
 
+  /* A prefix test is not a validator. `/^data:image\//.test(...)` accepts
+     `data:image/"><script>...` just as happily as a real logo, because it
+     only checks how the string OPENS and says nothing about how it ends —
+     and pc-proposal.js prints this value straight into an <img src="…">
+     with no escaping (escaping a real base64 payload would corrupt it).
+     The gap: pc-backup.js's importAll() writes a restored backup's fields
+     straight into storage with setItem(), never through save() below, so
+     a hand-edited or shared backup file reaches senderBlock() having
+     passed no validation at all — the UI's own upload checks (MIME type,
+     size) are not in that path either.
+     Caught in review on the PR that introduced this field, before it
+     shipped to anyone.
+
+     So the check has to be complete, not partial: anchored at both ends
+     (`^…$`), an explicit allowlist of the MIME subtypes the file picker's
+     own `accept` attribute offers, and a payload restricted to the base64
+     alphabet. That alphabet — A–Z, a–z, 0–9, +, /, and = for padding —
+     contains none of `< > " & '`, so a string that matches this pattern
+     cannot break out of the attribute it is printed into; the escaping
+     the logo intentionally skips is redundant precisely because nothing
+     that passes this regex could need it. */
+  const LOGO_RE = /^data:image\/(png|jpe?g|webp|svg\+xml);base64,[A-Za-z0-9+/]+=*$/;
+
   function make(storage) {
     return {
-      KEY, FIELDS, LOGO_KEY, LOGO_MAX,
+      KEY, FIELDS, LOGO_KEY, LOGO_MAX, LOGO_RE,
 
       load() {
         try {
@@ -63,7 +86,7 @@
           // only a data: URI, and only inside the ceiling — a stray string
           // here would otherwise print as a broken image on every future proposal
           const logo = data && data[LOGO_KEY];
-          if (logo && /^data:image\//.test(logo) && logo.length <= LOGO_MAX) clean[LOGO_KEY] = logo;
+          if (logo && logo.length <= LOGO_MAX && LOGO_RE.test(logo)) clean[LOGO_KEY] = logo;
           storage.setItem(KEY, JSON.stringify(clean));
           return true;
         } catch (e) { return false; }   // blocked or full — reported, never swallowed
@@ -82,7 +105,10 @@
     if (!name) return null;
     const business = (s.s_business || '').trim();
     const contact = [(s.s_phone || '').trim(), (s.s_email || '').trim()].filter(Boolean);
-    const logo = (s[LOGO_KEY] && /^data:image\//.test(s[LOGO_KEY])) ? s[LOGO_KEY] : null;
+    // the one gate a restored backup's raw fields actually pass through —
+    // see the note on LOGO_RE for why a prefix test was not enough here
+    const logo = (s[LOGO_KEY] && s[LOGO_KEY].length <= LOGO_MAX && LOGO_RE.test(s[LOGO_KEY]))
+      ? s[LOGO_KEY] : null;
     return { name, business, contact, logo };
   }
 
@@ -96,10 +122,11 @@
   root.PC.SENDER_KEY = KEY;
   root.PC.SENDER_LOGO_KEY = LOGO_KEY;
   root.PC.SENDER_LOGO_MAX = LOGO_MAX;
+  root.PC.SENDER_LOGO_RE = LOGO_RE;
   root.PC.senderBlock = block;
   root.PC.senderMissing = missing;
   if (typeof localStorage !== 'undefined') root.PC.sender = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, block, missing, FIELDS, KEY, LOGO_KEY, LOGO_MAX };
+    module.exports = { make, block, missing, FIELDS, KEY, LOGO_KEY, LOGO_MAX, LOGO_RE };
 })(typeof window !== 'undefined' ? window : globalThis);

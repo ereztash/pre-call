@@ -202,13 +202,62 @@ test('the document prints the logo beside the name, and nowhere without one', ()
   const noLogo = proposal.build(ctxFor(FULL));
   assert.ok(!noLogo.includes('from-logo'), 'a sender with no logo printed one anyway');
 });
-test('a logo cannot be used to inject markup — it is checked, never escaped', () => {
-  // escaping a data URI would corrupt its base64 payload, so the only
-  // defence against a malicious value here is the data:image/ prefix check
-  // in block() — this proves a non-image string never reaches the template
+test('a logo cannot be used to inject markup — checked at the gate, escaped at the template too', () => {
   const html = proposal.build(ctxFor(Object.assign({}, FULL,
     { [LOGO_KEY]: '"><script>alert(1)</script>' })));
   assert.ok(!html.includes('<script>alert'), 'an unvalidated logo value reached the document');
+});
+
+console.log('\nthe logo gate against a value that never went through save()');
+/* Found in review: pc-backup.js's importAll() writes a restored backup's
+   fields straight into storage with setItem() — never through save() — so
+   a hand-edited or shared backup file can carry an s_logo value that has
+   passed no validation of any kind by the time block() sees it. The prefix
+   test `/^data:image\//` that used to guard this accepted exactly the
+   shape below: it opens like a real logo and ends as markup. block() is
+   the one gate a value on that path is guaranteed to cross, so it has to
+   be a complete validator, not a hint. */
+test('block() rejects a value that opens like a logo and ends as markup', () => {
+  const attack = 'data:image/"><script>alert(1)</script>';
+  assert.strictEqual(block(Object.assign({}, FULL, { [LOGO_KEY]: attack })).logo, null,
+    'a prefix match let an attribute-breaking payload through');
+});
+test('block() rejects an unterminated data URI, an unlisted MIME type, and a non-base64 payload', () => {
+  const bad = [
+    'data:image/png;base64,',                              // real prefix, empty payload — nothing to render
+    'data:image/png,<script>alert(1)</script>',             // no ;base64, marker at all
+    'data:image/bmp;base64,QQ==',                            // not in the allowlist the file picker itself offers
+    'data:text/html;base64,PHNjcmlwdD4=',                    // not an image type — the whole point of the check
+    'data:image/png;base64,not-base64-at-all!!"><b>'         // valid prefix, payload outside the base64 alphabet
+  ];
+  bad.forEach(v => assert.strictEqual(block(Object.assign({}, FULL, { [LOGO_KEY]: v })).logo, null,
+    'accepted as a logo: ' + v));
+});
+test('save() applies the same complete check, not the old prefix test', () => {
+  const api = make(mem());
+  api.save(Object.assign({}, FULL, { [LOGO_KEY]: 'data:image/"><script>alert(1)</script>' }));
+  assert.strictEqual(api.load()[LOGO_KEY], undefined,
+    'save() stored a value that only LOOKS like a data:image URI');
+});
+test('a value restored straight into storage — the path save() never sees — still cannot reach the document', () => {
+  // simulates exactly what pc-backup.js's importAll() does: setItem() with
+  // no validation, then the normal load() -> senderBlock() render path
+  const s = mem();
+  s.setItem(KEY, JSON.stringify(Object.assign({}, FULL,
+    { [LOGO_KEY]: 'data:image/"><img src=x onerror=alert(1)>' })));
+  const restored = make(s).load();
+  const html = proposal.build(ctxFor(restored));
+  assert.ok(!html.includes('onerror=alert'),
+    'a value that bypassed save() entirely still reached the printed document');
+});
+test('a well-formed logo of every allowed type still passes', () => {
+  ['data:image/png;base64,' + 'A'.repeat(40) + '==',
+   'data:image/jpeg;base64,' + 'A'.repeat(40) + '=',
+   'data:image/jpg;base64,' + 'A'.repeat(40),
+   'data:image/webp;base64,' + 'A'.repeat(40) + '==',
+   'data:image/svg+xml;base64,' + 'A'.repeat(40)
+  ].forEach(v => assert.strictEqual(block(Object.assign({}, FULL, { [LOGO_KEY]: v })).logo, v,
+    'a legitimate ' + v.slice(11, v.indexOf(';')) + ' logo was rejected'));
 });
 
 console.log('\nthe backup carries it');

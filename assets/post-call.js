@@ -1277,6 +1277,16 @@ function handleLogoFile(e){
     if (typeof uri !== 'string' || uri.length > PC.SENDER_LOGO_MAX) {
       logoFlash(tr('הקובץ גדול מדי — עד 60KB. כווצו את התמונה ונסו שוב'), true); return;
     }
+    // The same pattern pc-sender.js's save() checks — asked here too, so a
+    // file the browser reports as an image type but encodes in a shape the
+    // allowlist does not cover (an ico, a bmp, anything save() will refuse)
+    // gets a reason on screen instead of a preview that quietly never
+    // persisted: without this, showLogoPreview() below would show the
+    // upload as if it worked, save() would silently drop it, and the
+    // operator would only find out on the next reload.
+    if (!PC.SENDER_LOGO_RE.test(uri)) {
+      logoFlash(tr('סוג הקובץ הזה לא נתמך — PNG, JPEG, WebP או SVG'), true); return;
+    }
     senderLogo = uri;
     showLogoPreview(uri);
     PC.sender && PC.sender.save(readSender());
