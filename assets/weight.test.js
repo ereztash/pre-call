@@ -96,7 +96,16 @@ function wire(f) {
    fixed cost, paid once per file and paid by every visitor regardless of
    language, which is exactly the kind of growth this budget exists to
    surface rather than hide: 0.2KB over on the old ceiling, for finishing
-   the second language. */
+   the second language.
+
+   A fifth raise, 148 → 150KB, is the logo field on the sender box — a
+   file picker, a preview, a size-checked upload path, and the <img> and
+   CSS to print it beside the name. Every other proposal tool in the
+   category ships this; this is the smallest version of it that fits an
+   architecture with no server to resize an image on, which is why the
+   feature is "pick a file under 60KB" rather than "upload anything and
+   we will handle it". The 60KB itself never touches this budget — it
+   lives in localStorage, not in a shipped asset. */
 const BUDGETS = {
   'index.html':          21 * 1024,
   'privacy.html':        21 * 1024,
@@ -118,7 +127,7 @@ const BUDGETS = {
      capability, the growth has stopped being features and the trim is overdue.
      index.html and pre-call.html keep their tight ceilings either way — they are
      what a first visit pays for. */
-  'post-call.html':     148 * 1024
+  'post-call.html':     150 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

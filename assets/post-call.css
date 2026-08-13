@@ -311,11 +311,26 @@
      Above the title, because that is where a reader looks to find out who
      is writing to them, and separated by a rule so the document reads as
      correspondence rather than as an output. */
-  .out .from{border-bottom:1px solid var(--cu-84);padding-bottom:var(--sp-4);margin-bottom:var(--sp-6)}
+  .out .from{border-bottom:1px solid var(--cu-84);padding-bottom:var(--sp-4);margin-bottom:var(--sp-6);
+    display:flex;align-items:center;gap:var(--sp-4)}
+  /* Capped on both axes so an operator's landscape letterhead or a tall
+     square mark cannot push the sender name off the printed page — the
+     name is the part of this block that has to survive no matter what
+     shape the image is. object-fit:contain keeps the logo from stretching
+     to fill a box its own aspect ratio does not match. */
+  .out .from-logo{max-width:120px;max-height:56px;object-fit:contain;flex:0 0 auto}
+  .out .from-t{flex:1 1 auto;min-width:0}
   .out .from-n{color:var(--nt-9);font-size:var(--fs-md);font-weight:700;letter-spacing:-.1px}
   .out .from-b{font-weight:400;color:var(--muted)}
   .out .from-c{color:var(--muted);font-size:var(--fs-xs);margin-top:var(--sp-2);
     font-variant-numeric:tabular-nums}
+
+  /* The sender box's own logo control — a small preview, not a second
+     document. Sits on the working form, not on the paper, so it uses the
+     ordinary UI tokens rather than the document's --paper-scoped ones. */
+  .logo-preview{display:flex;align-items:center}
+  .logo-preview img{max-width:96px;max-height:48px;object-fit:contain;
+    border-radius:var(--r-sm);background:var(--nt-90)}
   .out .signoff{margin-top:var(--sp-7);padding-top:var(--sp-5);border-top:1px solid var(--cu-84);
     color:var(--nt-21);font-size:var(--fs-xs);font-weight:600}
   /* Quiet on purpose. This travels to the operator's client, so it has to

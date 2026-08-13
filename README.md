@@ -20,6 +20,8 @@
 
 POST-CALL נבנה כתשובה לכשל מבני ב-PRE-CALL: עוגן המחיר שלו נשען על העסקה האחרונה של המשתמש, ולכן הוא ריק בדיוק אצל מי שהכלי מיועד לו — מי שעוד לא סגר עסקה.
 
+איפה זה עומד מול הקטגוריה — PandaDoc, Proposify, HoneyBook, Bonsai, Ignition — עם מקורות ומספרים, לא רק תחושה: [docs/category.md](docs/category.md).
+
 ## התמונה המלאה
 
 ```mermaid

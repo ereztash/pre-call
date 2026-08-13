@@ -166,10 +166,26 @@
        was from. Printed only when there is a name: a header carrying just
        a phone number reads worse than none at all. */
     const sender = (root.PC && root.PC.senderBlock) ? root.PC.senderBlock(ctx.sender) : null;
+    /* alt="" on purpose: the name text right beside it already says who
+       this is from, so a screen reader announcing the image too would say
+       the same thing twice.
+
+       escape(), not a raw interpolation — block()'s LOGO_RE already
+       restricts this string to `data:image/<allowed type>;base64,` plus
+       the base64 alphabet, none of which escape() touches (that alphabet
+       contains no `< > &`), so this is a no-op for every value that was
+       ever going to reach here. It stays anyway: a prefix check alone
+       once let `data:image/"><script>…` through block() and into this
+       exact template unescaped (found in review), and the fix for that
+       belongs in the validator, not in trusting the validator forever
+       from the render side too. Two independent layers, so a future bug
+       in one is not also a bug in the other. */
+    const logoImg = sender && sender.logo ? `<img class="from-logo" src="${escape(sender.logo)}" alt="">` : '';
     const from = sender ? `
 <div class="from">
-  <div class="from-n">${escape(sender.name)}${sender.business ? ' · <span class="from-b">' + escape(sender.business) + '</span>' : ''}</div>
-  ${sender.contact.length ? `<div class="from-c">${sender.contact.map(escape).join(' · ')}</div>` : ''}
+  ${logoImg}
+  <div class="from-t"><div class="from-n">${escape(sender.name)}${sender.business ? ' · <span class="from-b">' + escape(sender.business) + '</span>' : ''}</div>
+  ${sender.contact.length ? `<div class="from-c">${sender.contact.map(escape).join(' · ')}</div>` : ''}</div>
 </div>` : '';
 
     /* The one place this product travels on its own. The document goes
