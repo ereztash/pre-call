@@ -1,5 +1,13 @@
 /* ---------- prompts ---------- */
 
+/* ---------- i18n seam ----------
+   Hebrew in, the display language out — see assets/pc-i18n.js. Under Node
+   (the tests) PC.i18n does not exist and the fallback returns the Hebrew
+   with {name} params interpolated, so every string assertion in
+   assets/pre-call.test.js keeps reading the language it was written in. */
+var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+  : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
 /* ---------- state ---------- */
 const S = {};
 
@@ -59,7 +67,7 @@ function downloadCallIcs(){
     : null;
   /* Refused rather than half-built. A subtly malformed .ics does not error when
      tapped — it does nothing, and the operator concludes the tool is broken. */
-  if (!text) { say('חסר תאריך, שעה או אורך — בלעדיהם אין לאירוע מתי, ולא נוצר קובץ.'); return; }
+  if (!text) { say(tr('חסר תאריך, שעה או אורך — בלעדיהם אין לאירוע מתי, ולא נוצר קובץ.')); return; }
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
@@ -67,7 +75,7 @@ function downloadCallIcs(){
   a.download = cal.callFilename({ date: val('cal_date'), client: callWho() });
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  say('הקובץ ירד. פתחו אותו והאירוע ייכנס ליומן עם שתי התזכורות.');
+  say(tr('הקובץ ירד. פתחו אותו והאירוע ייכנס ליומן עם שתי התזכורות.'));
 }
 
 function toReadingCard(){
@@ -91,8 +99,8 @@ function refreshEdgeRef(){
   if(!el) return;
   const edge=(document.getElementById('f_edge').value||'').split('\n').map(s=>s.trim()).filter(Boolean).join(' ');
   el.textContent = edge
-    ? 'האבחנה הכללית שלכם, לגזור ממנה: "' + edge + '"'
-    : 'לא מילאתם "מה רק אתם רואים אצל הלקוחות שלכם" בשלב 1. בלי זה אין ממה לגזור את המשפט.';
+    ? tr('האבחנה הכללית שלכם, לגזור ממנה: "{edge}"', { edge: edge })
+    : tr('לא מילאתם "מה רק אתם רואים אצל הלקוחות שלכם" בשלב 1. בלי זה אין ממה לגזור את המשפט.');
 }
 
 /* ---------- copy ---------- */
@@ -160,27 +168,27 @@ function guard(name, fn){
   };
 }
 
-const FAIL_LABEL = { parse: 'חילוץ השדות מההדבקה', build: 'בניית התסריט' };
+const FAIL_LABEL = { parse: tr('חילוץ השדות מההדבקה'), build: tr('בניית התסריט') };
 
 function renderFailures(){
   const box = document.getElementById('errBoundary');
   if(!box) return;
   if(!_failed.size){ show('errBoundary', false); box.innerHTML=''; return; }
   const names = [..._failed].map(n => FAIL_LABEL[n] || n);
-  box.innerHTML = '<b>' + names.join(', ') + ' נכשל.</b> שאר הכלי ממשיך לעבוד, והנתונים ששמרת לא נפגעו. ' +
-    'רענון הדף בדרך כלל פותר את זה; אם לא, פתח את הקונסולה — הפירוט שם.';
+  box.innerHTML = '<b>' + tr('{names} נכשל.', { names: names.join(', ') }) + '</b> ' +
+    tr('שאר הכלי ממשיך לעבוד, והנתונים ששמרת לא נפגעו. רענון הדף בדרך כלל פותר את זה; אם לא, פתח את הקונסולה — הפירוט שם.');
   show('errBoundary', true);
 }
 
 window.addEventListener('error', e => {
   if(!e.filename || !/pre-call/.test(e.filename)) return;
-  _failed.add('כללי'); renderFailures();
+  _failed.add(tr('כללי')); renderFailures();
 });
 
 function flash(f, ok=true){
   const e=document.getElementById(f);
   if(!e.dataset.orig) e.dataset.orig=e.textContent;
-  e.textContent = ok ? e.dataset.orig : 'ההעתקה נכשלה — סמנו והעתיקו ידנית';
+  e.textContent = ok ? e.dataset.orig : tr('ההעתקה נכשלה — סמנו והעתיקו ידנית');
   e.style.color = ok ? '' : 'var(--red)';
   e.classList.add('on');
   setTimeout(()=>e.classList.remove('on'), ok?1600:3200);
@@ -192,8 +200,16 @@ function flash(f, ok=true){
 // but nothing stops a real answer, or a real person editing the model's
 // output, from leaving one blank. `KNOWN_LABELS` exists so a blank field can
 // be told apart from a missing one, in both directions below.
+//
+// Two label sets, both always active: the Hebrew prompt asks for the Hebrew
+// labels, the English prompt (assets/en-pre-call.js) asks for the English
+// ones, and the operator may paste either into either UI language. These are
+// a parse FORMAT, not prose — they must match what the model was asked to
+// emit, so they never pass through tr() (exempted in assets/i18n.test.js).
 const KNOWN_LABELS = ['מה אני מוכר:','למי:','יחידה תחומה:','מחיר היחידה:','עסקה אחרונה:',
-  'מקור הלקוח האחרון:','מה הלקוח הרוויח:','מה רק אני רואה:','מה אני לא מוכר:'];
+  'מקור הלקוח האחרון:','מה הלקוח הרוויח:','מה רק אני רואה:','מה אני לא מוכר:',
+  'What I sell:','For whom:','Bounded unit:','Unit price:','Last deal:',
+  'Last client source:','What the client gained:','What only I see:','What I do not sell:'];
 
 const parseBiz = guard('parse', function parseBiz(){
   const t=document.getElementById('pasteBiz').value;
@@ -211,13 +227,16 @@ const parseBiz = guard('parse', function parseBiz(){
   // label still needs the labels list to catch it) — never worth keeping
   const clean=v=>KNOWN_LABELS.some(l=>v===l||v.startsWith(l))?'':v;
   const set=(id,v)=>{v=clean(v); if(v)document.getElementById(id).value=v};
-  set('f_what', g(/מה אני מוכר:[ \t]*(.+)/));
-  set('f_who',  g(/למי:[ \t]*(.+)/));
-  set('f_unit', g(/יחידה תחומה:[ \t]*(.+)/));
-  set('f_price',g(/מחיר היחידה:[ \t]*(.+)/));
-  set('f_last', g(/עסקה אחרונה:[ \t]*(.+)/));
-  set('f_gain', g(/מה הלקוח הרוויח:[ \t]*(.+)/));
-  set('f_no',   g(/מה אני לא מוכר:[ \t]*(.+)/));
+  // each field tries the Hebrew label first, then the English one — clean()
+  // runs per attempt so a blank Hebrew field cannot mask a filled English one
+  const g2=(he,en)=>clean(g(he))||clean(g(en));
+  set('f_what', g2(/מה אני מוכר:[ \t]*(.+)/,   /What I sell:[ \t]*(.+)/));
+  set('f_who',  g2(/למי:[ \t]*(.+)/,           /For whom:[ \t]*(.+)/));
+  set('f_unit', g2(/יחידה תחומה:[ \t]*(.+)/,   /Bounded unit:[ \t]*(.+)/));
+  set('f_price',g2(/מחיר היחידה:[ \t]*(.+)/,   /Unit price:[ \t]*(.+)/));
+  set('f_last', g2(/עסקה אחרונה:[ \t]*(.+)/,   /Last deal:[ \t]*(.+)/));
+  set('f_gain', g2(/מה הלקוח הרוויח:[ \t]*(.+)/, /What the client gained:[ \t]*(.+)/));
+  set('f_no',   g2(/מה אני לא מוכר:[ \t]*(.+)/, /What I do not sell:[ \t]*(.+)/));
   // stop only at the next KNOWN field label, not any line that happens to contain a colon
   // (a multiline answer here easily contains its own "לדוגמה:"-style colon).
   // Multi-line on purpose, which is exactly why [ \t]* alone cannot fix a
@@ -226,14 +245,15 @@ const parseBiz = guard('parse', function parseBiz(){
   // field here swallowed the entire rest of the paste rather than one line
   // of it. clean() is what actually stops that: a capture that starts with
   // another field's label was never this field's answer.
-  const edge=clean(g(/מה רק אני רואה:[ \t]*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/));
+  const edge=g2(/מה רק אני רואה:[ \t]*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/,
+                /What only I see:[ \t]*([\s\S]+?)(?:\n(?:What I do not sell:|Last client source:|What the client gained:|Last deal:|Unit price:|Bounded unit:|For whom:|What I sell:)|$)/);
   if(edge)document.getElementById('f_edge').value=edge;
-  const src=clean(g(/מקור הלקוח האחרון:[ \t]*(.+)/));
+  const src=g2(/מקור הלקוח האחרון:[ \t]*(.+)/, /Last client source:[ \t]*(.+)/);
   if(src){
     const s=document.getElementById('f_src');
-    if(/הפני|היכר/.test(src))s.value='ref';
-    else if(/תוכן/.test(src))s.value='content';
-    else if(/יזומ/.test(src))s.value='out';
+    if(/הפני|היכר|referral|introduc/i.test(src))s.value='ref';
+    else if(/תוכן|content/i.test(src))s.value='content';
+    else if(/יזומ|outreach/i.test(src))s.value='out';
   }
   saveProfile();
 });
@@ -269,7 +289,7 @@ function warnStorage(){
   const e = document.getElementById('profileSaved');
   if (!e) return;
   if (!e.dataset.orig) e.dataset.orig = e.textContent;
-  e.textContent = 'הדפדפן חוסם שמירה — הפרופיל לא יישמר לפעם הבאה';
+  e.textContent = tr('הדפדפן חוסם שמירה — הפרופיל לא יישמר לפעם הבאה');
   e.classList.add('on', 'u-warn');
 }
 let saveProfileTimer=null;
@@ -319,7 +339,7 @@ const build = guard('build', function build(){
 
   const err2=document.getElementById('err2');
   if(!S.what){
-    err2.innerText='חסר השדה "מה אתם מוכרים". בלעדיו התסריט יוצא כללי, ואז הוא לא שווה יותר מרשימת שאלות באינטרנט.';
+    err2.innerText=tr('חסר השדה "מה אתם מוכרים". בלעדיו התסריט יוצא כללי, ואז הוא לא שווה יותר מרשימת שאלות באינטרנט.');
     show('err2', true);
     go(1);
     setTimeout(()=>document.getElementById('f_what').focus(),250);
@@ -338,12 +358,13 @@ function renderPrivate(){
   const items=(S.priv||[]);
   if(!items.length){ show('privArea', false); el.innerHTML=''; return; }
   el.innerHTML =
-    '<h4>לעיניכם בלבד</h4><ul>'+items.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>'+
-    '<div class="seal">לא נכלל בהעתקה ולא בהדפסה. אלה המספרים שלכם, לא של השיחה.</div>';
+    '<h4>'+tr('לעיניכם בלבד')+'</h4><ul>'+items.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>'+
+    '<div class="seal">'+tr('לא נכלל בהעתקה ולא בהדפסה. אלה המספרים שלכם, לא של השיחה.')+'</div>';
   show('privArea', true);
 }
 
-const EMPTY_OUT = '<div class="empty">עוד לא נבנה תסריט.<br>מלאו את שלב 1, ואז לחצו "בנה את התסריט" בשלב 2.</div>';
+const EMPTY_OUT = '<div class="empty">'+tr('עוד לא נבנה תסריט.')+'<br>'+
+  tr('מלאו את שלב 1, ואז לחצו "בנה את התסריט" בשלב 2.')+'</div>';
 function resetOutput(){
   document.getElementById('outArea').innerHTML=EMPTY_OUT;
   S.priv=[];
@@ -353,7 +374,8 @@ function resetOutput(){
 
 function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
 
-const SRC_LABEL = {ref:'הפניה או היכרות אישית', content:'התוכן שאתם מפרסמים', out:'פנייה יזומה שלכם', other:'ערוץ אחר'};
+const SRC_LABEL = {ref:tr('הפניה או היכרות אישית'), content:tr('התוכן שאתם מפרסמים'),
+  out:tr('פנייה יזומה שלכם'), other:tr('ערוץ אחר')};
 
 function render(){
   const name = S.pname ? (S.pname + (S.pco?' · '+S.pco:'')) : 'הצד השני';
