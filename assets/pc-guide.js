@@ -29,6 +29,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   /* Ordered. Each step knows what counts as done, where it lives on the
      page, and — the part that matters for someone who has never priced a
      job — why it is worth answering at all. `why` is written as what it buys
@@ -36,43 +39,43 @@
   const STEPS = [
     {
       id: 'process',
-      short: 'התהליך',
-      title: 'מה קורה אצלו היום',
-      ask: 'במילים פשוטות: מה נכנס, מי מקליד, לאן זה הולך.',
-      why: 'זה מה שהופך להיות "מה נכלל" בהצעה. בלי זה ההצעה מדברת כללית והלקוח לא מזהה את עצמו בה.',
-      cta: 'למלא את התהליך',
+      short: tr('התהליך'),
+      title: tr('מה קורה אצלו היום'),
+      ask: tr('במילים פשוטות: מה נכנס, מי מקליד, לאן זה הולך.'),
+      why: tr('זה מה שהופך להיות "מה נכלל" בהצעה. בלי זה ההצעה מדברת כללית והלקוח לא מזהה את עצמו בה.'),
+      cta: tr('למלא את התהליך'),
       anchor: 'q_process',
       fields: ['q_process'],
       done: s => !!(s.process || '').trim()
     },
     {
       id: 'volume',
-      short: 'כמה וכמה זמן',
-      title: 'כמה פעמים ביום זה קורה, וכמה זמן זה לוקח',
-      ask: 'שני מספרים. אם הוא אמר "המון" — שווה לשאול כמה בערך ביום.',
-      why: 'שני המספרים האלה הם כל המחיר. בלעדיהם אין על מה להישען כשהוא יגיד "זה יקר לי".',
-      cta: 'למלא את המספרים',
+      short: tr('כמה וכמה זמן'),
+      title: tr('כמה פעמים ביום זה קורה, וכמה זמן זה לוקח'),
+      ask: tr('שני מספרים. אם הוא אמר "המון" — שווה לשאול כמה בערך ביום.'),
+      why: tr('שני המספרים האלה הם כל המחיר. בלעדיהם אין על מה להישען כשהוא יגיד "זה יקר לי".'),
+      cta: tr('למלא את המספרים'),
       anchor: 'q_freq',
       fields: ['q_freq', 'q_minutes'],
       done: s => s.freq > 0 && s.minutes > 0
     },
     {
       id: 'systems',
-      short: 'תוכנות',
-      title: 'באילו תוכנות זה נוגע',
-      ask: 'וואטסאפ, אקסל, מערכת חשבוניות — לסמן כל מה שעלה בשיחה.',
-      why: 'ככל שיש יותר תוכנות, העבודה ארוכה יותר והמחיר עולה בהתאם. זה מה שקובע כמה זמן זה ייקח.',
-      cta: 'לסמן תוכנות',
+      short: tr('תוכנות'),
+      title: tr('באילו תוכנות זה נוגע'),
+      ask: tr('וואטסאפ, אקסל, מערכת חשבוניות — לסמן כל מה שעלה בשיחה.'),
+      why: tr('ככל שיש יותר תוכנות, העבודה ארוכה יותר והמחיר עולה בהתאם. זה מה שקובע כמה זמן זה ייקח.'),
+      cta: tr('לסמן תוכנות'),
       anchor: 'sysChips',
       done: s => (s.systems || []).length > 0
     },
     {
       id: 'breaks',
-      short: 'תקלות',
-      title: 'מה קורה כשמשהו נופל',
-      ask: 'כמה פעמים בחודש משהו נופל, וכמה זה עולה להם בכל פעם.',
-      why: 'זה בדרך כלל גדול יותר מחיסכון הזמן, וזה מה שמצדיק את המחיר בעיניו. בלי זה ההצעה יוצאת זולה בלי סיבה.',
-      cta: 'פתח ומלא',
+      short: tr('תקלות'),
+      title: tr('מה קורה כשמשהו נופל'),
+      ask: tr('כמה פעמים בחודש משהו נופל, וכמה זה עולה להם בכל פעם.'),
+      why: tr('זה בדרך כלל גדול יותר מחיסכון הזמן, וזה מה שמצדיק את המחיר בעיניו. בלי זה ההצעה יוצאת זולה בלי סיבה.'),
+      cta: tr('פתח ומלא'),
       anchor: 'q_err_freq',
       fields: ['q_err_freq', 'q_err_cost'],
       done: s => s.errFreq > 0 && s.errCost > 0,
@@ -80,32 +83,32 @@
     },
     {
       id: 'scope',
-      short: 'מה כלול',
-      title: 'מה נכלל בעבודה ומה לא',
-      ask: 'כל שורה כבר מסומנת בהמלצה. לשנות רק מה שלא מתאים, ואז לאשר.',
-      why: 'זה החלק שחוסך את הוויכוחים אחר כך. מה שלא כתוב שהוא בחוץ — הלקוח יניח שהוא בפנים.',
-      cta: 'לעבור על הרשימה',
+      short: tr('מה כלול'),
+      title: tr('מה נכלל בעבודה ומה לא'),
+      ask: tr('כל שורה כבר מסומנת בהמלצה. לשנות רק מה שלא מתאים, ואז לאשר.'),
+      why: tr('זה החלק שחוסך את הוויכוחים אחר כך. מה שלא כתוב שהוא בחוץ — הלקוח יניח שהוא בפנים.'),
+      cta: tr('לעבור על הרשימה'),
       anchor: 'scopeBox',
       done: s => !!s.scopeConfirmed
     },
     {
       id: 'client',
-      short: 'הלקוח',
-      title: 'שם הלקוח ומי מאשר',
-      ask: 'השם נכנס לכותרת ההצעה. מי שמאשר קובע כמה זמן היא בתוקף.',
-      why: 'הצעה בלי שם נראית כמו תבנית ששלחו לעוד עשרה. ומי שמאשר קובע אם שבועיים בתוקף מספיקים.',
-      cta: 'למלא פרטי לקוח',
+      short: tr('הלקוח'),
+      title: tr('שם הלקוח ומי מאשר'),
+      ask: tr('השם נכנס לכותרת ההצעה. מי שמאשר קובע כמה זמן היא בתוקף.'),
+      why: tr('הצעה בלי שם נראית כמו תבנית ששלחו לעוד עשרה. ומי שמאשר קובע אם שבועיים בתוקף מספיקים.'),
+      cta: tr('למלא פרטי לקוח'),
       anchor: 'q_client',
       fields: ['q_client', 'q_decider'],
       done: s => !!(s.client || '').trim()
     },
     {
       id: 'send',
-      short: 'שליחה',
-      title: 'ההצעה מוכנה',
-      ask: 'שווה לעבור עליה פעם אחת מלמעלה למטה. אחר כך אפשר לשלוח.',
+      short: tr('שליחה'),
+      title: tr('ההצעה מוכנה'),
+      ask: tr('שווה לעבור עליה פעם אחת מלמעלה למטה. אחר כך אפשר לשלוח.'),
       why: '',
-      cta: 'שלח ללקוח',
+      cta: tr('שלח ללקוח'),
       anchor: 'sendBox',
       /* The last step is an action, not a destination. Pointing it at an
          element was measured landing on a hidden panel — the final
@@ -133,29 +136,25 @@
 
     if (hours > 2000) {
       out.push({ id: 'toomuch', field: 'q_minutes',
-        text: 'לפי מה שהזנת, התהליך לוקח כ-' + Math.round(hours).toLocaleString('en-US') +
-              ' שעות בשנה — יותר מעובד אחד במשרה מלאה. כנראה שאחד משני המספרים גבוה מדי. ' +
-              'שווה לוודא: באמת ' + (+s.minutes) + ' דקות בכל פעם?' });
+        text: tr('לפי מה שהזנת, התהליך לוקח כ-{hours} שעות בשנה — יותר מעובד אחד במשרה מלאה. כנראה שאחד משני המספרים גבוה מדי. שווה לוודא: באמת {minutes} דקות בכל פעם?',
+          { hours: Math.round(hours).toLocaleString('en-US'), minutes: +s.minutes }) });
     }
     if (hours > 0 && hours < 5) {
       out.push({ id: 'toolittle', field: 'q_freq',
-        text: 'לפי מה שהזנת, כל התהליך לוקח כ-' + Math.round(hours) +
-              ' שעות בשנה. זה מעט מדי מכדי שמישהו ישלם על אוטומציה שלו. ' +
-              'אולי זה קורה יותר פעמים ממה שרשמת, או שכדאי לתמחר תהליך אחר.' });
+        text: tr('לפי מה שהזנת, כל התהליך לוקח כ-{hours} שעות בשנה. זה מעט מדי מכדי שמישהו ישלם על אוטומציה שלו. אולי זה קורה יותר פעמים ממה שרשמת, או שכדאי לתמחר תהליך אחר.',
+          { hours: Math.round(hours) }) });
     }
     if (+s.errCost > 0 && +s.errCost >= 20000) {
       out.push({ id: 'bigerr', field: 'q_err_cost',
-        text: 'רשמת ' + Math.round(+s.errCost).toLocaleString('en-US') +
-              ' ₪ לכל תקלה. זה מספר גדול, והמחיר כולו יישען עליו. ' +
-              'לפני השליחה שווה לבקש ממנו דוגמה אחת ספציפית לתקלה כזאת.' });
+        text: tr('רשמת {cost} ₪ לכל תקלה. זה מספר גדול, והמחיר כולו יישען עליו. לפני השליחה שווה לבקש ממנו דוגמה אחת ספציפית לתקלה כזאת.',
+          { cost: Math.round(+s.errCost).toLocaleString('en-US') }) });
     }
     /* Not a method change and not an error — a click that is worth one line,
        because the alternative is a section quietly missing from the document
        with the reason two panels away. */
     if (s.numbersUnset && (+s.freq > 0 || +s.errCost > 0)) {
       out.push({ id: 'unset', field: 'q_provenance',
-        text: 'לא סומן מאיפה הגיע המספר השנתי, ולכן פסקת ההחזר לא נכנסת למסמך שנשלח. ' +
-              'סימון אחד מחזיר אותה. אי-הסימון לא שינה את המחיר.' });
+        text: tr('לא סומן מאיפה הגיע המספר השנתי, ולכן פסקת ההחזר לא נכנסת למסמך שנשלח. סימון אחד מחזיר אותה. אי-הסימון לא שינה את המחיר.') });
     }
     /* An anchor this operator has never held.
 
