@@ -3,7 +3,7 @@
    The product shipped for months with no sender on the document and every
    check passed, because an absent letterhead breaks no rule. These are
    the rules that did not exist. */
-const { make, block, missing, FIELDS, KEY } = require('./pc-sender.js');
+const { make, block, missing, FIELDS, KEY, LOGO_KEY, LOGO_MAX } = require('./pc-sender.js');
 const proposal = require('./pc-proposal.js');
 const assert = require('assert');
 
@@ -153,6 +153,62 @@ test('export is warned about, never prevented', () => {
   const guarded = /senderMissing\([^)]*\)\s*\)?\s*(?:return|\|\|\s*return)/.test(shell);
   assert.ok(!guarded,
     'a missing letterhead must not stop the operator — see the note in renderSend');
+});
+
+console.log('\nthe logo — every proposal tool in the category has one, and this one is client-side only');
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+test('a well-formed image data URI round trips through save/load', () => {
+  const s = mem(), api = make(s);
+  api.save(Object.assign({}, FULL, { [LOGO_KEY]: PNG }));
+  assert.strictEqual(api.load()[LOGO_KEY], PNG, 'the logo did not survive a save/load cycle');
+});
+test('anything that is not an image data URI is dropped, not stored', () => {
+  // save() is the last line of defence — a caller that skipped the UI's own
+  // checks (or a hand-edited localStorage value) must not be trusted to have
+  // validated anything
+  const api = make(mem());
+  api.save(Object.assign({}, FULL, { [LOGO_KEY]: 'not a data uri at all' }));
+  assert.strictEqual(api.load()[LOGO_KEY], undefined, 'a non-image string was stored as if it were a logo');
+});
+test('a value over the ceiling is dropped, not truncated', () => {
+  // truncating would silently store a corrupt image — half a base64 payload
+  // decodes to nothing, and the first anyone would learn of it is a broken
+  // <img> on a document already sent to a client
+  const api = make(mem());
+  const tooBig = 'data:image/png;base64,' + 'A'.repeat(LOGO_MAX);
+  api.save(Object.assign({}, FULL, { [LOGO_KEY]: tooBig }));
+  assert.strictEqual(api.load()[LOGO_KEY], undefined, 'an oversized logo was stored instead of refused');
+});
+test('no logo means no logo — FULL never carried one', () => {
+  const api = make(mem());
+  api.save(FULL);
+  assert.strictEqual(api.load()[LOGO_KEY], undefined);
+});
+
+test('block() carries the logo through only when it is a real image URI', () => {
+  assert.strictEqual(block(Object.assign({}, FULL, { [LOGO_KEY]: PNG })).logo, PNG);
+  assert.strictEqual(block(FULL).logo, null, 'no logo was set — block() must not invent one');
+  assert.strictEqual(block(Object.assign({}, FULL, { [LOGO_KEY]: 'javascript:alert(1)' })).logo, null,
+    'a non-image URI reached the document instead of being refused');
+});
+test('the document prints the logo beside the name, and nowhere without one', () => {
+  const withLogo = proposal.build(ctxFor(Object.assign({}, FULL, { [LOGO_KEY]: PNG })));
+  assert.ok(withLogo.includes('class="from-logo"'), 'the logo never reached the document');
+  assert.ok(withLogo.includes(PNG), 'the image src is not the stored data URI');
+  // decorative alt: the name text right beside it already says who this is
+  // from, and a screen reader announcing the same identity twice is noise
+  assert.ok(/<img class="from-logo" src="[^"]*" alt="">/.test(withLogo),
+    'the logo needs an empty alt — the adjacent name already carries this information');
+  const noLogo = proposal.build(ctxFor(FULL));
+  assert.ok(!noLogo.includes('from-logo'), 'a sender with no logo printed one anyway');
+});
+test('a logo cannot be used to inject markup — it is checked, never escaped', () => {
+  // escaping a data URI would corrupt its base64 payload, so the only
+  // defence against a malicious value here is the data:image/ prefix check
+  // in block() — this proves a non-image string never reaches the template
+  const html = proposal.build(ctxFor(Object.assign({}, FULL,
+    { [LOGO_KEY]: '"><script>alert(1)</script>' })));
+  assert.ok(!html.includes('<script>alert'), 'an unvalidated logo value reached the document');
 });
 
 console.log('\nthe backup carries it');

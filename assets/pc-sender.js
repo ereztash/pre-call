@@ -27,9 +27,24 @@
      ways a client actually replies. Anything else belongs in the body. */
   const FIELDS = ['s_name', 's_business', 's_phone', 's_email'];
 
+  /* The logo lives outside FIELDS on purpose. FIELDS drives a generic
+     "read every id's .value" loop in post-call.js (readSender()), and a
+     file input's .value is a fake browser-assigned path, never the data —
+     looping it in there would silently save the string "C:\fakepath\..."
+     as a logo. It is written and read through its own key instead, by the
+     file-picker code that actually has the data URI in hand. */
+  const LOGO_KEY = 's_logo';
+  /* Same ceiling the UI enforces before it ever calls save() — checked
+     again here because this module has no other way to know a caller
+     followed that rule, and a save() that trusts its caller is the reason
+     half the bugs in this project's history got found by a user instead
+     of a test. Base64 runs a data URI to about 4/3 of the source bytes;
+     60KB of image is a bit over 80,000 characters. */
+  const LOGO_MAX = 84000;
+
   function make(storage) {
     return {
-      KEY, FIELDS,
+      KEY, FIELDS, LOGO_KEY, LOGO_MAX,
 
       load() {
         try {
@@ -45,6 +60,10 @@
           const clean = {};
           FIELDS.forEach(f => { if (data && data[f]) clean[f] = String(data[f]).trim(); });
           clean.attribution = data && data.attribution !== false;
+          // only a data: URI, and only inside the ceiling — a stray string
+          // here would otherwise print as a broken image on every future proposal
+          const logo = data && data[LOGO_KEY];
+          if (logo && /^data:image\//.test(logo) && logo.length <= LOGO_MAX) clean[LOGO_KEY] = logo;
           storage.setItem(KEY, JSON.stringify(clean));
           return true;
         } catch (e) { return false; }   // blocked or full — reported, never swallowed
@@ -63,7 +82,8 @@
     if (!name) return null;
     const business = (s.s_business || '').trim();
     const contact = [(s.s_phone || '').trim(), (s.s_email || '').trim()].filter(Boolean);
-    return { name, business, contact };
+    const logo = (s[LOGO_KEY] && /^data:image\//.test(s[LOGO_KEY])) ? s[LOGO_KEY] : null;
+    return { name, business, contact, logo };
   }
 
   /* True when the operator has not filled in who they are. The caller uses
@@ -74,10 +94,12 @@
   root.PC.senderFactory = make;
   root.PC.SENDER_FIELDS = FIELDS;
   root.PC.SENDER_KEY = KEY;
+  root.PC.SENDER_LOGO_KEY = LOGO_KEY;
+  root.PC.SENDER_LOGO_MAX = LOGO_MAX;
   root.PC.senderBlock = block;
   root.PC.senderMissing = missing;
   if (typeof localStorage !== 'undefined') root.PC.sender = make(localStorage);
 
   if (typeof module !== 'undefined' && module.exports)
-    module.exports = { make, block, missing, FIELDS, KEY };
+    module.exports = { make, block, missing, FIELDS, KEY, LOGO_KEY, LOGO_MAX };
 })(typeof window !== 'undefined' ? window : globalThis);

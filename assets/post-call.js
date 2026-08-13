@@ -1202,10 +1202,16 @@ function sendVia(id){
    Operator-level and saved once, not per deal — see pc-sender.js. Kept
    out of the draft on purpose: a draft is one unfinished proposal, this
    is who you are, and discarding the former must never clear the latter. */
+// the logo's own data URI, held here rather than read off a DOM element —
+// a file input's .value is a fake browser-assigned path, never the bytes,
+// so a generic "read every field's .value" loop can never carry this one
+let senderLogo = '';
+
 function readSender(){
   const s = {};
   PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f) s[id] = f.value.trim(); });
   s.attribution = el('s_attr') ? el('s_attr').checked : true;
+  if (senderLogo) s[PC.SENDER_LOGO_KEY] = senderLogo;
   return s;
 }
 let senderTimer = null;
@@ -1218,6 +1224,72 @@ function restoreSender(){
   if (!s) return;
   PC.SENDER_FIELDS.forEach(id => { const f = el(id); if (f && s[id]) f.value = s[id]; });
   if (el('s_attr')) el('s_attr').checked = s.attribution !== false;
+  if (s[PC.SENDER_LOGO_KEY]) { senderLogo = s[PC.SENDER_LOGO_KEY]; showLogoPreview(senderLogo); }
+}
+
+/* ---------- the logo ----------
+   Client-side only: the file is read in the browser, resized nowhere,
+   and never leaves it. It lands in the same localStorage key the name
+   and phone already use, so it rides the existing backup file for free —
+   see pc-backup.js's DATA_KEYS, which already lists postcall_sender_v1. */
+function pickLogo(){
+  const input = el('s_logo_file');
+  if (input) input.click();
+}
+function logoFlash(msg, warn){
+  const box = el('s_logo_msg'); if (!box) return;
+  box.textContent = msg;
+  box.classList.toggle('u-warn', !!warn);
+  box.classList.add('on');
+  setTimeout(() => box.classList.remove('on'), warn ? 4000 : 2200);
+}
+function showLogoPreview(dataUri){
+  const img = el('s_logo_img'), box = el('s_logo_preview'), rm = el('s_logo_remove');
+  if (!img || !box) return;
+  img.src = dataUri;
+  show('s_logo_preview', true);
+  if (rm) show('s_logo_remove', true);
+}
+function hideLogoPreview(){
+  const img = el('s_logo_img');
+  if (img) img.src = '';
+  show('s_logo_preview', false);
+  const rm = el('s_logo_remove');
+  if (rm) show('s_logo_remove', false);
+}
+function handleLogoFile(e){
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // choosing the same file twice must still fire 'change'
+  if (!file) return;
+  // Refused rather than half-built: a file too large to ever pass save()'s
+  // own ceiling is rejected here, with a reason, instead of silently
+  // failing to persist three steps downstream — the same instinct as the
+  // calendar file that refuses rather than downloading something broken.
+  if (!/^image\//.test(file.type)) {
+    logoFlash(tr('הקובץ הזה לא נראה כמו תמונה'), true); return;
+  }
+  if (file.size > PC.SENDER_LOGO_MAX * 0.75) {   // base64 grows the string ~4/3
+    logoFlash(tr('הקובץ גדול מדי — עד 60KB. כווצו את התמונה ונסו שוב'), true); return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const uri = reader.result;
+    if (typeof uri !== 'string' || uri.length > PC.SENDER_LOGO_MAX) {
+      logoFlash(tr('הקובץ גדול מדי — עד 60KB. כווצו את התמונה ונסו שוב'), true); return;
+    }
+    senderLogo = uri;
+    showLogoPreview(uri);
+    PC.sender && PC.sender.save(readSender());
+    recompute();
+  };
+  reader.onerror = () => logoFlash(tr('לא הצלחתי לקרוא את הקובץ'), true);
+  reader.readAsDataURL(file);
+}
+function removeLogo(){
+  senderLogo = '';
+  hideLogoPreview();
+  PC.sender && PC.sender.save(readSender());
+  recompute();
 }
 
 /* ---------- the document ---------- */
@@ -1509,7 +1581,9 @@ const ACTIONS = {
   retroadd:  () => addPastDeal(false),
   retrolost: () => addPastDeal(true),
   'backup-export': downloadBackup,
-  'backup-import': pickBackupFile
+  'backup-import': pickBackupFile,
+  'pick-logo':   pickLogo,
+  'remove-logo': removeLogo
 };
 document.addEventListener('click', e => {
   // the guide's own buttons carry where to go, so they are handled first
@@ -1595,6 +1669,8 @@ document.querySelectorAll('input,select,textarea').forEach(n => {
 });
 const backupFileInput = el('backupFile');
 if (backupFileInput) backupFileInput.addEventListener('change', handleBackupFile);
+const logoFileInput = el('s_logo_file');
+if (logoFileInput) logoFileInput.addEventListener('change', handleLogoFile);
 
 /* ---------- arriving from the entry page ----------
    The entry page asks which situation you are in, not which tool you want,

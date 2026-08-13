@@ -241,7 +241,8 @@ test('every element hidden by the class is toggled through show()', () => {
   // opens — it is a permanently hidden native control, clicked
   // programmatically (el('backupFile').click()) and never meant to become
   // visible. show() has nothing to toggle here, by design, not by omission.
-  const PERMANENTLY_HIDDEN = ['backupFile'];
+  // s_logo_file is the same control for the same reason, one field lower.
+  const PERMANENTLY_HIDDEN = ['backupFile', 's_logo_file'];
   const ids = [...html['post-call.html'].matchAll(/<[^>]*\sid="([^"]+)"[^>]*\sclass="[^"]*\bhidden\b/g)]
     .map(m => m[1])
     .concat([...html['post-call.html'].matchAll(/<[^>]*\sclass="[^"]*\bhidden\b[^"]*"[^>]*\sid="([^"]+)"/g)]

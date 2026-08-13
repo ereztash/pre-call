@@ -5,6 +5,13 @@
    shipped pages and modules and fails when a Hebrew string has no entry
    here, so a copy edit cannot silently ship untranslated. */
 if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
+  "לוגו": "Logo",
+  "בחרו קובץ": "Choose file",
+  "בחרו קובץ לוגו": "Choose a logo file",
+  "הסירו לוגו": "Remove logo",
+  "לא חובה. מודפס ליד השם בהצעה. עד 60KB.": "Optional. Printed beside your name on the proposal. Up to 60KB.",
+  "הקובץ הזה לא נראה כמו תמונה": "That file doesn't look like an image",
+  "הקובץ גדול מדי — עד 60KB. כווצו את התמונה ונסו שוב": "That file is too large — up to 60KB. Shrink the image and try again",
   "POST-CALL · מהשיחה להצעה מתומחרת · אוטומציות": "POST-CALL · From the call to a priced proposal · Automations",
   "הדבק כאן את התמלול המלא...": "Paste the full transcript here...",
   "למשל: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון, ואז נפתחת חשבונית במערכת": "e.g.: every order that comes in on WhatsApp gets typed by hand into a sheet, then an invoice opens in the system",

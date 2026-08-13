@@ -164,6 +164,34 @@
         <div><label for="s_email">אימייל</label>
           <input type="email" id="s_email" placeholder="dana@example.co.il" autocomplete="email"></div>
       </div>
+      <!-- ============ לוגו ============
+           Every proposal tool in the category prints one — this is the one
+           feature the audit in docs/category.md names as a real, structural
+           gap. Client-side only, on purpose: the file never leaves the
+           browser, it goes straight into the same localStorage key the name
+           and phone already live in, and the same backup file already
+           carries it (postcall_sender_v1 is already in pc-backup.js's
+           DATA_KEYS). No upload endpoint, because there is no endpoint for
+           anything else here either.
+
+           A size ceiling rather than silent resizing: the calendar file and
+           the transcript prompt both already use "refuse, explain, and let
+           the operator fix it" instead of a transformation that could go
+           wrong invisibly. A logo is a small, mostly-flat image; 60KB is
+           generous for one and small enough that it does not turn every
+           future backup file into a photo library. -->
+      <div class="row mt12">
+        <div>
+          <label for="s_logo_file">לוגו <span class="hint">לא חובה. מודפס ליד השם בהצעה. עד 60KB.</span></label>
+          <button type="button" class="ghost" data-act="pick-logo">בחרו קובץ</button>
+          <button type="button" class="ghost hidden" data-act="remove-logo" id="s_logo_remove">הסירו לוגו</button>
+          <input type="file" id="s_logo_file" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="hidden" aria-label="בחרו קובץ לוגו">
+          <span class="copied" id="s_logo_msg"></span>
+        </div>
+        <div class="logo-preview hidden" id="s_logo_preview">
+          <img id="s_logo_img" alt="" src="">
+        </div>
+      </div>
       <label class="checkline" for="s_attr">
         <input type="checkbox" id="s_attr" checked>
         <span>להשאיר שורה קטנה בתחתית המסמך שאומרת במה הוא נבנה</span>

@@ -878,8 +878,14 @@ async function journey(engineName, base) {
      are real decisions and Hick's law does not care that they are chrome —
      so the ceiling moves by exactly two and not by "a bit of room". The
      section ceiling below is the one that matters and it did not move:
-     these two are not in any section. */
-  const PAGE_CONTROL_CEILING = 97;      // measured 91, then 93 across the whole page
+     these two are not in any section.
+
+     97 → 98: the "Choose file" button behind the new logo field, one
+     real control in the sender section (45, still under the 48 section
+     ceiling — the remove button and the file input stay hidden until a
+     logo exists, so neither is on screen at rest and neither is counted
+     here). */
+  const PAGE_CONTROL_CEILING = 98;      // measured 91, then 93, then 97 across the whole page
 
   await test(label('no single section puts more choices in front of you than it has to'), async () => {
     /* Its own context at a pinned viewport, because the number is meaningless

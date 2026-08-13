@@ -166,10 +166,17 @@
        was from. Printed only when there is a name: a header carrying just
        a phone number reads worse than none at all. */
     const sender = (root.PC && root.PC.senderBlock) ? root.PC.senderBlock(ctx.sender) : null;
+    /* alt="" on purpose: the name text right beside it already says who
+       this is from, so a screen reader announcing the image too would say
+       the same thing twice. block() already restricted this to a data:
+       image URI — never user text — so it is not escaped like the fields
+       around it; escaping a data URI would corrupt its base64 payload. */
+    const logoImg = sender && sender.logo ? `<img class="from-logo" src="${sender.logo}" alt="">` : '';
     const from = sender ? `
 <div class="from">
-  <div class="from-n">${escape(sender.name)}${sender.business ? ' · <span class="from-b">' + escape(sender.business) + '</span>' : ''}</div>
-  ${sender.contact.length ? `<div class="from-c">${sender.contact.map(escape).join(' · ')}</div>` : ''}
+  ${logoImg}
+  <div class="from-t"><div class="from-n">${escape(sender.name)}${sender.business ? ' · <span class="from-b">' + escape(sender.business) + '</span>' : ''}</div>
+  ${sender.contact.length ? `<div class="from-c">${sender.contact.map(escape).join(' · ')}</div>` : ''}</div>
 </div>` : '';
 
     /* The one place this product travels on its own. The document goes
