@@ -11,17 +11,69 @@ var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
 /* ---------- state ---------- */
 const S = {};
 
-/* ---------- nav ---------- */
-document.querySelectorAll('.stepbtn').forEach(b=>b.onclick=()=>go(+b.dataset.s));
-function go(n){
+/* ---------- nav ----------
+   Three buttons that swap which panel is showing, wired as the ARIA tabs
+   pattern: aria-selected says which one is current, and a roving tabindex
+   means the whole tab strip is ONE stop in the tab order rather than
+   three — Tab moves you past the nav and into the panel, arrows move you
+   between steps. That is the behaviour a screen-reader user is told to
+   expect the moment the markup says role="tablist".
+
+   The part that mattered more and was missing entirely: switching steps
+   moved the page but never moved FOCUS. Sighted mouse users saw the new
+   panel; anyone on a keyboard was left standing on a button while the
+   thing it opened was somewhere else, and a screen reader went on reading
+   the panel that had just been hidden. So the panel itself takes focus
+   (tabindex="-1" in the markup, never in the tab order) — the reader
+   lands on the new step's heading and reads down from there. */
+const STEP_BTNS = () => [...document.querySelectorAll('.stepbtn')];
+
+function go(n, opts){
   if(n!==3) callMode(false); // the step buttons are hidden in call mode; leaving the script step must not hide them
   if(n===2) refreshEdgeRef();
-  document.querySelectorAll('.stepbtn').forEach(b=>b.classList.toggle('on',+b.dataset.s===n));
+  STEP_BTNS().forEach(b=>{
+    const on = +b.dataset.s===n;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    b.tabIndex = on ? 0 : -1;
+  });
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  document.getElementById('p'+n).classList.add('on');
-  window.scrollTo({top:0,behavior:
-    (typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches)?'auto':'smooth'});
+  const panel = document.getElementById('p'+n);
+  panel.classList.add('on');
+  const still = (typeof matchMedia==='function' &&
+                 matchMedia('(prefers-reduced-motion: reduce)').matches);
+  window.scrollTo({top:0,behavior: still?'auto':'smooth'});
+  /* Not on the very first render — moving focus on page load steals it
+     from wherever the browser restored it, and announces a step nobody
+     asked for. Only a deliberate change moves anybody. */
+  if(!opts || opts.focus !== false) panel.focus({preventScroll:true});
 }
+
+STEP_BTNS().forEach(b=>{
+  b.addEventListener('click', ()=>go(+b.dataset.s));
+  /* Arrows move between tabs and take focus with them, which is what
+     makes the roving tabindex navigable; Home/End jump to the ends. */
+  b.addEventListener('keydown', e=>{
+    const keys = {ArrowRight:1, ArrowLeft:1, ArrowDown:1, ArrowUp:1, Home:1, End:1};
+    if(!keys[e.key]) return;
+    e.preventDefault();
+    const btns = STEP_BTNS();
+    const at = btns.indexOf(b);
+    /* The page is RTL in Hebrew and LTR in English, and "next" follows
+       the reading direction in both — an arrow that moved the wrong way
+       would be the one thing here more confusing than no arrows. */
+    const rtl = (document.documentElement.dir || 'rtl') === 'rtl';
+    const fwd = rtl ? 'ArrowLeft' : 'ArrowRight';
+    let to = at;
+    if(e.key === 'Home') to = 0;
+    else if(e.key === 'End') to = btns.length - 1;
+    else if(e.key === fwd || e.key === 'ArrowDown') to = (at + 1) % btns.length;
+    else to = (at - 1 + btns.length) % btns.length;
+    const target = btns[to];
+    go(+target.dataset.s, {focus:false});
+    target.focus();
+  });
+});
 
 /* ---------- call mode ----------
    Everything this does lives in CSS (see the @media screen block next to the

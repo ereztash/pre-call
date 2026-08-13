@@ -55,6 +55,11 @@ jobs:
         run: node assets/followup.test.js
       - name: markup, CSP, print and telemetry contracts
         run: node assets/markup.test.js
+      # Every Hebrew string the product ships has to have an English one.
+      # A missing entry is not an error at runtime — it is a Hebrew sentence
+      # in the middle of an English page, which nothing else would catch.
+      - name: the second language — no string ships untranslated
+        run: node assets/i18n.test.js
       - name: PRE-CALL — parsing, the anchor sentence, and the private/public split
         run: node assets/pre-call.test.js
       - name: api request guards
@@ -120,6 +125,14 @@ jobs:
         env:
           A11Y_REQUIRED: '1'
           PW_SCHEME: dark
+        run: node assets/a11y.test.js
+      # And the English overlay, which lays the same pages out left-to-right
+      # with different label lengths. A translation can break a layout the
+      # original passed, and the standard does not care which language broke it.
+      - name: accessibility — the same states, in English
+        env:
+          A11Y_REQUIRED: '1'
+          PW_LANG: en
         run: node assets/a11y.test.js
       - name: core web vitals on a throttled phone
         run: node assets/perf.test.js

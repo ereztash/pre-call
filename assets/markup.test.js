@@ -171,6 +171,58 @@ test('pre-call still prints the script and never the private notes', () => {
     'the script panel is #p3 now — hiding it prints a blank page');
 });
 
+console.log('\nlandmarks and the way past them');
+/* WCAG 2.4.1 is satisfied by something being present, which is exactly the
+   shape of requirement that rots: nobody notices its absence, and axe
+   reports nothing because nothing is wrong — there is simply nothing
+   there. A new page added to this product would arrive without either of
+   these unless a test asks for them by name. */
+for (const f of ['index.html', 'pre-call.html', 'post-call.html', 'privacy.html']) {
+  test(f + ' opens with a skip link that points at a real landmark', () => {
+    const page = read(f);
+    const skip = page.match(/<a class="skip" href="#([\w-]+)"[^>]*>/);
+    assert.ok(skip, 'no skip link — every visit crosses the whole chrome on the keyboard');
+    /* First in the body, or it is not a bypass: a skip link that comes
+       after the preferences strip has already made you tab through it. */
+    const body = page.slice(page.indexOf('<body>') + 6).trim();
+    assert.ok(body.startsWith('<a class="skip"'),
+      'the skip link is not the first thing in the body, so it is not the first stop');
+    const target = new RegExp('id="' + skip[1] + '"');
+    assert.ok(target.test(page), 'the skip link points at #' + skip[1] + ', which does not exist');
+  });
+  test(f + ' has exactly one main landmark and one h1', () => {
+    const page = read(f);
+    assert.strictEqual((page.match(/<main[\s>]/g) || []).length, 1, 'a page has one main region');
+    assert.strictEqual((page.match(/<\/main>/g) || []).length, 1, 'the main region is not closed exactly once');
+    assert.strictEqual((page.match(/<h1[\s>]/g) || []).length, 1, 'a page has one first-level heading');
+  });
+}
+
+test('the step nav declares the pattern it behaves like, and wires every part of it', () => {
+  /* role="tablist" is a promise about the keyboard. Making it in the markup
+     and not keeping it in the script is worse than never making it: a
+     screen reader tells its user arrows will work, and they do not. */
+  const page = read('pre-call.html');
+  assert.ok(/role="tablist"/.test(page), 'the step nav no longer declares itself a tablist');
+  const tabs = [...page.matchAll(/<button class="stepbtn[^"]*"[^>]*>/g)].map(m => m[0]);
+  assert.strictEqual(tabs.length, 3, 'expected three steps, found ' + tabs.length);
+  tabs.forEach(t => {
+    assert.ok(/role="tab"/.test(t), 'a step button is not a tab: ' + t.slice(0, 70));
+    assert.ok(/aria-controls="p\d"/.test(t), 'a tab does not say which panel it controls');
+    assert.ok(/aria-selected="(true|false)"/.test(t), 'a tab does not report whether it is selected');
+  });
+  const selected = tabs.filter(t => /aria-selected="true"/.test(t));
+  assert.strictEqual(selected.length, 1, 'exactly one step is current, found ' + selected.length);
+  /* the roving tabindex: every tab but the current one is out of the tab order */
+  assert.strictEqual(tabs.filter(t => /tabindex="-1"/.test(t)).length, 2,
+    'a tablist is one stop in the tab order — the other two tabs need tabindex="-1"');
+  const src = read('assets/pre-call.js');
+  assert.ok(/ArrowRight/.test(src) && /ArrowLeft/.test(src),
+    'the markup promises arrow keys and the script does not implement them');
+  assert.ok(/panel\.focus\(/.test(src),
+    'changing step must move focus into the panel, or the keyboard user is left behind');
+});
+
 console.log('\nshow/hide mechanism');
 /* Removing the inline styles for the CSP turned style="display:none" into
    class="hidden", and every site that un-hid with style.display='' silently
@@ -346,8 +398,15 @@ test('the control box stays the first div in #p3, or the print sheet loses its t
      child of #p4 only if that div also carries .box. .callbar is a div, so
      inserting it above the control box would silently start printing the button
      row. This pins the order the selector depends on. */
-  const open = '<div class="panel" id="p3">';
-  const p3 = html['pre-call.html'].slice(html['pre-call.html'].indexOf(open) + open.length);
+  /* Matched by id rather than by the exact opening tag: the panel grew
+     role="tabpanel" and aria-labelledby when the step nav became a real
+     tablist, and an exact-string indexOf silently returned -1 — which
+     sliced from the top of the document and reported the preferences
+     strip as the first div in #p3. A test that fails for the wrong
+     reason is worth less than no test. */
+  const opened = html['pre-call.html'].match(/<div class="panel"[^>]*id="p3"[^>]*>/);
+  assert.ok(opened, 'the #p3 panel opening tag is not where this test can find it');
+  const p3 = html['pre-call.html'].slice(opened.index + opened[0].length);
   const firstDiv = p3.match(/<div class="([^"]+)"/);
   assert.ok(/\bbox\b/.test(firstDiv[1]),
     'the first div inside #p3 is now class="' + firstDiv[1] + '" — the print sheet targets .box:first-of-type');

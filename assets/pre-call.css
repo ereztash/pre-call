@@ -408,6 +408,14 @@
      #2e353d. Reused on a dark page it computed to 1.3:1, i.e. invisible.
      That is what privacy.html was doing. This is the same table for the
      screen: same structure, colours that belong to the ground it sits on. */
+  /* The table is allowed to be wider than a phone; the PAGE is not.
+     min-width:420px on a 320px viewport made the whole document scroll
+     sideways — WCAG 1.4.10 calls that a reflow failure, and it is the one
+     kind of overflow a reader magnifying to 400% cannot work around. The
+     wrapper below takes the scrolling, so the sentence around the table
+     still wraps to the screen. Same mechanism as .tbl-wrap in the built
+     script; this table simply never got one. */
+  .facts-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table.facts{width:100%;min-width:420px;border-collapse:collapse;font-size:var(--fs-xs)}
   table.facts th{background:var(--nt-90);color:var(--ink);padding:var(--sp-3) var(--sp-4);
     text-align:start;font-size:var(--fs-xs);font-weight:600;border-bottom:1px solid var(--line)}

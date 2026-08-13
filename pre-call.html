@@ -33,6 +33,7 @@
 <link rel="stylesheet" href="assets/theme.css">
 </head>
 <body>
+<a class="skip" href="#main">דלג לתוכן</a>
 <div class="prefs" id="prefsBar"></div>
 <div class="wrap">
 
@@ -49,11 +50,16 @@
      silently did nothing — same mechanism as errBoundary in post-call.html. -->
 <div class="errbound hidden" id="errBoundary" role="status" aria-live="polite"></div>
 
-<div class="steps">
-  <button class="stepbtn on" data-s="1"><span class="n">שלב 1</span>הפרופיל העסקי</button>
-  <button class="stepbtn" data-s="2"><span class="n">שלב 2</span>הצד השני</button>
-  <button class="stepbtn" data-s="3"><span class="n">שלב 3</span>התסריט</button>
-</div>
+<!-- role="tablist": three buttons that swap which panel is showing IS a
+     tab set, and saying so is what makes the arrow keys expected rather
+     than surprising (WAI-ARIA Authoring Practices, tabs pattern). The
+     wiring — roving tabindex, aria-selected, arrow/Home/End — is in
+     assets/pre-call.js. -->
+<nav class="steps" role="tablist" aria-label="שלבי הכלי">
+  <button class="stepbtn on" data-s="1" role="tab" id="tab1" aria-controls="p1" aria-selected="true"><span class="n">שלב 1</span>הפרופיל העסקי</button>
+  <button class="stepbtn" data-s="2" role="tab" id="tab2" aria-controls="p2" aria-selected="false" tabindex="-1"><span class="n">שלב 2</span>הצד השני</button>
+  <button class="stepbtn" data-s="3" role="tab" id="tab3" aria-controls="p3" aria-selected="false" tabindex="-1"><span class="n">שלב 3</span>התסריט</button>
+</nav>
 
 <!-- ============ STEP 1 ============
      Until this commit the tool opened on an instruction to leave: copy a
@@ -66,7 +72,8 @@
      it behind a disclosure, and the prompt waits behind another one for
      whoever would rather have the machine type. Nothing was deleted;
      what changed is who pays for what. -->
-<div class="panel on" id="p1">
+<main id="main" tabindex="-1">
+<div class="panel on" id="p1" role="tabpanel" aria-labelledby="tab1" tabindex="-1">
   <h2>שלב 1 · הפרופיל העסקי</h2>
   <p class="lead">ממלאים פעם אחת — נשמר בדפדפן הזה ומשמש כל שיחה. ארבעה שדות מספיקים לתסריט חד; שדות ריקים לא שוברים כלום, הם רק מכהים אותו.</p>
 
@@ -159,7 +166,7 @@
 </div>
 
 <!-- ============ STEP 2 ============ -->
-<div class="panel" id="p2">
+<div class="panel" id="p2" role="tabpanel" aria-labelledby="tab2" tabindex="-1">
   <h2>שלב 2 · הצד השני</h2>
   <p class="lead">שתי דרכים. מהירה, או מעמיקה. הפרטים כאן משנים את הניסוח של השאלות, לא את המבנה.</p>
   <button data-act="newprospect" class="ghost mb6">שיחה חדשה · נקה פרטי לקוח קודם</button>
@@ -233,7 +240,7 @@
 </div>
 
 <!-- ============ STEP 3 ============ -->
-<div class="panel" id="p3">
+<div class="panel" id="p3" role="tabpanel" aria-labelledby="tab3" tabindex="-1">
   <!-- This box must stay the FIRST div inside #p4: the print sheet hides it
        with `#p3 .box:first-of-type`, which is first-of-*element*-type, so a
        div inserted above it would stop matching and the button row would
@@ -299,6 +306,8 @@
     <a class="act" href="post-call.html">לתמחור ההצעה · POST-CALL</a>
   </div>
 </div>
+
+</main>
 
 <!-- ============ גיבוי ושחזור ============
      Everything above lives only in this browser's localStorage. Clearing

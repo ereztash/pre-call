@@ -79,10 +79,40 @@
    corner of the flow, styled with the same tokens as everything else
    so they theme without being mentioned again in this file.
    ============================================================ */
+/* ============================================================
+   Skip to content — WCAG 2.4.1 Bypass Blocks (Level A).
+
+   Every page opens with the same chrome: a preferences strip, a header,
+   and on the tools a step nav. Somebody using a keyboard or a screen
+   reader crossed all of it, on every page, on every visit, to reach the
+   thing they came for. axe cannot flag this — a missing bypass is
+   nothing on the page rather than something wrong with it, which is
+   exactly the class of defect this project keeps finding.
+
+   Off-screen rather than display:none, because a hidden element is not
+   focusable and the whole point is that Tab finds it first. It is the
+   first element in the body on every page, ahead of the preferences
+   strip, so it is the first stop in the tab order. Non-transparent
+   background: it lands on top of whatever is underneath it.
+   ============================================================ */
+.skip{position:absolute;inset-inline-start:var(--sp-5);top:-100px;z-index:100;
+  background:var(--copper);color:var(--nt-90);padding:var(--sp-3) var(--sp-5);
+  border-radius:var(--r-md);font-size:var(--fs-md);font-weight:600;
+  text-decoration:none;transition:top .12s ease}
+.skip:focus{top:var(--sp-3)}
+@media (prefers-reduced-motion: reduce){ .skip{transition:none} }
+@media print{ .skip{display:none} }
+
 /* min-height matches the buttons it will hold, so the space exists from
    first paint and filling it shifts nothing — see strip() in pc-i18n.js. */
 .prefs{display:flex;gap:var(--sp-3);justify-content:flex-end;align-items:center;
   max-width:920px;margin:0 auto;padding:var(--sp-3) var(--sp-6) 0;min-height:32px}
+/* The preferences strip is defined only here, so its focus ring has to be
+   defined only here too — on the entry page the sole :focus-visible rule
+   in the stylesheet is .card's, which meant these two buttons had no
+   visible focus at all (WCAG 2.4.7). They were the first two stops in the
+   tab order of every page in the product. */
+.prefs button:focus-visible{outline:3px solid var(--cu-50);outline-offset:2px}
 /* A background step, not a border — the audit holds every page to
    borders on ≤15% of elements, and two chrome buttons are exactly the
    kind of thing that should not spend that budget. The step is
@@ -94,3 +124,32 @@
   border-radius:var(--r-pill);cursor:pointer;min-height:32px}
 .prefs button:hover{background:var(--cu-90);color:var(--ink)}
 @media print{ .prefs{display:none} }
+
+/* ============================================================
+   prefers-contrast: more — WCAG 1.4.6 territory, offered rather
+   than assumed.
+
+   The palette below AA is a deliberate design: --muted is grey on
+   purpose, hints recede on purpose, and a border is a hairline on
+   purpose. That is right for most readers and wrong for some, and the
+   browser already knows which is which — Windows High Contrast, macOS
+   Increase Contrast and the GNOME setting all surface here.
+
+   So this does not invent a third palette. It reaches for steps the
+   ramp already ships, at the far ends: secondary text stops being
+   secondary, hairlines get a value that survives a glare, and the
+   focus ring thickens. Both themes, because both have the same
+   problem at opposite ends of the ramp.
+   ============================================================ */
+@media (prefers-contrast: more){
+  :root{
+    --muted:var(--nt-27);      /* secondary text joins the body text */
+    --line:var(--nt-50);       /* a hairline you can actually see */
+  }
+  .hint,.hint-p,.why,.scope-why{color:var(--nt-17)}
+  :focus-visible{outline-width:4px}
+  /* A border that exists only as a value step stops being enough when
+     contrast is turned up — the elements that separate by background
+     alone get an explicit edge back. */
+  .box,.qa,.stat,.card,.chip,input,textarea,select{border:1px solid var(--line)}
+}

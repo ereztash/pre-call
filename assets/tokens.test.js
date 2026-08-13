@@ -289,7 +289,10 @@ console.log('\nthe dark theme is the same vocabulary, read from the other end');
    of the ramp, not an invention beside it. */
 {
   const theme = strip(fs.readFileSync(path.join(__dirname, 'theme.css'), 'utf8'));
-  const blocks = [...theme.matchAll(/\{([^{}]*--nt-5[^{}]*)\}/g)].map(m => m[1]);
+  /* `--nt-5\s*:` — a block that DECLARES the first ramp step, not one that
+     merely mentions a step. The looser `--nt-5` matched `var(--nt-50)` too,
+     so the prefers-contrast block below counted as a third dark theme. */
+  const blocks = [...theme.matchAll(/\{([^{}]*--nt-5\s*:[^{}]*)\}/g)].map(m => m[1]);
   const rampOf = t => {
     const out = {};
     for (const m of t.matchAll(/(--(?:nt|cu|tq|rd)-\d+)\s*:\s*(#[0-9a-fA-F]{6})\s*;/g))
