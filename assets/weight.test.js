@@ -86,7 +86,17 @@ function wire(f) {
    the prefers-contrast block. The dictionaries themselves are still not in
    any of these numbers — a Hebrew visit does not download them — so what
    grew is the product, not the translation. accessibility.html is a new
-   page and gets the small-page ceiling the other static page has. */
+   page and gets the small-page ceiling the other static page has.
+
+   A fourth raise, 146 → 148KB, landed the same day every remaining
+   POST-CALL module (pc-followup, pc-gate, pc-history, pc-ledger,
+   pc-proposal, pc-transcript) finished crossing the tr() seam — the
+   wrapper itself, once per module, plus every Hebrew literal now sitting
+   inside a function call instead of a bare string. That is the seam's
+   fixed cost, paid once per file and paid by every visitor regardless of
+   language, which is exactly the kind of growth this budget exists to
+   surface rather than hide: 0.2KB over on the old ceiling, for finishing
+   the second language. */
 const BUDGETS = {
   'index.html':          21 * 1024,
   'privacy.html':        21 * 1024,
@@ -108,7 +118,7 @@ const BUDGETS = {
      capability, the growth has stopped being features and the trim is overdue.
      index.html and pre-call.html keep their tight ceilings either way — they are
      what a first visit pays for. */
-  'post-call.html':     146 * 1024
+  'post-call.html':     148 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

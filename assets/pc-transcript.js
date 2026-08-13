@@ -86,13 +86,21 @@
        professional prompt cannot afford. The one truly dynamic piece,
        the transcript itself, is never translated — it is the operator's
        own paste, in whatever language they have it — so it travels as a
-       {transcript} parameter rather than sitting inside the literal. */
+       {transcript} parameter rather than sitting inside the literal.
+
+       The ```json fence sits OUTSIDE both tr() calls, on its own, rather
+       than escaped inside the template literal: tools/i18n-extract.js
+       matches a tr(`...`) literal up to its first backtick, escaped or
+       not, so an escaped ``` here silently truncated the whole header at
+       "בתוך בלוק" and lost everything after it. Splitting the sentence
+       around the fence — itself unmarked-up structure, not prose — keeps
+       the literal backtick-free and the extraction honest. */
     const header = tr(`להלן תמלול של שיחת מכירה בין נותן שירות אוטומציה ללקוח פוטנציאלי.
 
 המשימה שלך היא חילוץ בלבד. אל תעריך, אל תשלים ואל תנחש — אם משהו לא נאמר, החזר null.
 לכל ערך שאתה מחלץ, החזר גם את הציטוט המדויק שממנו לקחת אותו ומי אמר אותו.
 
-החזר JSON יחיד, בתוך בלוק \`\`\`json, במבנה הבא:
+החזר JSON יחיד, בתוך בלוק`) + ' ```json' + tr(`, במבנה הבא:
 
 {
   "fields": {`);

@@ -319,23 +319,31 @@ const renderLedger = guard('ledger', function (){
      past; this is the only line here that asks for something. */
   const waiting = PC.followup.summary(list);
 
-  const summary = list.length ? `
-    ${waiting ? `<div class="ledger-act">
-      <b>${waiting.count === 1 ? 'הצעה אחת מחכה לך' : waiting.count + ' הצעות מחכות לך'}:</b>
+  const waitingHeading = waiting
+    ? (waiting.count === 1 ? tr('הצעה אחת מחכה לך') : tr('{n} הצעות מחכות לך', { n: waiting.count }))
+    : '';
+  const waitingBlock = waiting ? `<div class="ledger-act">
+      <b>${waitingHeading}:</b>
       ${esc(waiting.text)}.
-      <span class="ledger-act-n">תשובה שלא הגיעה היא עדיין מידע — סמנו אותה, כדי שהאומדן יתחיל להימדד.</span>
-    </div>` : ''}
+      <span class="ledger-act-n">${tr('תשובה שלא הגיעה היא עדיין מידע — סמנו אותה, כדי שהאומדן יתחיל להימדד.')}</span>
+    </div>` : '';
+  const closeRateLine = win.rate !== null
+    ? `<span>${tr('שיעור סגירה {pct}%', { pct: Math.round(win.rate * 100) })}</span>` : '';
+  const calBlock = cal.enough
+    ? `<div class="ok">` + tr('<b>הכיול נמדד על {n} מסירות.</b> {suggestion}. אומדן מצטבר {est} שעות מול {act} בפועל. אפשר לעדכן את התעריף או את האומדן בהתאם.', {
+        n: cal.n, suggestion: cal.suggestion, est: cal.estimatedTotal, act: cal.actualTotal
+      }) + `</div>`
+    : `<div class="tri-warn">` + tr('כיול האומדן דורש {n} מסירות נוספות עם שעות מדווחות. עד אז טבלת האומדן נשארת מסומנת כלא-מכוילת — היא הותאמה אחורה למחיר, ולא נמדדה.',
+        { n: 5 - cal.n }) + `</div>`;
+
+  const summary = list.length ? `
+    ${waitingBlock}
     <div class="ledger-sum">
-      <span>${list.length} הצעות</span>
-      <span>${win.won} נסגרו · ${win.lost} נדחו · ${win.undecided} פתוחות</span>
-      ${win.rate !== null ? `<span>שיעור סגירה ${Math.round(win.rate*100)}%</span>` : ''}
+      <span>${tr('{n} הצעות', { n: list.length })}</span>
+      <span>${tr('{won} נסגרו · {lost} נדחו · {undecided} פתוחות', { won: win.won, lost: win.lost, undecided: win.undecided })}</span>
+      ${closeRateLine}
     </div>
-    ${cal.enough
-      ? `<div class="ok"><b>הכיול נמדד על ${cal.n} מסירות.</b> ${cal.suggestion}.
-           אומדן מצטבר ${cal.estimatedTotal} שעות מול ${cal.actualTotal} בפועל.
-           אפשר לעדכן את התעריף או את האומדן בהתאם.</div>`
-      : `<div class="tri-warn">כיול האומדן דורש ${5 - cal.n} מסירות נוספות עם שעות מדווחות.
-           עד אז טבלת האומדן נשארת מסומנת כלא-מכוילת — היא הותאמה אחורה למחיר, ולא נמדדה.</div>`}` : '';
+    ${calBlock}` : '';
 
   box.innerHTML = summary + (list.length ? list.map(d => {
     const o = d.outcome || {};
@@ -345,12 +353,32 @@ const renderLedger = guard('ledger', function (){
        sent three weeks ago and a proposal sent this morning looked
        identical in here. */
     const due = PC.followup.dueState(d);
+    const editDisabled = d.form ? '' : ` disabled title="${tr('נשמרה לפני שהיה אפשר לפתוח מחדש')}"`;
+    const calBtn = due ? `<button type="button" class="sbtn s-cal" data-deal="${d.id}" data-status="__ics"
+          title="${tr('מוריד קובץ יומן עם תזכורת לבדוק מה קרה')}">${tr('תזכורת ליומן')}</button>` : '';
+    const outcomeBlock = (d.status === 'won' || done) ? `
+        <div class="deal-out">
+          <div><label for="oc_price_${d.id}">${tr('מחיר שנסגר בפועל')}</label>
+            <input type="number" id="oc_price_${d.id}" value="${o.closedPrice || ''}" placeholder="${d.priceQuoted || ''}"></div>
+          <div><label for="oc_hours_${d.id}">${tr('שעות עבודה בפועל')}</label>
+            <input type="number" id="oc_hours_${d.id}" value="${o.actualHours || ''}" placeholder="${d.estimatedHours || ''}"></div>
+          ${o.closedPrice > 0 && d.priceQuoted > 0 && o.closedPrice < d.priceQuoted ? `
+          <div><label for="oc_conc_${d.id}">${tr('המחיר ירד. מי ביקש?')}</label>
+            <select id="oc_conc_${d.id}">
+              <option value="unknown"${(o.concession || 'unknown') === 'unknown' ? ' selected' : ''}>${tr('לא נרשם')}</option>
+              <option value="client_asked"${o.concession === 'client_asked' ? ' selected' : ''}>${tr('הלקוח ביקש')}</option>
+              <option value="i_offered"${o.concession === 'i_offered' ? ' selected' : ''}>${tr('הצעתי מעצמי')}</option>
+            </select></div>` : ''}
+          <button type="button" class="ghost" data-deal="${d.id}" data-status="__outcome">${tr('שמור תוצאה')}</button>
+        </div>` : '';
     return `<div class="deal${due && due.needsAction ? ' deal-act' : ''}">
       <div class="deal-h">
         <b>${esc(d.client)}</b>
         <span class="deal-st st-${d.status}">${PC.STATUS_LABEL[d.status]}</span>
         ${due ? `<span class="deal-due due-${due.state}">${esc(due.label)}</span>` : ''}
-        <span class="deal-meta">${d.priceQuoted ? ils(d.priceQuoted) : '—'} · אומדן ${d.estimatedHours || '—'} ש׳ · ${d.created.slice(0,10)}</span>
+        <span class="deal-meta">${tr('{price} · אומדן {hours} ש׳ · {date}', {
+          price: d.priceQuoted ? ils(d.priceQuoted) : '—', hours: d.estimatedHours || '—', date: d.created.slice(0, 10)
+        })}</span>
       </div>
       ${movementLine(d.id, moves)}
       ${d.process ? `<div class="deal-p">${esc(d.process)}</div>` : ''}
@@ -358,34 +386,18 @@ const renderLedger = guard('ledger', function (){
         ${['sent','won','lost','no_answer'].map(s =>
           `<button type="button" class="sbtn${d.status===s?' on s-in':''}" aria-pressed="${d.status===s}"
             data-deal="${d.id}" data-status="${s}">${PC.STATUS_LABEL[s]}</button>`).join('')}
-        <button type="button" class="sbtn s-open" data-deal="${d.id}" data-status="__open"${
-          d.form ? '' : ' disabled title="נשמרה לפני שהיה אפשר לפתוח מחדש"'}>פתח לעריכה</button>
-        <button type="button" class="sbtn" data-deal="${d.id}" data-status="__remove">מחק</button>
-        ${due ? `<button type="button" class="sbtn s-cal" data-deal="${d.id}" data-status="__ics"
-          title="מוריד קובץ יומן עם תזכורת לבדוק מה קרה">תזכורת ליומן</button>` : ''}
+        <button type="button" class="sbtn s-open" data-deal="${d.id}" data-status="__open"${editDisabled}>${tr('פתח לעריכה')}</button>
+        <button type="button" class="sbtn" data-deal="${d.id}" data-status="__remove">${tr('מחק')}</button>
+        ${calBtn}
       </div>
-      ${d.status === 'won' || done ? `
-        <div class="deal-out">
-          <div><label for="oc_price_${d.id}">מחיר שנסגר בפועל</label>
-            <input type="number" id="oc_price_${d.id}" value="${o.closedPrice || ''}" placeholder="${d.priceQuoted || ''}"></div>
-          <div><label for="oc_hours_${d.id}">שעות עבודה בפועל</label>
-            <input type="number" id="oc_hours_${d.id}" value="${o.actualHours || ''}" placeholder="${d.estimatedHours || ''}"></div>
-          ${o.closedPrice > 0 && d.priceQuoted > 0 && o.closedPrice < d.priceQuoted ? `
-          <div><label for="oc_conc_${d.id}">המחיר ירד. מי ביקש?</label>
-            <select id="oc_conc_${d.id}">
-              <option value="unknown"${(o.concession || 'unknown') === 'unknown' ? ' selected' : ''}>לא נרשם</option>
-              <option value="client_asked"${o.concession === 'client_asked' ? ' selected' : ''}>הלקוח ביקש</option>
-              <option value="i_offered"${o.concession === 'i_offered' ? ' selected' : ''}>הצעתי מעצמי</option>
-            </select></div>` : ''}
-          <button type="button" class="ghost" data-deal="${d.id}" data-status="__outcome">שמור תוצאה</button>
-        </div>` : ''}
+      ${outcomeBlock}
     </div>`;
-  }).join('') : '<p class="lead nomargin">עוד לא נשמרה אף הצעה. בנה אחת למעלה ולחץ "שמור".</p>');
+  }).join('') : '<p class="lead nomargin">' + tr('עוד לא נשמרה אף הצעה. בנה אחת למעלה ולחץ "שמור".') + '</p>');
 
   const bar = el('dealBar');
   if (bar) bar.innerHTML = list.length
-    ? `<button type="button" class="ghost" data-act="newdeal">הצעה חדשה</button>
-       <span class="dealbar-n">${list.length} שמורות · ${win.undecided} ממתינות לתשובה</span>` : '';
+    ? `<button type="button" class="ghost" data-act="newdeal">${tr('הצעה חדשה')}</button>
+       <span class="dealbar-n">${tr('{n} שמורות · {undecided} ממתינות לתשובה', { n: list.length, undecided: win.undecided })}</span>` : '';
 
   renderFunnel();      // transitions, from the journal
   renderHistory(list); // states, from the ledger
@@ -442,45 +454,46 @@ const renderFunnel = guard('funnel', function (){
   const row = (k, v) => `<div class="hist-row">
       <span class="hist-k">${k}</span><span class="hist-v">${v}</span></div>`;
 
-  const stages = row('פתחת את הדף',
-      n(f.sessions, 'פעם אחת', '% פעמים')) +
-    row('נשמרו הצעות',
-      f.deals ? n(f.deals, 'אחת', '%') + (f.removed
-        ? ` · ${f.removed === 1 ? 'אחת נמחקה' : f.removed + ' נמחקו'}, ${held} בפנקס` : '')
-              : 'עדיין אף אחת') +
-    row('יצאו ללקוח', f.sent ? n(f.sent, 'אחת', '%') : 'עדיין אף אחת') +
-    row('קיבלו תשובה', f.decided ? n(f.decided, 'אחת', '%') : 'עדיין אף אחת');
+  const removedNote = f.removed
+    ? tr(' · {clause}, {held} בפנקס', {
+        clause: f.removed === 1 ? tr('אחת נמחקה') : tr('{n} נמחקו', { n: f.removed }),
+        held: held
+      })
+    : '';
+  const stages = row(tr('פתחת את הדף'), n(f.sessions, tr('פעם אחת'), tr('% פעמים'))) +
+    row(tr('נשמרו הצעות'),
+      f.deals ? n(f.deals, tr('אחת'), '%') + removedNote : tr('עדיין אף אחת')) +
+    row(tr('יצאו ללקוח'), f.sent ? n(f.sent, tr('אחת'), '%') : tr('עדיין אף אחת')) +
+    row(tr('קיבלו תשובה'), f.decided ? n(f.decided, tr('אחת'), '%') : tr('עדיין אף אחת'));
 
   /* The gap between saving and sending is the one duration this product can
      measure without asking anything, and it is the interesting one: a proposal
      that sits unsent is the most common way a good price never gets tested. */
   const timing = f.medianMinutesToSend !== null
-    ? `<div class="hist-t"><b>מהשמירה לשליחה: ${f.medianMinutesToSend} דקות בחציון.</b>
-         נמדד על ${n(f.sent, 'הצעה אחת', '% הצעות')} שיצאו.</div>`
-    : `<div class="hist-gap">מהשמירה לשליחה — ${
-         n(f.sendsNeeded, 'עוד שליחה אחת', 'עוד % שליחות')} וזה יימדד.
-         עד אז אין כאן מספר, ולא אפס.</div>`;
+    ? `<div class="hist-t"><b>` + tr('מהשמירה לשליחה: {min} דקות בחציון.', { min: f.medianMinutesToSend }) + `</b>
+         ` + tr('נמדד על {n} שיצאו.', { n: n(f.sent, tr('הצעה אחת'), tr('% הצעות')) }) + `</div>`
+    : `<div class="hist-gap">` + tr('מהשמירה לשליחה — {n} וזה יימדד. עד אז אין כאן מספר, ולא אפס.',
+         { n: n(f.sendsNeeded, tr('עוד שליחה אחת'), tr('עוד % שליחות')) }) + `</div>`;
 
   /* Reported apart because averaged together they describe neither: a price
      that fell before anybody had seen it is a decision made alone, and a price
      that fell at closing is one made across a table. */
   const money = (f.droppedBeforeSending
-      ? `<div class="hist-find">${n(f.droppedBeforeSending,
-          'בהצעה אחת המחיר ירד לפני שההצעה יצאה', 'ב-% הצעות המחיר ירד לפני שההצעה יצאה')}
-         — זו הנחה שאף אחד לא ביקש.</div>` : '') +
+      ? `<div class="hist-find">` + tr('{clause} — זו הנחה שאף אחד לא ביקש.', {
+          clause: n(f.droppedBeforeSending, tr('בהצעה אחת המחיר ירד לפני שההצעה יצאה'), tr('ב-% הצעות המחיר ירד לפני שההצעה יצאה'))
+        }) + `</div>` : '') +
     (f.closedLower
-      ? `<div class="hist-find">${n(f.closedLower,
-          'הצעה אחת נסגרה מתחת למחיר שנשלח', '% הצעות נסגרו מתחת למחיר שנשלח')}.</div>` : '');
+      ? `<div class="hist-find">` + n(f.closedLower, tr('הצעה אחת נסגרה מתחת למחיר שנשלח'), tr('% הצעות נסגרו מתחת למחיר שנשלח')) + `.</div>` : '');
 
   /* The whole clause varies, not only the count. Swapping the number alone left
      "הצעה אחת … ואינן", which is a plural verb after a singular subject — the
      kind of thing a template with one variable slot produces and a screenshot
      catches. */
+  const retroClause = f.retro === 1
+    ? tr('הצעה אחת הוזנה בדיעבד ואינה נכללת בזמנים')
+    : tr('{n} הצעות הוזנו בדיעבד ואינן נכללות בזמנים', { n: f.retro });
   const retro = f.retro
-    ? `<div class="hist-gap">${f.retro === 1
-        ? 'הצעה אחת הוזנה בדיעבד ואינה נכללת בזמנים'
-        : f.retro + ' הצעות הוזנו בדיעבד ואינן נכללות בזמנים'} — שם נמדדת
-         ההקלדה ולא המכירה.</div>` : '';
+    ? `<div class="hist-gap">` + tr('{clause} — שם נמדדת ההקלדה ולא המכירה.', { clause: retroClause }) + `</div>` : '';
 
   box.innerHTML = `<div class="hist-rows">${stages}</div>` + timing + money + retro;
 });
@@ -503,16 +516,17 @@ const renderHistory = guard('history', function (list) {
      been written, commented and tested in deals.js since the ledger
      existed and called from nowhere — the one question the operator most
      wants answered, computed and thrown away on every render. */
+  const holdMain = hold.n === 1
+    ? (hold.held ? tr('נסגרה במחיר המלא') : tr('לא נסגרה במחיר המלא'))
+    : tr('{held} מתוך {n} נסגרו במחיר המלא', { held: hold.held, n: hold.n });
+  const holdDiscountNote = hold.discounted
+    ? ' · ' + (hold.discounted === 1
+        ? tr('אחת ירדה ב-{pct}%', { pct: hold.avgDiscount })
+        : tr('{n} ירדו, בממוצע {pct}%', { n: hold.discounted, pct: hold.avgDiscount }))
+    : '';
   const holdLine = hold.n ? `<div class="hist-row">
-      <span class="hist-k">המחיר ששלחת מול המחיר שנסגר</span>
-      <span class="hist-v">${hold.n === 1
-        ? (hold.held ? 'נסגרה במחיר המלא' : 'לא נסגרה במחיר המלא')
-        : `${hold.held} מתוך ${hold.n} נסגרו במחיר המלא`}${
-        hold.discounted
-          ? ` · ${hold.discounted === 1
-              ? `אחת ירדה ב-${hold.avgDiscount}%`
-              : `${hold.discounted} ירדו, בממוצע ${hold.avgDiscount}%`}`
-          : ''}</span>
+      <span class="hist-k">${tr('המחיר ששלחת מול המחיר שנסגר')}</span>
+      <span class="hist-v">${holdMain}${holdDiscountNote}</span>
     </div>` : '';
 
   /* The concession the line above cannot see.
@@ -526,12 +540,13 @@ const renderHistory = guard('history', function (list) {
      that matters most: it is not in the discount figure. `widened` is null for a
      ledger with no baselines, and null is not a number greater than zero, so
      nothing is claimed about deals saved before the baseline existed. */
+  const widenMain = hold.widened === 1
+    ? tr('עסקה אחת קיבלה סעיף שלא היה בהצעה')
+    : tr('{n} עסקאות קיבלו סעיפים שלא היו בהצעה', { n: hold.widened });
+  const widenDiscountNote = hold.discounted ? ' · ' + tr('לא נכנס לאחוז ההנחה') : '';
   const widenLine = hold.widened > 0 ? `<div class="hist-row">
-      <span class="hist-k">נמסר יותר באותו מחיר</span>
-      <span class="hist-v">${hold.widened === 1
-        ? 'עסקה אחת קיבלה סעיף שלא היה בהצעה'
-        : hold.widened + ' עסקאות קיבלו סעיפים שלא היו בהצעה'}, והמחיר לא עלה${
-        hold.discounted ? ' · לא נכנס לאחוז ההנחה' : ''}</span>
+      <span class="hist-k">${tr('נמסר יותר באותו מחיר')}</span>
+      <span class="hist-v">` + tr('{main}, והמחיר לא עלה{note}', { main: widenMain, note: widenDiscountNote }) + `</span>
     </div>` : '';
 
   /* The split, on its own line, whenever at least one side is attributed. One
@@ -542,22 +557,23 @@ const renderHistory = guard('history', function (list) {
      finding, and the countdown says that instead. */
   const bc = hold.byConcession || {};
   const sides = ['client_asked', 'i_offered'].filter(k => bc[k] && bc[k].n);
+  const concUnknownNote = (bc.unknown && bc.unknown.n)
+    ? ' · ' + (bc.unknown.n === 1 ? tr('אחת לא נרשמה') : tr('{n} לא נרשמו', { n: bc.unknown.n }))
+    : '';
   const concLine = sides.length ? `<div class="hist-row">
-      <span class="hist-k">מי הזיז את המחיר</span>
+      <span class="hist-k">${tr('מי הזיז את המחיר')}</span>
       <span class="hist-v">${sides.map(k =>
-        `${esc(PC.CONCESSION_LABEL[k])}: ${bc[k].n === 1 ? 'אחת' : bc[k].n} · −${bc[k].avgDiscount}%`
-      ).join(' · ')}${bc.unknown && bc.unknown.n
-        ? ` · ${bc.unknown.n === 1 ? 'אחת לא נרשמה' : bc.unknown.n + ' לא נרשמו'}`
-        : ''}</span>
+        `${esc(PC.CONCESSION_LABEL[k])}: ${bc[k].n === 1 ? tr('אחת') : bc[k].n} · −${bc[k].avgDiscount}%`
+      ).join(' · ')}${concUnknownNote}</span>
     </div>` : '';
 
+  const accCount = acc.n === 1 ? tr('מסירה אחת') : tr('{n} מסירות', { n: acc.n });
+  const accWithin = (acc.within === 1 && acc.n === 1) ? tr('בתוך') : tr('{n} בתוך', { n: acc.within });
+  const accOverNote = acc.over ? ' · ' + (acc.over === 1 ? tr('אחת חרגה') : tr('{n} חרגו', { n: acc.over })) : '';
+  const accUnderNote = acc.under ? ' · ' + (acc.under === 1 ? tr('אחת מתחת') : tr('{n} מתחת', { n: acc.under })) : '';
   const accLine = acc.n ? `<div class="hist-row">
-      <span class="hist-k">האומדן שלך מול המציאות</span>
-      <span class="hist-v">${acc.n === 1 ? 'מסירה אחת' : acc.n + ' מסירות'} · ${
-        acc.within === 1 && acc.n === 1 ? 'בתוך' : acc.within + ' בתוך'} ±${
-        Math.round(PC.history.CLOSE_ENOUGH * 100)}%${
-        acc.over ? ` · ${acc.over === 1 ? 'אחת חרגה' : acc.over + ' חרגו'}` : ''}${
-        acc.under ? ` · ${acc.under === 1 ? 'אחת מתחת' : acc.under + ' מתחת'}` : ''}</span>
+      <span class="hist-k">${tr('האומדן שלך מול המציאות')}</span>
+      <span class="hist-v">${accCount} · ${accWithin} ±${Math.round(PC.history.CLOSE_ENOUGH * 100)}%${accOverNote}${accUnderNote}</span>
     </div>` : '';
 
   const verdict = acc.verdict
@@ -572,19 +588,22 @@ const renderHistory = guard('history', function (list) {
   const ceilingLine = rep.ceiling && rep.ceiling.untested && rep.ceiling.text
     ? `<div class="hist-find hist-low">${esc(rep.ceiling.text)}</div>` : '';
 
-  const ready = rep.methods.rows.filter(r => r.enough);
-  const methodTable = ready.length ? `
-    <table class="hist-t">
-      <caption>לפי שיטת התמחור שקבעה את המחיר בפועל</caption>
-      <thead><tr><th scope="col">שיטה</th><th scope="col">הצעות</th>
-        <th scope="col">נסגרו</th><th scope="col">במחיר מלא</th></tr></thead>
-      <tbody>${ready.map(r => `<tr>
+  const histColHeaders = `<th scope="col">${tr('הצעות')}</th>
+        <th scope="col">${tr('נסגרו')}</th><th scope="col">${tr('במחיר מלא')}</th>`;
+  const histTableRow = r => `<tr>
         <th scope="row">${esc(r.label)}</th>
         <td>${r.quoted}</td>
         <td>${r.decided ? `${r.won}/${r.decided}` : '—'}</td>
         <td>${r.pricedN ? `${r.heldFull}/${r.pricedN}${
           r.avgDiscount > 0 ? ` · −${r.avgDiscount}%` : ''}` : '—'}</td>
-      </tr>`).join('')}</tbody>
+      </tr>`;
+
+  const ready = rep.methods.rows.filter(r => r.enough);
+  const methodTable = ready.length ? `
+    <table class="hist-t">
+      <caption>${tr('לפי שיטת התמחור שקבעה את המחיר בפועל')}</caption>
+      <thead><tr><th scope="col">${tr('שיטה')}</th>${histColHeaders}</tr></thead>
+      <tbody>${ready.map(histTableRow).join('')}</tbody>
     </table>` : '';
 
   /* Second table, same shape and the same threshold as the one above it. It
@@ -598,16 +617,9 @@ const renderHistory = guard('history', function (list) {
   const provReady = rep.provenance.rows.filter(r => r.enough);
   const provTable = provReady.length ? `
     <table class="hist-t">
-      <caption>לפי מאיפה הגיע המספר שעליו נבנה המחיר</caption>
-      <thead><tr><th scope="col">המספר</th><th scope="col">הצעות</th>
-        <th scope="col">נסגרו</th><th scope="col">במחיר מלא</th></tr></thead>
-      <tbody>${provReady.map(r => `<tr>
-        <th scope="row">${esc(r.label)}</th>
-        <td>${r.quoted}</td>
-        <td>${r.decided ? `${r.won}/${r.decided}` : '—'}</td>
-        <td>${r.pricedN ? `${r.heldFull}/${r.pricedN}${
-          r.avgDiscount > 0 ? ` · −${r.avgDiscount}%` : ''}` : '—'}</td>
-      </tr>`).join('')}</tbody>
+      <caption>${tr('לפי מאיפה הגיע המספר שעליו נבנה המחיר')}</caption>
+      <thead><tr><th scope="col">${tr('המספר')}</th>${histColHeaders}</tr></thead>
+      <tbody>${provReady.map(histTableRow).join('')}</tbody>
     </table>` : '';
 
   /* The countdown, always, even once there are findings — because the
@@ -615,7 +627,7 @@ const renderHistory = guard('history', function (list) {
      one of them gets answered. */
   const missing = rep.unknowns.length ? `
     <div class="hist-gap">
-      <div class="hist-gap-h">מה עוד אי אפשר לומר</div>
+      <div class="hist-gap-h">${tr('מה עוד אי אפשר לומר')}</div>
       <ul class="hist-gap-l">${rep.unknowns.map(u =>
         `<li><b>${esc(u.what)}</b> — ${esc(u.text)}</li>`).join('')}</ul>
     </div>` : '';
