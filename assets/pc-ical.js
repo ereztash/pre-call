@@ -17,6 +17,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const PREP_BEFORE_MIN = 30;   // enough to open the tool and read your own script
   const PRICE_AFTER_MIN = 15;   // inside the gap for 69 of 70 measured meetings
 
@@ -141,7 +144,7 @@
     const end = new Date(start.getTime() + minutes * 60000);
 
     const client = (i.client || '').trim();
-    const who = client || 'הלקוח';
+    const who = client || tr('הלקוח');
     const stamp = o.now || new Date();
 
     return build([
@@ -155,15 +158,15 @@
       'DTSTAMP:' + stampUTC(stamp),
       'DTSTART:' + stampUTC(start),
       'DTEND:' + stampUTC(end),
-      'SUMMARY:' + esc('שיחת אפיון · ' + who),
+      'SUMMARY:' + esc(tr('שיחת אפיון · {who}', { who: who })),
       'DESCRIPTION:' + esc(
-        'לפני: תסריט השיחה מוכן ב-PRE-CALL. אחרי: תמחור ההצעה ב-POST-CALL, ' +
-        'כל עוד השיחה עוד באוזניים.\n\n' +
-        'הרגע שאחרי הוא הרגע שבו ההיקף עוד זכור והמחיר עוד לא נוחש.'),
+        tr('לפני: תסריט השיחה מוכן ב-PRE-CALL. אחרי: תמחור ההצעה ב-POST-CALL, כל עוד השיחה עוד באוזניים.') +
+        '\n\n' +
+        tr('הרגע שאחרי הוא הרגע שבו ההיקף עוד זכור והמחיר עוד לא נוחש.')),
       'BEGIN:VALARM',
       'TRIGGER:-PT' + PREP_BEFORE_MIN + 'M',
       'ACTION:DISPLAY',
-      'DESCRIPTION:' + esc('בעוד ' + PREP_BEFORE_MIN + ' דקות: שיחה עם ' + who),
+      'DESCRIPTION:' + esc(tr('בעוד {min} דקות: שיחה עם {who}', { min: PREP_BEFORE_MIN, who: who })),
       'END:VALARM',
       'BEGIN:VALARM',
       /* The line this whole file exists for. Relative to the END of the event:
@@ -171,8 +174,7 @@
          follow-up reminder. */
       'TRIGGER;RELATED=END:PT' + PRICE_AFTER_MIN + 'M',
       'ACTION:DISPLAY',
-      'DESCRIPTION:' + esc('השיחה עם ' + who + ' נגמרה. תמחר אותה עכשיו, ' +
-        'לא מחר — מחר ההיקף כבר מטושטש והמחיר יוצא מהבטן.'),
+      'DESCRIPTION:' + esc(tr('השיחה עם {who} נגמרה. תמחר אותה עכשיו, לא מחר — מחר ההיקף כבר מטושטש והמחיר יוצא מהבטן.', { who: who })),
       'END:VALARM',
       'END:VEVENT',
       'END:VCALENDAR'

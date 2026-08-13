@@ -8,6 +8,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const ils   = n => '₪' + Math.round(n).toLocaleString('en-US');
   // round to 10, not 100: precise first offers draw less ambitious
   // counteroffers than round ones and read as better-informed
@@ -25,13 +28,13 @@
      say "your market-priced quotes" — at which point the name would have
      been retyped somewhere else and the two would drift. */
   const METHOD_LABEL = {
-    cost: 'עלות + מרווח',
-    market: 'מחירון שוק',
-    value: 'ערך / ROI',
-    comparable: 'עסקה דומה',
+    cost: tr('עלות + מרווח'),
+    market: tr('מחירון שוק'),
+    value: tr('ערך / ROI'),
+    comparable: tr('עסקה דומה'),
     /* Not one of the four. It is what set the price whenever the chosen
        method landed under what delivery costs — see pricedBy below. */
-    floor: 'רצפת עלות'
+    floor: tr('רצפת עלות')
   };
 
   const PRICE = {
@@ -47,10 +50,10 @@
   // Converted from published US ranges for this vertical — starting points for
   // an Israeli market, not measurements of it.
   const MARKET_TIERS = [
-    { name: 'פשוט',      max: 2, simpleOnly: true, lo: 1500,  hi: 4000  },
-    { name: 'מורכב',     max: 3,                   lo: 4000,  hi: 11000 },
-    { name: 'רב-מערכתי', max: 5,                   lo: 11000, hi: 25000 },
-    { name: 'ארגוני',    max: Infinity,            lo: 25000, hi: 45000 }
+    { name: tr('פשוט'),      max: 2, simpleOnly: true, lo: 1500,  hi: 4000  },
+    { name: tr('מורכב'),     max: 3,                   lo: 4000,  hi: 11000 },
+    { name: tr('רב-מערכתי'), max: 5,                   lo: 11000, hi: 25000 },
+    { name: tr('ארגוני'),    max: Infinity,            lo: 25000, hi: 45000 }
   ];
 
   function marketTier(systemCount, integration) {
@@ -88,22 +91,24 @@
     M.cost = {
       label: METHOD_LABEL.cost,
       raw: round(floor * (1 + margin / 100)),
-      basis: effort + ' שעות × ₪' + myRate + ' + ' + margin + '% מרווח'
+      basis: tr('{effort} שעות × ₪{rate} + {margin}% מרווח',
+                { effort: effort, rate: myRate, margin: margin })
     };
 
     const tier = marketTier(n, i.integration || 1);
     M.market = tier ? {
       label: METHOD_LABEL.market,
       raw: round((tier.lo + tier.hi) / 2),
-      basis: 'טווח ' + tier.name + ': ' + ils(tier.lo) + '–' + ils(tier.hi)
+      basis: tr('טווח {tier}: {lo}–{hi}',
+                { tier: tier.name, lo: ils(tier.lo), hi: ils(tier.hi) })
     } : null;
 
     M.value = annualValue > 0 ? {
       label: METHOD_LABEL.value,
       raw: round(annualValue * PRICE.valueCoeff),
-      basis: Math.round(PRICE.valueCoeff * 100) + '% מ' + ils(annualValue) +
-             ' ערך שנתי · הטווח שניתן להגנה ' +
-             ils(annualValue * PRICE.bandLow) + '–' + ils(annualValue * PRICE.bandHigh)
+      basis: tr('{pct}% מ{value} ערך שנתי · הטווח שניתן להגנה {lo}–{hi}',
+                { pct: Math.round(PRICE.valueCoeff * 100), value: ils(annualValue),
+                  lo: ils(annualValue * PRICE.bandLow), hi: ils(annualValue * PRICE.bandHigh) })
     } : null;
 
     M.comparable = (i.compLast > 0) ? {
