@@ -634,7 +634,7 @@ const recompute = guard('recompute', function (){
   el('s_payback').textContent = m.payback ? m.payback.toFixed(1) : '—';
   el('s_band').textContent = m.annualValue
     ? ils(m.low) + ' – ' + ils(m.high)
-    : 'טווח הגנה';
+    : tr('טווח הגנה');
 
   /* The three checks the chain and the verdict box already compute, as a row
      next to the price that reads in the second before the operator opens
