@@ -28,8 +28,11 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const n0 = v => Math.round(v).toLocaleString('en-US');
-  const UNIT_NAME = { '365': 'ליום', '52': 'לשבוע', '12': 'לחודש' };
+  const UNIT_NAME = { '365': tr('ליום'), '52': tr('לשבוע'), '12': tr('לחודש') };
 
   /* The steps, in the order the money actually accumulates. `from` names the
      transcript fields that fed each one, so a row can show the sentences
@@ -51,42 +54,45 @@
     const rows = [];
 
     if (m.runs > 0) rows.push({
-      id: 'runs', title: 'כמה פעמים בשנה',
+      id: 'runs', title: tr('כמה פעמים בשנה'),
       formula: n0(i.freq) + ' ' + (UNIT_NAME[String(i.freqUnit)] || '') + ' × ' +
                n0(i.freqUnit) + ' = ' + n0(m.runs),
-      out: n0(m.runs) + ' פעמים בשנה',
+      out: tr('{n} פעמים בשנה', { n: n0(m.runs) }),
       from: ['freq', 'freqUnit'], said: quotes('freq', 'freqUnit')
     });
 
     if (m.hours > 0) rows.push({
-      id: 'hours', title: 'כמה שעות עבודה זה',
-      formula: n0(m.runs) + ' × ' + n0(m.mins) + ' דקות ÷ 60 = ' + n0(m.hours),
-      out: n0(m.hours) + ' שעות בשנה',
+      id: 'hours', title: tr('כמה שעות עבודה זה'),
+      formula: tr('{runs} × {mins} דקות ÷ 60 = {hours}',
+                  { runs: n0(m.runs), mins: n0(m.mins), hours: n0(m.hours) }),
+      out: tr('{n} שעות בשנה', { n: n0(m.hours) }),
       from: ['minutes'], said: quotes('minutes')
     });
 
     if (m.timeValue > 0) rows.push({
-      id: 'time', title: 'כמה הזמן הזה עולה לו',
-      formula: n0(m.hours) + ' שעות × ₪' + n0(m.rate) + ' לשעה × ' +
-               Math.round((m.capture || 0) * 100) + '% שבאמת ייחסך = ₪' + n0(m.timeValue),
-      out: '₪' + n0(m.timeValue) + ' בשנה',
-      note: 'לא כל שעה שנחסכת הופכת לכסף, ולכן היא מוכפלת בחלק שבאמת מתפנה.',
+      id: 'time', title: tr('כמה הזמן הזה עולה לו'),
+      formula: tr('{hours} שעות × ₪{rate} לשעה × {pct}% שבאמת ייחסך = ₪{value}',
+                  { hours: n0(m.hours), rate: n0(m.rate),
+                    pct: Math.round((m.capture || 0) * 100), value: n0(m.timeValue) }),
+      out: tr('₪{v} בשנה', { v: n0(m.timeValue) }),
+      note: tr('לא כל שעה שנחסכת הופכת לכסף, ולכן היא מוכפלת בחלק שבאמת מתפנה.'),
       from: [], said: []
     });
 
     if (m.errValue > 0) rows.push({
-      id: 'err', title: 'כמה התקלות עולות לו',
-      formula: n0(m.errValue / 12 / (i.errCost || 1)) + ' תקלות בחודש × ₪' +
-               n0(i.errCost) + ' × 12 חודשים = ₪' + n0(m.errValue),
-      out: '₪' + n0(m.errValue) + ' בשנה',
+      id: 'err', title: tr('כמה התקלות עולות לו'),
+      formula: tr('{n} תקלות בחודש × ₪{cost} × 12 חודשים = ₪{total}',
+                  { n: n0(m.errValue / 12 / (i.errCost || 1)),
+                    cost: n0(i.errCost), total: n0(m.errValue) }),
+      out: tr('₪{v} בשנה', { v: n0(m.errValue) }),
       from: ['errFreq', 'errCost'], said: quotes('errFreq', 'errCost')
     });
 
     if (m.annualValue > 0) rows.push({
-      id: 'annual', title: 'סך הכול, מה התהליך עולה לו בשנה',
-      formula: '₪' + n0(m.timeValue) + ' זמן + ₪' + n0(m.errValue) +
-               ' תקלות = ₪' + n0(m.annualValue),
-      out: '₪' + n0(m.annualValue) + ' בשנה',
+      id: 'annual', title: tr('סך הכול, מה התהליך עולה לו בשנה'),
+      formula: tr('₪{time} זמן + ₪{err} תקלות = ₪{total}',
+                  { time: n0(m.timeValue), err: n0(m.errValue), total: n0(m.annualValue) }),
+      out: tr('₪{v} בשנה', { v: n0(m.annualValue) }),
       emphasis: true, from: [], said: []
     });
 
@@ -96,18 +102,20 @@
        as "0 תוכנות → אומדן 7 שעות", which is how the flow found it. A step
        with no inputs is absent here too. */
     if (m.effort > 0 && (i.systemCount || 0) > 0) rows.push({
-      id: 'effort', title: 'כמה עבודה זה מצידך',
-      formula: (i.systemCount || 0) + ' תוכנות → אומדן ' + m.effort + ' שעות',
-      out: m.effort + ' שעות עבודה',
-      note: 'זה מה שקובע את הרצפה: מתחת ל-₪' + n0(m.costFloor) + ' אין שום שיטה שתתמחר.',
+      id: 'effort', title: tr('כמה עבודה זה מצידך'),
+      formula: tr('{n} תוכנות → אומדן {effort} שעות',
+                  { n: i.systemCount || 0, effort: m.effort }),
+      out: tr('{effort} שעות עבודה', { effort: m.effort }),
+      note: tr('זה מה שקובע את הרצפה: מתחת ל-₪{floor} אין שום שיטה שתתמחר.',
+               { floor: n0(m.costFloor) }),
       from: ['systems'], said: quotes('systems')
     });
 
     if (m.price > 0 && (m.annualValue > 0 || (i.systemCount || 0) > 0)) {
       const chosen = m.chosen;
       rows.push({
-        id: 'price', title: 'המחיר',
-        formula: chosen ? chosen.label + ' · ' + chosen.basis : 'לפי העלות',
+        id: 'price', title: tr('המחיר'),
+        formula: chosen ? chosen.label + ' · ' + chosen.basis : tr('לפי העלות'),
         out: '₪' + n0(m.price),
         /* The method's own basis already prints the defensible band, and
            m.high is a different thing — the ceiling past which the client
@@ -115,9 +123,11 @@
            defensible range" put two different upper bounds side by side and
            read as the panel contradicting itself. */
         note: chosen && chosen.raised
-          ? 'השיטה עצמה נתנה ₪' + n0(chosen.raw) + ', והמחיר הועלה לרצפת העלות.'
-          : (m.high > 0 ? 'מעל ₪' + n0(m.high) +
-              ' הלקוח כבר לא מחזיר את ההשקעה בשנה הראשונה, וזה קשה להגנה בשיחה.' : ''),
+          ? tr('השיטה עצמה נתנה ₪{raw}, והמחיר הועלה לרצפת העלות.', { raw: n0(chosen.raw) })
+          : (m.high > 0
+              ? tr('מעל ₪{high} הלקוח כבר לא מחזיר את ההשקעה בשנה הראשונה, וזה קשה להגנה בשיחה.',
+                   { high: n0(m.high) })
+              : ''),
         emphasis: true, from: [], said: []
       });
     }
@@ -134,9 +144,9 @@
      correctly refused to. */
   function headline(m, rows) {
     if (!m || !rows || !rows.length) return null;
-    if (!m.annualValue) return 'המחיר נבנה מהיקף העבודה, כי עוד אין מספרים מהלקוח.';
-    return 'ארבע תשובות מהשיחה הפכו ל-₪' + n0(m.annualValue) +
-           ' שהתהליך עולה לו בשנה, ומתוכם נגזר מחיר של ₪' + n0(m.price) + '.';
+    if (!m.annualValue) return tr('המחיר נבנה מהיקף העבודה, כי עוד אין מספרים מהלקוח.');
+    return tr('ארבע תשובות מהשיחה הפכו ל-₪{annual} שהתהליך עולה לו בשנה, ומתוכם נגזר מחיר של ₪{price}.',
+              { annual: n0(m.annualValue), price: n0(m.price) });
   }
 
   /* How much of the whole rests on a single answer. The tool already warns
@@ -174,11 +184,12 @@
     const paysBack = m.payback > 0 && m.payback <= 20;
     return [
       { id: 'band', ok: !m.tooThin,
-        label: m.tooThin ? 'מעל הטווח שניתן להגנה' : 'בטווח שניתן להגנה' },
+        label: m.tooThin ? tr('מעל הטווח שניתן להגנה') : tr('בטווח שניתן להגנה') },
       { id: 'payback', ok: paysBack,
-        label: paysBack ? 'מחזיר את עצמו בזמן סביר' : 'ההחזר איטי' },
+        label: paysBack ? tr('מחזיר את עצמו בזמן סביר') : tr('ההחזר איטי') },
       { id: 'balance', ok: !weak,
-        label: weak ? 'תלוי במספר בודד (' + weak.share + '%)' : 'לא תלוי במספר בודד' }
+        label: weak ? tr('תלוי במספר בודד ({share}%)', { share: weak.share })
+                    : tr('לא תלוי במספר בודד') }
     ];
   }
 

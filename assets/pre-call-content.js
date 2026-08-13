@@ -1,7 +1,17 @@
 /* PRE-CALL · the two prompts handed to an LLM. Kept apart from the UI
    because this is the text most likely to be reworded, and rewording it
-   should not mean scrolling through render code. */
-const P_BIZ = `אני מכין את עצמי לשיחת אפיון עם לקוח פוטנציאלי, ואחריה אצטרך לכתוב לו הצעת מחיר.
+   should not mean scrolling through render code.
+
+   Both prompts pass through tr() whole: the Hebrew literal is the
+   dictionary key, and the English value is a full prompt of its own
+   (assets/en-pre-call.js), instructing the model to answer in the fixed
+   ENGLISH label format that parseBiz in assets/pre-call.js also
+   recognises. The two label sets are always active in the parser, so a
+   paste in either language fills the same form. */
+var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+  : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
+const P_BIZ = tr(`אני מכין את עצמי לשיחת אפיון עם לקוח פוטנציאלי, ואחריה אצטרך לכתוב לו הצעת מחיר.
 לפני זה אני צריך לאפיין את העסק שלי עצמי, כדי שהשאלות שאשאל בשיחה יהיו מדויקות.
 
 ראיין אותי. שאל אותי שאלה אחת בכל פעם, וחכה לתשובה לפני השאלה הבאה.
@@ -29,11 +39,11 @@ const P_BIZ = `אני מכין את עצמי לשיחת אפיון עם לקוח
 מקור הלקוח האחרון: הפניה / תוכן / פנייה יזומה
 מה הלקוח הרוויח: ...
 מה רק אני רואה: ...
-מה אני לא מוכר: ...`;
+מה אני לא מוכר: ...`);
 
 function drPrompt(n,c){
-  const who = (n||c) ? (n||'') + (n&&c?' , ':'') + (c||'') : '[שם] , [חברה]';
-  return `מחקר הכנה לשיחת אפיון. הנושא: ${who}
+  const who = (n||c) ? (n||'') + (n&&c?' , ':'') + (c||'') : tr('[שם] , [חברה]');
+  return tr(`מחקר הכנה לשיחת אפיון. הנושא: {who}
 
 אני נפגש איתו בקרוב ואצטרך להבין איפה העסק שלו נעצר, לא מה הוא עושה.
 חפש מקורות ציבוריים בלבד. אל תשער ואל תמלא פערים. מה שלא מצאת, כתוב "לא נמצא".
@@ -51,5 +61,5 @@ function drPrompt(n,c){
 בסוף, תן לי שלוש שורות בלבד:
 הצוואר הסביר ביותר: ...
 מה שכנגדו: ...
-מה שאני לא יכול לדעת בלי לשאול: ...`;
+מה שאני לא יכול לדעת בלי לשאול: ...`, { who: who });
 }

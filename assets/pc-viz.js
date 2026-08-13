@@ -42,6 +42,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const WEEKS = 52;
 
   /* One cell per week of the first year, filled up to the point the client
@@ -62,14 +65,15 @@
       weeks: Math.round(w * 10) / 10,
       verdict,
       // the word carries the meaning; the colour only repeats it
-      verdictText: verdict === 'fast' ? 'מהיר' : verdict === 'ok' ? 'סביר' : 'איטי',
+      verdictText: verdict === 'fast' ? tr('מהיר') : verdict === 'ok' ? tr('סביר') : tr('איטי'),
       label: beyond
-        ? 'ההשקעה לא חוזרת בתוך השנה הראשונה'
-        : 'כל ריבוע הוא שבוע. הצבועים הם עד שההשקעה חזרה: כ-' +
-          (Math.round(w * 10) / 10) + ' שבועות מתוך 52',
+        ? tr('ההשקעה לא חוזרת בתוך השנה הראשונה')
+        : tr('כל ריבוע הוא שבוע. הצבועים הם עד שההשקעה חזרה: כ-{w} שבועות מתוך 52',
+             { w: Math.round(w * 10) / 10 }),
       sentence: beyond
-        ? 'בקצב הזה הלקוח לא מחזיר את ההשקעה בשנה הראשונה. זו סיבה לצמצם את ההיקף, לא להוריד מחיר.'
-        : 'אחרי כ-' + (Math.round(w * 10) / 10) + ' שבועות הלקוח כבר בפלוס, ומשם זה חיסכון מלא.'
+        ? tr('בקצב הזה הלקוח לא מחזיר את ההשקעה בשנה הראשונה. זו סיבה לצמצם את ההיקף, לא להוריד מחיר.')
+        : tr('אחרי כ-{w} שבועות הלקוח כבר בפלוס, ומשם זה חיסכון מלא.',
+             { w: Math.round(w * 10) / 10 })
     };
   }
 
@@ -84,10 +88,10 @@
     return {
       percent: pct,
       over: p > a,
-      label: 'המחיר הוא ' + pct + '% ממה שהתהליך עולה לו בשנה',
+      label: tr('המחיר הוא {pct}% ממה שהתהליך עולה לו בשנה', { pct: pct }),
       sentence: p > a
-        ? 'המחיר גבוה ממה שהתהליך עולה לו בשנה. זה קשה להגנה בשיחה.'
-        : 'הוא משלם ' + pct + '% פעם אחת, ומפסיק לשלם את ה-100% בכל שנה.'
+        ? tr('המחיר גבוה ממה שהתהליך עולה לו בשנה. זה קשה להגנה בשיחה.')
+        : tr('הוא משלם {pct}% פעם אחת, ומפסיק לשלם את ה-100% בכל שנה.', { pct: pct })
     };
   }
 
@@ -104,9 +108,9 @@
     if (notHis || !isFinite(a) || a <= 0) return null;
     return {
       perWeek: Math.round(a / 52),
-      label: 'כל שבוע שהוא לא מחליט עולה לו כ-' +
-             Math.round(a / 52).toLocaleString('en-US') + ' ₪',
-      note: 'זה לא לחץ שיווקי — זו חלוקה של המספר שהוא עצמו נתן.'
+      label: tr('כל שבוע שהוא לא מחליט עולה לו כ-{v} ₪',
+                { v: Math.round(a / 52).toLocaleString('en-US') }),
+      note: tr('זה לא לחץ שיווקי — זו חלוקה של המספר שהוא עצמו נתן.')
     };
   }
 

@@ -15,11 +15,14 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const KEY = 'postcall_deals_v1';
   const STATUS = ['draft', 'sent', 'won', 'lost', 'no_answer'];
   const STATUS_LABEL = {
-    draft: 'טיוטה', sent: 'נשלחה', won: 'נסגרה',
-    lost: 'נדחתה', no_answer: 'ללא מענה'
+    draft: tr('טיוטה'), sent: tr('נשלחה'), won: tr('נסגרה'),
+    lost: tr('נדחתה'), no_answer: tr('ללא מענה')
   };
 
   /* Where the annual-value figure came from. The form has asked this since the
@@ -41,10 +44,10 @@
      makes a claim about. */
   const PROVENANCE = ['unprompted', 'prompted', 'mine', 'none', 'unset'];
   const PROVENANCE_LABEL = {
-    unprompted: 'הוא נקב מעצמו',
-    prompted:   'הוא נקב אחרי שאלה',
-    mine:       'אתה הערכת',
-    none:       'לא היה מספר'
+    unprompted: tr('הוא נקב מעצמו'),
+    prompted:   tr('הוא נקב אחרי שאלה'),
+    mine:       tr('אתה הערכת'),
+    none:       tr('לא היה מספר')
   };
 
   /* Who moved the price, when the closing price came in under the quote.
@@ -58,9 +61,9 @@
      exactly the finding this field exists to record. */
   const CONCESSION = ['client_asked', 'i_offered', 'unknown'];
   const CONCESSION_LABEL = {
-    client_asked: 'הלקוח ביקש',
-    i_offered:    'הצעת מעצמך',
-    unknown:      'לא נרשם'
+    client_asked: tr('הלקוח ביקש'),
+    i_offered:    tr('הצעת מעצמך'),
+    unknown:      tr('לא נרשם')
   };
 
   /* `journal` is optional and injected, for the same reason storage is: this
@@ -205,7 +208,7 @@
            area was just fixed for. */
         if (closed && closed > quoted) return null;
         return api.save({
-          client: (r.client || '').trim() || 'ללא שם',
+          client: (r.client || '').trim() || tr('ללא שם'),
           status: lost ? 'lost' : 'won',
           priceQuoted: quoted,
           estimatedHours: null,
@@ -414,8 +417,8 @@
           ratio: est > 0 ? +(act / est).toFixed(2) : null,
           suggestion: est > 0 && done.length >= minDeliveries
             ? (act > est
-                ? 'האומדן שלך נמוך ב-' + Math.round((act / est - 1) * 100) + '%'
-                : 'האומדן שלך גבוה ב-' + Math.round((1 - act / est) * 100) + '%')
+                ? tr('האומדן שלך נמוך ב-{pct}%', { pct: Math.round((act / est - 1) * 100) })
+                : tr('האומדן שלך גבוה ב-{pct}%', { pct: Math.round((1 - act / est) * 100) }))
             : null
         };
       },

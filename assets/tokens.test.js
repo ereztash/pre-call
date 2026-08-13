@@ -278,5 +278,61 @@ FILES.forEach(f => {
   });
 });
 
+console.log('\nthe dark theme is the same vocabulary, read from the other end');
+/* assets/theme.css redefines the ramp for dark surfaces. Three claims keep
+   it from becoming a second palette: it redefines exactly the tokens the
+   light ramp declares (a token missed is a light colour leaking into the
+   dark theme); its two blocks — system-dark and explicit-dark — are
+   identical (a value edited in one and not the other is a theme that
+   changes depending on HOW it was asked for); and every dark value is a
+   value the light ramp already ships, because the dark theme is a mirror
+   of the ramp, not an invention beside it. */
+{
+  const theme = strip(fs.readFileSync(path.join(__dirname, 'theme.css'), 'utf8'));
+  /* `--nt-5\s*:` — a block that DECLARES the first ramp step, not one that
+     merely mentions a step. The looser `--nt-5` matched `var(--nt-50)` too,
+     so the prefers-contrast block below counted as a third dark theme. */
+  const blocks = [...theme.matchAll(/\{([^{}]*--nt-5\s*:[^{}]*)\}/g)].map(m => m[1]);
+  const rampOf = t => {
+    const out = {};
+    for (const m of t.matchAll(/(--(?:nt|cu|tq|rd)-\d+)\s*:\s*(#[0-9a-fA-F]{6})\s*;/g))
+      out[m[1]] = m[2].toLowerCase();
+    return out;
+  };
+  const lightRamp = rampOf(strip(read(FILES[2])));
+
+  test('theme.css declares the dark ramp twice — system and explicit — and only twice', () => {
+    assert.strictEqual(blocks.length, 2,
+      'expected the prefers-color-scheme block and the data-theme block, found ' + blocks.length);
+  });
+  test('the two dark blocks are identical, token for token', () => {
+    assert.deepStrictEqual(rampOf(blocks[0]), rampOf(blocks[1]),
+      'the system-dark and chosen-dark themes have drifted apart');
+  });
+  test('the dark ramp covers exactly the tokens the light ramp declares', () => {
+    const dark = rampOf(blocks[0]);
+    assert.deepStrictEqual(Object.keys(dark).sort(), Object.keys(lightRamp).sort(),
+      'a ramp token exists on one side of the theme and not the other');
+  });
+  test('every dark value is a colour the light ramp already ships', () => {
+    const dark = rampOf(blocks[0]);
+    const lightValues = new Set(Object.values(lightRamp));
+    const invented = Object.entries(dark).filter(([, v]) => !lightValues.has(v));
+    assert.deepStrictEqual(invented, [],
+      'the dark theme invented colours instead of mirroring the ramp');
+  });
+  test('within each family, dark is light in reverse order', () => {
+    for (const fam of ['nt', 'cu', 'tq', 'rd']) {
+      const dark = rampOf(blocks[0]);
+      const steps = Object.keys(lightRamp).filter(k => k.startsWith('--' + fam + '-'))
+        .sort((a, b) => parseInt(a.split('-')[3]) - parseInt(b.split('-')[3]));
+      const lightSeq = steps.map(k => lightRamp[k]);
+      const darkSeq = steps.map(k => dark[k]);
+      assert.deepStrictEqual(darkSeq, [...lightSeq].reverse(),
+        fam + ': the mirror is bent — a step maps somewhere other than its opposite');
+    }
+  });
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

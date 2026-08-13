@@ -14,6 +14,9 @@
 (function () {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const el = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s)
     .replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
@@ -78,18 +81,18 @@
     if (s.draftAlive) {
       lines.push({
         text: s.draftClient
-          ? 'יש הצעה שלא סיימתם, של ' + esc(s.draftClient) + '.'
-          : 'יש הצעה שהתחלתם ולא סיימתם.',
-        cta: 'להמשיך אותה',
+          ? tr('יש הצעה שלא סיימתם, של {name}.', { name: esc(s.draftClient) })
+          : tr('יש הצעה שהתחלתם ולא סיימתם.'),
+        cta: tr('להמשיך אותה'),
         href: 'post-call.html'
       });
     }
     if (s.waiting) {
       lines.push({
         text: s.waiting === 1
-          ? 'הצעה אחת נשלחה וממתינה לתשובה.'
-          : s.waiting + ' הצעות נשלחו וממתינות לתשובה.',
-        cta: 'לראות מה קרה',
+          ? tr('הצעה אחת נשלחה וממתינה לתשובה.')
+          : tr('{n} הצעות נשלחו וממתינות לתשובה.', { n: s.waiting }),
+        cta: tr('לראות מה קרה'),
         href: 'post-call.html#ledger'
       });
     }
@@ -97,7 +100,7 @@
     if (!lines.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
 
     box.innerHTML =
-      '<div class="resume-h">המשך מאיפה שהפסקתם</div>' +
+      '<div class="resume-h">' + tr('המשך מאיפה שהפסקתם') + '</div>' +
       lines.map(l =>
         '<div class="resume-row">' +
           '<span class="resume-t">' + l.text + '</span>' +

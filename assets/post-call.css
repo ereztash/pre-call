@@ -117,7 +117,7 @@
   h1{font-size:var(--fs-3xl);font-weight:600;letter-spacing:-.3px}
   h1 .mark{color:var(--copper)}
   .sub{color:var(--muted);font-size:var(--fs-md);margin-top:var(--sp-3);max-width:var(--measure);}
-  .note{background:var(--charcoal-2);border-right:3px solid var(--copper);
+  .note{background:var(--charcoal-2);border-inline-start:3px solid var(--copper);
         padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);font-size:var(--fs-md);color:var(--nt-17);margin-top:var(--sp-5)}
 
   h2{font-size:var(--fs-xl);font-weight:600;margin:0 0 var(--sp-2)}
@@ -135,7 +135,7 @@
      Marked as a one-time thing so it does not read as another field to
      fill in on every proposal, which is what it would look like sitting
      among the per-deal questions otherwise. */
-  .senderbox .sender-once{display:inline-block;margin-right:var(--sp-3);font-size:var(--fs-xs);
+  .senderbox .sender-once{display:inline-block;margin-inline-start:var(--sp-3);font-size:var(--fs-xs);
     font-weight:600;letter-spacing:.3px;color:var(--turq);
     border:1px solid var(--tq-64);border-radius:var(--r-sm);padding:1px var(--sp-3);vertical-align:middle}
   .checkline{display:flex;align-items:flex-start;gap:var(--sp-3);margin-top:var(--sp-4);
@@ -146,15 +146,15 @@
   .qa:last-child{border-bottom:0}
   .qa .qt{font-size:var(--fs-md);color:var(--nt-5);margin-bottom:var(--sp-2)}
   .qa .qn{display:inline-block;background:var(--nt-90);color:var(--cu-9);font-size:var(--fs-xs);
-          padding:1px var(--sp-3);border-radius:var(--r-sm);margin-left:var(--sp-3);font-weight:600;vertical-align:middle}
+          padding:1px var(--sp-3);border-radius:var(--r-sm);margin-inline-end:var(--sp-3);font-weight:600;vertical-align:middle}
   .qa .why{font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--sp-3)}
 
   label{display:block;font-size:var(--fs-xs);color:var(--nt-17);margin:var(--sp-4) 0 var(--sp-2);font-weight:500}
   input[type=text],input[type=number],textarea,select{
-    width:100%;background:var(--nt-90);border:1px solid var(--line);border-radius:var(--r-md);
+    width:100%;background:var(--nt-90);border:0;border-radius:var(--r-md);
     color:var(--ink);padding:var(--sp-4);font-size:var(--fs-md);font-family:inherit;
-    min-height:44px;direction:rtl;text-align:right}
-  input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
+    min-height:44px;text-align:start}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--copper-dim);outline-offset:0}
   /* the border shift alone was two dark tones apart — invisible to a keyboard user */
   :focus-visible{outline:3px solid var(--cu-50);outline-offset:2px;border-radius:var(--r-sm)}
   .chip:focus-visible,.sbtn:focus-visible,button:focus-visible{outline:3px solid var(--cu-50);outline-offset:2px}
@@ -185,7 +185,7 @@
              font-size:var(--fs-xs);font-weight:700;letter-spacing:.3px;
              padding-bottom:0;margin-bottom:var(--sp-4)}
   .scope-mark{font-weight:700;font-size:var(--fs-md)}
-  .scope-n{font-size:var(--fs-xs);font-weight:600;color:var(--muted);margin-right:auto}
+  .scope-n{font-size:var(--fs-xs);font-weight:600;color:var(--muted);margin-inline-start:auto}
   .scope-g-in .scope-g-h{color:var(--tq-27)}
   .scope-g-out .scope-g-h{color:var(--muted)}
   .scope-g-extra .scope-g-h{color:var(--cu-27)}
@@ -233,7 +233,7 @@
   .smove-in:hover{color:var(--tq-41);border-color:var(--tq-50)}
   .smove-extra:hover{color:var(--cu-64);border-color:var(--cu-78)}
   .presets{display:flex;flex-wrap:wrap;gap:var(--sp-3);margin-top:var(--sp-3)}
-  .presets .lbl{font-size:var(--fs-xs);color:var(--muted);align-self:center;margin-left:var(--sp-1)}
+  .presets .lbl{font-size:var(--fs-xs);color:var(--muted);align-self:center;margin-inline-end:var(--sp-1)}
 
   /* ---- live numbers ---- */
   /* Was position:sticky;bottom:0 — sensible when this was a five-stat strip.
@@ -244,8 +244,8 @@
         margin-top:var(--sp-3)}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--sp-5)}
   .stat{background:var(--charcoal-2);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);
-        border-right:3px solid var(--turq)}
-  .stat.big{border-right-color:var(--copper)}
+        border-inline-start:3px solid var(--turq)}
+  .stat.big{border-inline-start-color:var(--copper)}
   .stat .k{font-size:var(--fs-xs);color:var(--muted);letter-spacing:.3px}
   .stat .v{font-size:var(--fs-2xl);font-weight:700;color:var(--cu-9);margin-top:var(--sp-1);
            font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
@@ -254,17 +254,17 @@
          font-weight:700;margin:var(--sp-5) 0 var(--sp-3)}
   .tri-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--sp-2) var(--sp-4);
            padding:var(--sp-3) var(--sp-4);border-radius:var(--r-md);background:var(--charcoal-2);margin-bottom:var(--sp-2);
-           border-right:3px solid var(--line)}
-  .tri-row.on{border-right-color:var(--copper);background:var(--cu-90)}
+           border-inline-start:3px solid var(--line)}
+  .tri-row.on{border-inline-start-color:var(--copper);background:var(--cu-90)}
   .tri-n{font-size:var(--fs-xs);color:var(--nt-9);font-weight:600;flex:0 0 auto}
   .tri-v{font-size:var(--fs-md);font-weight:700;color:var(--cu-9);font-variant-numeric:tabular-nums;
-         direction:ltr;margin-right:auto}
+         direction:ltr;margin-inline-start:auto}
   .tri-b{font-size:var(--fs-xs);color:var(--muted);flex:1 0 100%}
-  .tri-warn{border-right:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
+  .tri-warn{border-inline-start:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
             padding:var(--sp-4) var(--sp-4);border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-3)}
-  .flag{border-right:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
+  .flag{border-inline-start:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
         padding:var(--sp-4) var(--sp-5);border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-4)}
-  .ok{border-right:3px solid var(--turq);background:var(--charcoal-2);color:var(--tq-21);
+  .ok{border-inline-start:3px solid var(--turq);background:var(--charcoal-2);color:var(--tq-21);
       padding:var(--sp-4) var(--sp-5);border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-4)}
 
   details.assump{margin-top:var(--sp-4)}
@@ -274,7 +274,7 @@
   button.act,a.act{background:var(--copper);color:var(--nt-90);border:0;padding:var(--sp-4) var(--sp-7);border-radius:var(--r-md);
     font-size:var(--fs-md);font-weight:600;cursor:pointer;font-family:inherit;min-height:46px}
   button.act:hover,a.act:hover{background:var(--cu-64)}
-  button.act:disabled{background:var(--nt-84);color:var(--nt-41);cursor:not-allowed}
+  button.act:disabled{background:var(--nt-84);color:var(--nt-27);cursor:not-allowed}
   /* the PRE-CALL handoff link needs the same box a real button gets,
      without an underline or the anchor's baseline-aligned text */
   a.act,a.ghost{display:inline-flex;align-items:center;text-decoration:none}
@@ -313,8 +313,8 @@
      correspondence rather than as an output. */
   .out .from{border-bottom:1px solid var(--cu-84);padding-bottom:var(--sp-4);margin-bottom:var(--sp-6)}
   .out .from-n{color:var(--nt-9);font-size:var(--fs-md);font-weight:700;letter-spacing:-.1px}
-  .out .from-b{font-weight:400;color:var(--nt-41)}
-  .out .from-c{color:var(--nt-41);font-size:var(--fs-xs);margin-top:var(--sp-2);
+  .out .from-b{font-weight:400;color:var(--muted)}
+  .out .from-c{color:var(--muted);font-size:var(--fs-xs);margin-top:var(--sp-2);
     font-variant-numeric:tabular-nums}
   .out .signoff{margin-top:var(--sp-7);padding-top:var(--sp-5);border-top:1px solid var(--cu-84);
     color:var(--nt-21);font-size:var(--fs-xs);font-weight:600}
@@ -324,7 +324,7 @@
      3.44:1 on the document's paper. Illegible is not the same as
      discreet, and a line the client's eye slides off is also a line a
      screen reader still reads out. 4.93:1 here: subdued and legible. */
-  .out .madewith{margin-top:var(--sp-5);color:var(--nt-41);font-size:var(--fs-xs);letter-spacing:.2px}
+  .out .madewith{margin-top:var(--sp-5);color:var(--muted);font-size:var(--fs-xs);letter-spacing:.2px}
   /* The only <a> inside the document, so nothing else here reaches it and it
      computed to the UA default — rgb(0, 0, 238), stock blue, at the foot of a
      page with a price on it. `inherit` takes the 4.93:1 grey above rather than
@@ -335,7 +335,7 @@
   .out .madewith a{color:inherit;text-decoration:underline}
 
   .out h3{color:var(--nt-9);font-size:var(--fs-2xl);margin:0 0 var(--sp-2);font-weight:700}
-  .out .meta{color:var(--nt-41);font-size:var(--fs-xs);margin-bottom:var(--sp-6);
+  .out .meta{color:var(--muted);font-size:var(--fs-xs);margin-bottom:var(--sp-6);
              border-bottom:1px solid var(--cu-84);padding-bottom:var(--sp-4)}
   .out h4{font-size:var(--fs-xs);letter-spacing:1.1px;text-transform:uppercase;color:var(--copper-dim);
           font-weight:700;margin:var(--sp-7) 0 var(--sp-3)}
@@ -379,7 +379,7 @@
      Markers are drawn with ::before rather than list-style so they keep
      their colour independently of the text. */
   .out ul.incl,.out ul.excl{list-style:none;padding:0;margin:var(--sp-3) 0}
-  .out ul.incl li,.out ul.excl li{position:relative;padding-right:var(--sp-7)}
+  .out ul.incl li,.out ul.excl li{position:relative;padding-inline-start:var(--sp-7)}
   /* The comment above says the weight matches the meaning. It did not. Removing
      red from the exclusions fixed the alarm and left the mass untouched, and
      measuring it found the boundary list still occupying 230px against the
@@ -396,12 +396,12 @@
      cannot see it, because axe does not evaluate ::before content. So the
      marker takes the text's colour and the quiet is carried by size and
      line-height alone, which is where it was already doing most of the work. */
-  .out ul.incl li::before{content:"✓";position:absolute;right:0;top:0;
+  .out ul.incl li::before{content:"✓";position:absolute;inset-inline-start:0;top:0;
     color:var(--tq-27);font-weight:700}
   .out ul.incl li{color:var(--nt-17);font-size:var(--fs-md);line-height:1.75;
                   margin-bottom:var(--sp-3)}
-  .out ul.excl li::before{content:"—";position:absolute;right:0;top:0;color:var(--nt-41)}
-  .out ul.excl li{color:var(--nt-41);font-size:var(--fs-xs);line-height:1.5;
+  .out ul.excl li::before{content:"—";position:absolute;inset-inline-start:0;top:0;color:var(--muted)}
+  .out ul.excl li{color:var(--muted);font-size:var(--fs-xs);line-height:1.5;
                   margin-bottom:var(--sp-1)}
   .out ul.excl{margin:var(--sp-2) 0}
 
@@ -443,18 +443,18 @@
   .out .pbk-c.on{background:var(--tq-27);border:2px solid var(--tq-27)}
   .out .pbk-l{font-size:var(--fs-xs);color:var(--tq-21);margin-top:var(--sp-3);max-width:var(--measure)}
   .out ul.plus{list-style:none;padding:0;margin:var(--sp-3) 0}
-  .out ul.plus li{position:relative;padding-right:var(--sp-7);color:var(--cu-27)}
-  .out ul.plus li::before{content:"+";position:absolute;right:0;top:0;
+  .out ul.plus li{position:relative;padding-inline-start:var(--sp-7);color:var(--cu-27)}
+  .out ul.plus li::before{content:"+";position:absolute;inset-inline-start:0;top:0;
     color:var(--cu-34);font-weight:700}
 
-  .out .pricebox{background:#fff;border:1px solid var(--cu-84);border-right:3px solid var(--copper);
+  .out .pricebox{background:var(--paper);border:1px solid var(--cu-84);border-inline-start:3px solid var(--copper);
                  border-radius:var(--r-sm);padding:var(--sp-5) var(--sp-6);margin:var(--sp-4) 0}
   .out .pricebox .amt{font-size:var(--fs-4xl);font-weight:700;color:var(--nt-9);
                       font-variant-numeric:tabular-nums;direction:ltr;text-align:right}
-  .out .rationale{background:var(--tq-95);border-right:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);
+  .out .rationale{background:var(--tq-95);border-inline-start:3px solid var(--turq);padding:var(--sp-4) var(--sp-5);
                   border-radius:var(--r-sm);font-size:var(--fs-xs);color:var(--tq-21);margin:var(--sp-4) 0}
   .out table{width:100%;border-collapse:collapse;font-size:var(--fs-xs);margin-top:var(--sp-3)}
-  .out th{background:var(--nt-9);color:var(--cu-95);padding:var(--sp-3) var(--sp-4);text-align:right;font-size:var(--fs-xs)}
+  .out th{background:var(--nt-9);color:var(--cu-95);padding:var(--sp-3) var(--sp-4);text-align:start;font-size:var(--fs-xs)}
   .out td{border-bottom:1px solid var(--cu-84);padding:var(--sp-3) var(--sp-4);color:var(--nt-21)}
   .out .no{color:var(--red)}
 
@@ -469,7 +469,7 @@
   /* See the matching note in pre-call.css: an opacity:0 element is still
      announced by a screen reader, so this confirmation was permanently
      present whether or not anything had happened. */
-  .copied{color:var(--turq);font-size:var(--fs-xs);margin-right:var(--sp-4);
+  .copied{color:var(--turq);font-size:var(--fs-xs);margin-inline-start:var(--sp-4);
     opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
   .copied.on{opacity:1;visibility:visible}
 
@@ -499,7 +499,7 @@
        from body text. Each one is restated with a border, which always prints. */
     .out th{background:transparent;color:#000;border-bottom:1.5px solid #000}
     .out .pricebox,.out .rationale{background:transparent;border:1px solid var(--nt-57);
-                                   border-right:3px solid var(--nt-21)}
+                                   border-inline-start:3px solid var(--nt-21)}
     /* the exclusions list keeps its colour and nothing else — #9d3442 is a text
        colour, so it prints; striking it through would read as "cancelled"
        rather than "out of scope" on a document going to a client */
@@ -551,13 +551,13 @@
   /* text carries the verdict, not only the fill — the icon and the fill
      agree with each other, neither is load-bearing alone (WCAG 1.4.1) */
   .guard-chip.ok{background:var(--turq);color:var(--tq-95)}
-  .guard-chip.warn{background:var(--red);color:#fff}
+  .guard-chip.warn{background:var(--red);color:var(--rd-95)}
 
   details.drawer{background:var(--charcoal-2);border:1px solid var(--line);
                  border-radius:var(--r-md);margin-bottom:var(--sp-4)}
   details.drawer>summary{cursor:pointer;padding:var(--sp-5) var(--sp-5);font-size:var(--fs-md);font-weight:600;
                          color:var(--nt-9);min-height:44px;display:flex;align-items:center}
-  details.drawer>summary:hover{color:#fff}
+  details.drawer>summary:hover{color:var(--nt-5)}
   details.drawer[open]>summary{border-bottom:1px solid var(--line)}
   details.drawer .box{border:0;background:transparent;margin-bottom:0}
   details.drawer .nums{border:0;border-radius:0}
@@ -585,10 +585,10 @@
   .deal:last-child{border-bottom:0}
   .deal-h{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:baseline}
   .deal-h b{font-size:var(--fs-md);color:var(--nt-5)}
-  .deal-meta{font-size:var(--fs-xs);color:var(--muted);margin-right:auto;direction:rtl}
+  .deal-meta{font-size:var(--fs-xs);color:var(--muted);margin-inline-start:auto}
   .deal-st{font-size:var(--fs-xs);padding:var(--sp-1) var(--sp-3);border-radius:var(--r-lg);background:var(--nt-90);color:var(--muted)}
   .deal-st.st-won{background:var(--turq);color:var(--tq-95);font-weight:600}
-  .deal-st.st-lost{background:var(--red);color:#fff;font-weight:600}
+  .deal-st.st-lost{background:var(--red);color:var(--rd-95);font-weight:600}
   .deal-st.st-sent{background:var(--copper);color:var(--nt-90);font-weight:600}
   .deal-p{font-size:var(--fs-xs);color:var(--muted);margin:var(--sp-2) 0 var(--sp-3)}
   /* What moved. Bordered on the leading edge rather than boxed: it is a fact
@@ -625,17 +625,17 @@
      Deliberately not chips: a chip reads as a filter you can toggle, and this
      rewrites four fields and nineteen scope rows. Bigger target, a subtitle
      saying what it is, and a note afterwards saying what it changed. */
-  .tplbox{border-right:3px solid var(--copper)}
+  .tplbox{border-inline-start:3px solid var(--copper)}
   .tpl-h{font-size:var(--fs-md);font-weight:600;color:var(--copper);margin-bottom:var(--sp-2)}
   .tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--sp-4);margin-top:var(--sp-4)}
-  .tpl{display:flex;flex-direction:column;gap:var(--sp-2);text-align:right;background:var(--nt-90);
+  .tpl{display:flex;flex-direction:column;gap:var(--sp-2);text-align:start;background:var(--nt-90);
        border:0;border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);min-height:44px;
        cursor:pointer;font-family:inherit;color:var(--ink);transition:.15s}
   .tpl:hover{background:var(--nt-84)}
   .tpl.on{background:var(--charcoal-2);box-shadow:inset 0 0 0 2px var(--copper)}
   .tpl-n{font-size:var(--fs-md);font-weight:600}
   .tpl-b{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
-  .tpl-note{background:var(--charcoal-2);border-right:3px solid var(--turq);border-radius:var(--r-sm);
+  .tpl-note{background:var(--charcoal-2);border-inline-start:3px solid var(--turq);border-radius:var(--r-sm);
             padding:var(--sp-4) var(--sp-5);margin-top:var(--sp-4);font-size:var(--fs-xs);color:var(--nt-17);line-height:1.65}
   /* The note is a list of scope decisions, not a paragraph about them. Each
      row is: what it is, where it landed, why. Laid out so the first two read
@@ -690,11 +690,11 @@
 
   /* a question that moves this particular client's document, marked where it
      already sits — moving it would cost more orientation than it buys */
-  .qa.focus{border-right:2px solid var(--turq);padding-right:var(--sp-4);margin-right:-14px}
+  .qa.focus{border-inline-start:2px solid var(--turq);padding-inline-start:var(--sp-4);margin-inline-start:-14px}
   .box.focus{border-color:var(--turq)}
   .qa.focus .qt::after,.box.focus>label:first-child::after{
     content:'משנה את המסמך אצל הלקוח הזה';display:inline-block;
-    margin-right:var(--sp-3);font-size:var(--fs-xs);font-weight:600;letter-spacing:.3px;
+    margin-inline-start:var(--sp-3);font-size:var(--fs-xs);font-weight:600;letter-spacing:.3px;
     color:var(--nt-90);background:var(--turq);border-radius:var(--r-sm);padding:1px var(--sp-3);
     vertical-align:middle}
 
@@ -739,7 +739,7 @@
      nothing to feed on. */
   .guide-slot{margin:var(--sp-5) 0 var(--sp-2)}
   .guide{position:sticky;top:0;z-index:20;background:var(--nt-95);
-         border:1px solid var(--tq-64);border-right:4px solid var(--turq);
+         border:1px solid var(--tq-64);border-inline-start:4px solid var(--turq);
          border-radius:var(--r-lg);padding:var(--sp-5) var(--sp-5);
          min-height:246px;
          box-shadow:0 6px 18px rgba(0,0,0,.35)}
@@ -837,7 +837,7 @@
              padding:var(--sp-2) var(--sp-3);border:1px solid var(--line)}
   .guide-dot.done{color:var(--tq-95);background:var(--turq);border-color:var(--turq);font-weight:600}
   .guide-dot.now{border-color:var(--turq);color:var(--tq-9)}
-  .guide.ready{border-right-color:var(--copper);border-color:var(--copper-dim)}
+  .guide.ready{border-inline-start-color:var(--copper);border-color:var(--copper-dim)}
   .guide.ready .guide-step,.guide.ready .guide-fill{color:var(--copper);background:var(--copper)}
 
   /* a suggestion, under the instruction and never in place of it */
@@ -849,7 +849,7 @@
 
   /* a number that cannot be true, said as an observation with the arithmetic
      shown — a red border teaches nothing to someone who does not know why */
-  .guide-prob{background:var(--rd-95);border-right:3px solid var(--red-text);border-radius:var(--r-md);
+  .guide-prob{background:var(--rd-95);border-inline-start:3px solid var(--red-text);border-radius:var(--r-md);
               padding:var(--sp-4) var(--sp-4);margin-top:var(--sp-4);font-size:var(--fs-xs);color:var(--rd-27);line-height:1.6;
               display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
   .guide-prob button{margin:0;font-size:var(--fs-xs);padding:var(--sp-3) var(--sp-4);min-height:38px}
@@ -865,7 +865,7 @@
   .scope-confirm .hint-p{margin:0;flex:1 1 220px}
   .scope-confirm.done button{background:var(--tq-50);color:var(--tq-95)}
 
-  .methodwhy{background:var(--charcoal-2);border-right:3px solid var(--turq);border-radius:var(--r-md);
+  .methodwhy{background:var(--charcoal-2);border-inline-start:3px solid var(--turq);border-radius:var(--r-md);
              padding:var(--sp-4) var(--sp-5);font-size:var(--fs-xs);color:var(--tq-21);line-height:1.65;margin-bottom:var(--sp-4)}
   details.methodpick{margin-bottom:var(--sp-4)}
   details.methodpick>summary{font-size:var(--fs-xs);font-weight:500;color:var(--muted)}
@@ -874,7 +874,7 @@
      Every extracted row shows the sentence it came from, so the quote is
      styled as evidence rather than as a caption: it is the part the operator
      is meant to read. */
-  .trbox{border-right:3px solid var(--turq)}
+  .trbox{border-inline-start:3px solid var(--turq)}
   .trbox textarea{min-height:110px}
   .tr-acts{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;margin-top:var(--sp-4)}
   .tr-acts button{margin:0}
@@ -885,7 +885,7 @@
   .tr-p{background:var(--nt-95);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--sp-4);
         white-space:pre-wrap;word-wrap:break-word;font-size:var(--fs-xs);line-height:1.6;
         font-family:ui-monospace,Consolas,monospace;color:var(--nt-13);max-height:210px;overflow:auto;
-        direction:rtl;text-align:right}
+        unicode-bidi:plaintext;text-align:start}
   /* minmax(0,1fr) not 1fr: a grid track sized 1fr will not shrink below its
      content's minimum, so a long quote pushed the button column wide and the
      text collapsed to one word per line. max-content keeps the button at its
@@ -898,7 +898,7 @@
         overflow-wrap:anywhere}
   .tr-v b{color:var(--copper-label);font-weight:600}
   .tr-q{grid-column:1;grid-row:2;font-size:var(--fs-xs);color:var(--nt-17);line-height:1.6;
-        border-right:2px solid var(--turq);padding-right:var(--sp-3);margin-top:var(--sp-1);
+        border-inline-start:2px solid var(--turq);padding-inline-start:var(--sp-3);margin-top:var(--sp-1);
         min-width:0;overflow-wrap:anywhere}
   .tr-s{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-1)}
   .tr-x{grid-column:2;grid-row:1 / span 2;align-self:start;justify-self:end;
@@ -907,10 +907,10 @@
     .tr-row{grid-template-columns:minmax(0,1fr)}
     .tr-x{grid-column:1;grid-row:auto;justify-self:start;margin-top:var(--sp-3)}}
   .tr-tag{display:inline-block;font-size:var(--fs-xs);font-weight:600;border-radius:var(--r-sm);
-          padding:1px var(--sp-3);margin-right:var(--sp-3);border:1px solid}
+          padding:1px var(--sp-3);margin-inline-start:var(--sp-3);border:1px solid}
   .t-guess{color:var(--cu-50);border-color:var(--cu-50)}
   .t-unver{color:var(--red-text);border-color:var(--red-text);border-style:dashed}
-  .tr-prov{background:var(--charcoal-2);border-right:3px solid var(--turq);border-radius:var(--r-md);
+  .tr-prov{background:var(--charcoal-2);border-inline-start:3px solid var(--turq);border-radius:var(--r-md);
            padding:var(--sp-4) var(--sp-5);margin-top:var(--sp-4);font-size:var(--fs-xs);color:var(--tq-21);line-height:1.6}
 
   /* ---- micro-interactions ----
@@ -937,7 +937,7 @@
     .docprice .v.bumped,.guide-dot.just{animation:none}}
 
   /* ---- the document before there is a document ---- */
-  .doc-empty{padding:var(--sp-8) var(--sp-8);text-align:center;color:var(--nt-41)}
+  .doc-empty{padding:var(--sp-8) var(--sp-8);text-align:center;color:var(--muted)}
   .doc-empty-t{font-size:var(--fs-xl);font-weight:700;color:var(--nt-21);margin-bottom:var(--sp-3)}
   .doc-empty p{font-size:var(--fs-md);line-height:1.7;max-width:44ch;margin:0 auto}
   .doc-empty-n{margin-top:var(--sp-5);padding-top:var(--sp-5);border-top:1px solid var(--cu-84);
@@ -951,7 +951,7 @@
   .flow>summary{cursor:pointer;padding:var(--sp-4) var(--sp-5);font-size:var(--fs-xs);font-weight:600;
                 color:var(--nt-9);min-height:44px;display:flex;flex-wrap:wrap;
                 align-items:center;gap:var(--sp-4)}
-  .flow>summary:hover{color:#fff}
+  .flow>summary:hover{color:var(--nt-5)}
   .flow[open]>summary{border-bottom:1px solid var(--line)}
   .flow-tag{font-size:var(--fs-xs);font-weight:600;color:var(--tq-95);background:var(--turq);
             border-radius:var(--r-lg);padding:var(--sp-1) var(--sp-3)}
@@ -962,22 +962,22 @@
              gap:0 var(--sp-4);padding:var(--sp-4) 0;position:relative}
   /* the line that makes it a chain rather than a list */
   .flow-step:not(:last-child)::before{content:'';position:absolute;top:34px;bottom:-4px;
-    right:13px;width:1px;background:var(--line)}
+    inset-inline-start:13px;width:1px;background:var(--line)}
   .flow-n{width:27px;height:27px;border-radius:50%;background:var(--nt-90);
           border:1px solid var(--line);color:var(--muted);font-size:var(--fs-xs);font-weight:700;
           display:flex;align-items:center;justify-content:center;z-index:1}
   .flow-step.big .flow-n{background:var(--copper);border-color:var(--copper);color:var(--nt-90)}
   .flow-t{font-size:var(--fs-xs);color:var(--nt-13);font-weight:600}
   .flow-f{font-size:var(--fs-xs);color:var(--muted);font-family:ui-monospace,Consolas,monospace;
-          margin-top:var(--sp-2);direction:rtl;overflow-wrap:anywhere}
+          margin-top:var(--sp-2);unicode-bidi:plaintext;overflow-wrap:anywhere}
   .flow-o{font-size:var(--fs-md);font-weight:700;color:var(--cu-9);margin-top:var(--sp-2);
           font-variant-numeric:tabular-nums}
   .flow-step.big .flow-o{color:var(--copper);font-size:var(--fs-md)}
   .flow-note{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-2);line-height:1.55}
-  .flow-weak{font-size:var(--fs-xs);color:var(--rd-27);background:var(--rd-95);border-right:2px solid var(--red-text);
+  .flow-weak{font-size:var(--fs-xs);color:var(--rd-27);background:var(--rd-95);border-inline-start:2px solid var(--red-text);
              border-radius:var(--r-sm);padding:var(--sp-3) var(--sp-4);margin-top:var(--sp-3);line-height:1.55}
-  .flow-said{font-size:var(--fs-xs);color:var(--nt-17);border-right:2px solid var(--turq);
-             padding-right:var(--sp-3);margin-top:var(--sp-3);line-height:1.6;overflow-wrap:anywhere}
+  .flow-said{font-size:var(--fs-xs);color:var(--nt-17);border-inline-start:2px solid var(--turq);
+             padding-inline-start:var(--sp-3);margin-top:var(--sp-3);line-height:1.6;overflow-wrap:anywhere}
   .flow-who{display:block;font-size:var(--fs-xs);color:var(--muted)}
   @media(max-width:520px){.flow-step::before{display:none}}
 
@@ -1009,8 +1009,8 @@
   .shr{position:relative;height:26px;background:var(--nt-95);border:1px solid var(--line);
        border-radius:var(--r-sm);overflow:hidden;direction:ltr}
   .shr-f{position:absolute;inset:0 auto 0 0;background:var(--copper);
-         border-left:2px solid var(--cu-50)}
-  .shr.over .shr-f{background:var(--red);border-left-color:var(--red-text)}
+         border-inline-end:2px solid var(--cu-50)}
+  .shr.over .shr-f{background:var(--red);border-inline-end-color:var(--red-text)}
   .shr-l{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
          font-size:var(--fs-xs);font-weight:700;color:var(--cu-9);text-shadow:0 1px 2px rgba(0,0,0,.6)}
 
@@ -1041,12 +1041,12 @@
   .due-expired{color:var(--red-text);border-color:var(--rd-78);background:var(--rd-95)}
   /* a deal that wants something gets a rail, so the list can be skimmed
      for what to act on rather than read in full */
-  .deal.deal-act{border-right:3px solid var(--cu-84)}
+  .deal.deal-act{border-inline-start:3px solid var(--cu-84)}
 
   /* The only line in the ledger that asks for something rather than
      reporting something, so it sits above the counts and looks unlike
      them. */
-  .ledger-act{background:var(--cu-95);border:1px solid var(--cu-84);border-right:3px solid var(--cu-71);
+  .ledger-act{background:var(--cu-95);border:1px solid var(--cu-84);border-inline-start:3px solid var(--cu-71);
     border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4);font-size:var(--fs-xs);color:var(--cu-34)}
   .ledger-act b{color:var(--cu-27)}
   .ledger-act-n{display:block;margin-top:var(--sp-3);font-size:var(--fs-xs);color:var(--cu-57)}
@@ -1056,7 +1056,7 @@
      Sized to be unmissable and still not a wall — this product warns and
      lets the operator through, and that principle does not bend for the
      letterhead any more than it bends for an implausible number. */
-  .send-anon{background:var(--cu-95);border:1px solid var(--cu-78);border-right:3px solid var(--cu-71);
+  .send-anon{background:var(--cu-95);border:1px solid var(--cu-78);border-inline-start:3px solid var(--cu-71);
     border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4);font-size:var(--fs-xs);color:var(--cu-27);
     display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-4)}
   .send-anon b{color:var(--cu-13)}
@@ -1076,18 +1076,18 @@
   .hist-find{border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);
              margin-bottom:var(--sp-4);font-size:var(--fs-xs);line-height:1.6}
   /* An estimate that holds and one that is improving are the same news */
-  .hist-holds{background:var(--charcoal-2);border-right:3px solid var(--turq);color:var(--tq-21)}
+  .hist-holds{background:var(--charcoal-2);border-inline-start:3px solid var(--turq);color:var(--tq-21)}
   /* Under-estimating costs money, so it is the loud one */
-  .hist-low{background:var(--cu-95);border-right:3px solid var(--cu-71);color:var(--cu-27)}
+  .hist-low{background:var(--cu-95);border-inline-start:3px solid var(--cu-71);color:var(--cu-27)}
   /* Over-estimating is a real finding and not an emergency */
-  .hist-high{background:var(--charcoal-2);border-right:3px solid var(--copper-dim);color:var(--nt-13)}
+  .hist-high{background:var(--charcoal-2);border-inline-start:3px solid var(--copper-dim);color:var(--nt-13)}
   /* The case a single ratio cannot express: baseline fine, one job broke */
-  .hist-outlier{background:var(--cu-95);border-right:3px solid var(--cu-71);color:var(--cu-27)}
+  .hist-outlier{background:var(--cu-95);border-inline-start:3px solid var(--cu-71);color:var(--cu-27)}
 
   .hist-t{width:100%;border-collapse:collapse;font-size:var(--fs-xs);margin-bottom:var(--sp-5)}
-  .hist-t caption{text-align:right;font-size:var(--fs-xs);color:var(--muted);
+  .hist-t caption{text-align:start;font-size:var(--fs-xs);color:var(--muted);
                   padding-bottom:var(--sp-3)}
-  .hist-t th,.hist-t td{text-align:right;padding:var(--sp-3) var(--sp-4) var(--sp-3) 0;
+  .hist-t th,.hist-t td{text-align:start;padding-block:var(--sp-3);padding-inline:var(--sp-4) 0;
                         border-bottom:1px solid var(--line)}
   .hist-t thead th{font-size:var(--fs-xs);color:var(--muted);font-weight:600}
   .hist-t tbody th{font-weight:600;color:var(--nt-5)}
@@ -1104,16 +1104,16 @@
   .hist-gap-l b{color:var(--nt-9)}
 
   /* ---- restored draft ---- */
-  .draftnote{background:var(--charcoal-2);border:1px solid var(--tq-64);border-right:3px solid var(--turq);
+  .draftnote{background:var(--charcoal-2);border:1px solid var(--tq-64);border-inline-start:3px solid var(--turq);
              border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin:var(--sp-4) 0;font-size:var(--fs-xs);color:var(--tq-21);
              display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4)}
   .draftnote button{margin:0}
 
   /* ---- error boundary ---- */
-  .errbound{background:var(--rd-95);border:1px solid var(--rd-78);border-right:3px solid var(--red-text);
+  .errbound{background:var(--rd-95);border:1px solid var(--rd-78);border-inline-start:3px solid var(--red-text);
             border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);margin:var(--sp-4) 0;font-size:var(--fs-xs);
             color:var(--rd-27);line-height:1.65}
-  .out .fine{font-size:var(--fs-xs);color:var(--nt-41)}
+  .out .fine{font-size:var(--fs-xs);color:var(--muted)}
   .mt4{margin-top:var(--sp-2)}
   .mt8{margin-top:var(--sp-3)}
   .nomargin{margin:0}

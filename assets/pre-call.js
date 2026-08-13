@@ -1,19 +1,79 @@
 /* ---------- prompts ---------- */
 
+/* ---------- i18n seam ----------
+   Hebrew in, the display language out — see assets/pc-i18n.js. Under Node
+   (the tests) PC.i18n does not exist and the fallback returns the Hebrew
+   with {name} params interpolated, so every string assertion in
+   assets/pre-call.test.js keeps reading the language it was written in. */
+var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+  : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
 /* ---------- state ---------- */
 const S = {};
 
-/* ---------- nav ---------- */
-document.querySelectorAll('.stepbtn').forEach(b=>b.onclick=()=>go(+b.dataset.s));
-function go(n){
-  if(n!==4) callMode(false); // the step buttons are hidden in call mode; leaving step 4 must not hide them
-  if(n===3) refreshEdgeRef();
-  document.querySelectorAll('.stepbtn').forEach(b=>b.classList.toggle('on',+b.dataset.s===n));
+/* ---------- nav ----------
+   Three buttons that swap which panel is showing, wired as the ARIA tabs
+   pattern: aria-selected says which one is current, and a roving tabindex
+   means the whole tab strip is ONE stop in the tab order rather than
+   three — Tab moves you past the nav and into the panel, arrows move you
+   between steps. That is the behaviour a screen-reader user is told to
+   expect the moment the markup says role="tablist".
+
+   The part that mattered more and was missing entirely: switching steps
+   moved the page but never moved FOCUS. Sighted mouse users saw the new
+   panel; anyone on a keyboard was left standing on a button while the
+   thing it opened was somewhere else, and a screen reader went on reading
+   the panel that had just been hidden. So the panel itself takes focus
+   (tabindex="-1" in the markup, never in the tab order) — the reader
+   lands on the new step's heading and reads down from there. */
+const STEP_BTNS = () => [...document.querySelectorAll('.stepbtn')];
+
+function go(n, opts){
+  if(n!==3) callMode(false); // the step buttons are hidden in call mode; leaving the script step must not hide them
+  if(n===2) refreshEdgeRef();
+  STEP_BTNS().forEach(b=>{
+    const on = +b.dataset.s===n;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    b.tabIndex = on ? 0 : -1;
+  });
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  document.getElementById('p'+n).classList.add('on');
-  window.scrollTo({top:0,behavior:
-    (typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches)?'auto':'smooth'});
+  const panel = document.getElementById('p'+n);
+  panel.classList.add('on');
+  const still = (typeof matchMedia==='function' &&
+                 matchMedia('(prefers-reduced-motion: reduce)').matches);
+  window.scrollTo({top:0,behavior: still?'auto':'smooth'});
+  /* Not on the very first render — moving focus on page load steals it
+     from wherever the browser restored it, and announces a step nobody
+     asked for. Only a deliberate change moves anybody. */
+  if(!opts || opts.focus !== false) panel.focus({preventScroll:true});
 }
+
+STEP_BTNS().forEach(b=>{
+  b.addEventListener('click', ()=>go(+b.dataset.s));
+  /* Arrows move between tabs and take focus with them, which is what
+     makes the roving tabindex navigable; Home/End jump to the ends. */
+  b.addEventListener('keydown', e=>{
+    const keys = {ArrowRight:1, ArrowLeft:1, ArrowDown:1, ArrowUp:1, Home:1, End:1};
+    if(!keys[e.key]) return;
+    e.preventDefault();
+    const btns = STEP_BTNS();
+    const at = btns.indexOf(b);
+    /* The page is RTL in Hebrew and LTR in English, and "next" follows
+       the reading direction in both — an arrow that moved the wrong way
+       would be the one thing here more confusing than no arrows. */
+    const rtl = (document.documentElement.dir || 'rtl') === 'rtl';
+    const fwd = rtl ? 'ArrowLeft' : 'ArrowRight';
+    let to = at;
+    if(e.key === 'Home') to = 0;
+    else if(e.key === 'End') to = btns.length - 1;
+    else if(e.key === fwd || e.key === 'ArrowDown') to = (at + 1) % btns.length;
+    else to = (at - 1 + btns.length) % btns.length;
+    const target = btns[to];
+    go(+target.dataset.s, {focus:false});
+    target.focus();
+  });
+});
 
 /* ---------- call mode ----------
    Everything this does lives in CSS (see the @media screen block next to the
@@ -59,7 +119,7 @@ function downloadCallIcs(){
     : null;
   /* Refused rather than half-built. A subtly malformed .ics does not error when
      tapped — it does nothing, and the operator concludes the tool is broken. */
-  if (!text) { say('חסר תאריך, שעה או אורך — בלעדיהם אין לאירוע מתי, ולא נוצר קובץ.'); return; }
+  if (!text) { say(tr('חסר תאריך, שעה או אורך — בלעדיהם אין לאירוע מתי, ולא נוצר קובץ.')); return; }
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
@@ -67,7 +127,7 @@ function downloadCallIcs(){
   a.download = cal.callFilename({ date: val('cal_date'), client: callWho() });
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  say('הקובץ ירד. פתחו אותו והאירוע ייכנס ליומן עם שתי התזכורות.');
+  say(tr('הקובץ ירד. פתחו אותו והאירוע ייכנס ליומן עם שתי התזכורות.'));
 }
 
 function toReadingCard(){
@@ -91,8 +151,8 @@ function refreshEdgeRef(){
   if(!el) return;
   const edge=(document.getElementById('f_edge').value||'').split('\n').map(s=>s.trim()).filter(Boolean).join(' ');
   el.textContent = edge
-    ? 'האבחנה הכללית שלכם, לגזור ממנה: "' + edge + '"'
-    : 'לא מילאתם "מה רק אתם רואים אצל הלקוחות שלכם" בשלב 2. בלי זה אין ממה לגזור את המשפט.';
+    ? tr('האבחנה הכללית שלכם, לגזור ממנה: "{edge}"', { edge: edge })
+    : tr('לא מילאתם "מה רק אתם רואים אצל הלקוחות שלכם" בשלב 1. בלי זה אין ממה לגזור את המשפט.');
 }
 
 /* ---------- copy ---------- */
@@ -160,27 +220,27 @@ function guard(name, fn){
   };
 }
 
-const FAIL_LABEL = { parse: 'חילוץ השדות מההדבקה', build: 'בניית התסריט' };
+const FAIL_LABEL = { parse: tr('חילוץ השדות מההדבקה'), build: tr('בניית התסריט') };
 
 function renderFailures(){
   const box = document.getElementById('errBoundary');
   if(!box) return;
   if(!_failed.size){ show('errBoundary', false); box.innerHTML=''; return; }
   const names = [..._failed].map(n => FAIL_LABEL[n] || n);
-  box.innerHTML = '<b>' + names.join(', ') + ' נכשל.</b> שאר הכלי ממשיך לעבוד, והנתונים ששמרת לא נפגעו. ' +
-    'רענון הדף בדרך כלל פותר את זה; אם לא, פתח את הקונסולה — הפירוט שם.';
+  box.innerHTML = '<b>' + tr('{names} נכשל.', { names: names.join(', ') }) + '</b> ' +
+    tr('שאר הכלי ממשיך לעבוד, והנתונים ששמרת לא נפגעו. רענון הדף בדרך כלל פותר את זה; אם לא, פתח את הקונסולה — הפירוט שם.');
   show('errBoundary', true);
 }
 
 window.addEventListener('error', e => {
   if(!e.filename || !/pre-call/.test(e.filename)) return;
-  _failed.add('כללי'); renderFailures();
+  _failed.add(tr('כללי')); renderFailures();
 });
 
 function flash(f, ok=true){
   const e=document.getElementById(f);
   if(!e.dataset.orig) e.dataset.orig=e.textContent;
-  e.textContent = ok ? e.dataset.orig : 'ההעתקה נכשלה — סמנו והעתיקו ידנית';
+  e.textContent = ok ? e.dataset.orig : tr('ההעתקה נכשלה — סמנו והעתיקו ידנית');
   e.style.color = ok ? '' : 'var(--red)';
   e.classList.add('on');
   setTimeout(()=>e.classList.remove('on'), ok?1600:3200);
@@ -192,8 +252,16 @@ function flash(f, ok=true){
 // but nothing stops a real answer, or a real person editing the model's
 // output, from leaving one blank. `KNOWN_LABELS` exists so a blank field can
 // be told apart from a missing one, in both directions below.
+//
+// Two label sets, both always active: the Hebrew prompt asks for the Hebrew
+// labels, the English prompt (assets/en-pre-call.js) asks for the English
+// ones, and the operator may paste either into either UI language. These are
+// a parse FORMAT, not prose — they must match what the model was asked to
+// emit, so they never pass through tr() (exempted in assets/i18n.test.js).
 const KNOWN_LABELS = ['מה אני מוכר:','למי:','יחידה תחומה:','מחיר היחידה:','עסקה אחרונה:',
-  'מקור הלקוח האחרון:','מה הלקוח הרוויח:','מה רק אני רואה:','מה אני לא מוכר:'];
+  'מקור הלקוח האחרון:','מה הלקוח הרוויח:','מה רק אני רואה:','מה אני לא מוכר:',
+  'What I sell:','For whom:','Bounded unit:','Unit price:','Last deal:',
+  'Last client source:','What the client gained:','What only I see:','What I do not sell:'];
 
 const parseBiz = guard('parse', function parseBiz(){
   const t=document.getElementById('pasteBiz').value;
@@ -211,13 +279,16 @@ const parseBiz = guard('parse', function parseBiz(){
   // label still needs the labels list to catch it) — never worth keeping
   const clean=v=>KNOWN_LABELS.some(l=>v===l||v.startsWith(l))?'':v;
   const set=(id,v)=>{v=clean(v); if(v)document.getElementById(id).value=v};
-  set('f_what', g(/מה אני מוכר:[ \t]*(.+)/));
-  set('f_who',  g(/למי:[ \t]*(.+)/));
-  set('f_unit', g(/יחידה תחומה:[ \t]*(.+)/));
-  set('f_price',g(/מחיר היחידה:[ \t]*(.+)/));
-  set('f_last', g(/עסקה אחרונה:[ \t]*(.+)/));
-  set('f_gain', g(/מה הלקוח הרוויח:[ \t]*(.+)/));
-  set('f_no',   g(/מה אני לא מוכר:[ \t]*(.+)/));
+  // each field tries the Hebrew label first, then the English one — clean()
+  // runs per attempt so a blank Hebrew field cannot mask a filled English one
+  const g2=(he,en)=>clean(g(he))||clean(g(en));
+  set('f_what', g2(/מה אני מוכר:[ \t]*(.+)/,   /What I sell:[ \t]*(.+)/));
+  set('f_who',  g2(/למי:[ \t]*(.+)/,           /For whom:[ \t]*(.+)/));
+  set('f_unit', g2(/יחידה תחומה:[ \t]*(.+)/,   /Bounded unit:[ \t]*(.+)/));
+  set('f_price',g2(/מחיר היחידה:[ \t]*(.+)/,   /Unit price:[ \t]*(.+)/));
+  set('f_last', g2(/עסקה אחרונה:[ \t]*(.+)/,   /Last deal:[ \t]*(.+)/));
+  set('f_gain', g2(/מה הלקוח הרוויח:[ \t]*(.+)/, /What the client gained:[ \t]*(.+)/));
+  set('f_no',   g2(/מה אני לא מוכר:[ \t]*(.+)/, /What I do not sell:[ \t]*(.+)/));
   // stop only at the next KNOWN field label, not any line that happens to contain a colon
   // (a multiline answer here easily contains its own "לדוגמה:"-style colon).
   // Multi-line on purpose, which is exactly why [ \t]* alone cannot fix a
@@ -226,14 +297,15 @@ const parseBiz = guard('parse', function parseBiz(){
   // field here swallowed the entire rest of the paste rather than one line
   // of it. clean() is what actually stops that: a capture that starts with
   // another field's label was never this field's answer.
-  const edge=clean(g(/מה רק אני רואה:[ \t]*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/));
+  const edge=g2(/מה רק אני רואה:[ \t]*([\s\S]+?)(?:\n(?:מה אני לא מוכר:|מקור הלקוח האחרון:|מה הלקוח הרוויח:|עסקה אחרונה:|מחיר היחידה:|יחידה תחומה:|למי:|מה אני מוכר:)|$)/,
+                /What only I see:[ \t]*([\s\S]+?)(?:\n(?:What I do not sell:|Last client source:|What the client gained:|Last deal:|Unit price:|Bounded unit:|For whom:|What I sell:)|$)/);
   if(edge)document.getElementById('f_edge').value=edge;
-  const src=clean(g(/מקור הלקוח האחרון:[ \t]*(.+)/));
+  const src=g2(/מקור הלקוח האחרון:[ \t]*(.+)/, /Last client source:[ \t]*(.+)/);
   if(src){
     const s=document.getElementById('f_src');
-    if(/הפני|היכר/.test(src))s.value='ref';
-    else if(/תוכן/.test(src))s.value='content';
-    else if(/יזומ/.test(src))s.value='out';
+    if(/הפני|היכר|referral|introduc/i.test(src))s.value='ref';
+    else if(/תוכן|content/i.test(src))s.value='content';
+    else if(/יזומ|outreach/i.test(src))s.value='out';
   }
   saveProfile();
 });
@@ -269,7 +341,7 @@ function warnStorage(){
   const e = document.getElementById('profileSaved');
   if (!e) return;
   if (!e.dataset.orig) e.dataset.orig = e.textContent;
-  e.textContent = 'הדפדפן חוסם שמירה — הפרופיל לא יישמר לפעם הבאה';
+  e.textContent = tr('הדפדפן חוסם שמירה — הפרופיל לא יישמר לפעם הבאה');
   e.classList.add('on', 'u-warn');
 }
 let saveProfileTimer=null;
@@ -319,9 +391,9 @@ const build = guard('build', function build(){
 
   const err2=document.getElementById('err2');
   if(!S.what){
-    err2.innerText='חסר השדה "מה אתם מוכרים". בלעדיו התסריט יוצא כללי, ואז הוא לא שווה יותר מרשימת שאלות באינטרנט.';
+    err2.innerText=tr('חסר השדה "מה אתם מוכרים". בלעדיו התסריט יוצא כללי, ואז הוא לא שווה יותר מרשימת שאלות באינטרנט.');
     show('err2', true);
-    go(2);
+    go(1);
     setTimeout(()=>document.getElementById('f_what').focus(),250);
     return;
   }
@@ -329,7 +401,7 @@ const build = guard('build', function build(){
 
   document.getElementById('outArea').innerHTML=render();
   renderPrivate();
-  go(4);
+  go(3);
 });
 
 /* Rendered outside #outArea on purpose — see the .priv CSS note. */
@@ -338,12 +410,13 @@ function renderPrivate(){
   const items=(S.priv||[]);
   if(!items.length){ show('privArea', false); el.innerHTML=''; return; }
   el.innerHTML =
-    '<h4>לעיניכם בלבד</h4><ul>'+items.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>'+
-    '<div class="seal">לא נכלל בהעתקה ולא בהדפסה. אלה המספרים שלכם, לא של השיחה.</div>';
+    '<h4>'+tr('לעיניכם בלבד')+'</h4><ul>'+items.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>'+
+    '<div class="seal">'+tr('לא נכלל בהעתקה ולא בהדפסה. אלה המספרים שלכם, לא של השיחה.')+'</div>';
   show('privArea', true);
 }
 
-const EMPTY_OUT = '<div class="empty">עוד לא נבנה תסריט.<br>מלאו את שלב 2, ואז לחצו "בנה את התסריט" בשלב 3.</div>';
+const EMPTY_OUT = '<div class="empty">'+tr('עוד לא נבנה תסריט.')+'<br>'+
+  tr('מלאו את שלב 1, ואז לחצו "בנה את התסריט" בשלב 2.')+'</div>';
 function resetOutput(){
   document.getElementById('outArea').innerHTML=EMPTY_OUT;
   S.priv=[];
@@ -353,10 +426,11 @@ function resetOutput(){
 
 function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}
 
-const SRC_LABEL = {ref:'הפניה או היכרות אישית', content:'התוכן שאתם מפרסמים', out:'פנייה יזומה שלכם', other:'ערוץ אחר'};
+const SRC_LABEL = {ref:tr('הפניה או היכרות אישית'), content:tr('התוכן שאתם מפרסמים'),
+  out:tr('פנייה יזומה שלכם'), other:tr('ערוץ אחר')};
 
 function render(){
-  const name = S.pname ? (S.pname + (S.pco?' · '+S.pco:'')) : 'הצד השני';
+  const name = S.pname ? (S.pname + (S.pco?' · '+S.pco:'')) : tr('הצד השני');
   const d = new Date();
   const dstr = d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear();
 
@@ -367,13 +441,13 @@ function render(){
   const numFirst = /^\s*(כ-|~|בערך)?\s*[\d₪$€]/.test(S.gain||'');
   let anchor;
   if(S.gain && numFirst){
-    anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך ${S.gain}. אצלך זה יותר או פחות?`;
+    anchor = tr('אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך {gain}. אצלך זה יותר או פחות?', {gain: S.gain});
   }else if(S.gain){
     // "אצל לקוח..., חסך 12 שעות" reads as if YOU saved them — the verb loses its subject.
     // Making the client the grammatical subject fixes it for any narrative phrasing.
-    anchor = `לקוח שעבדתי איתו במצב דומה — ${S.gain}. אצלך זה דומה, פחות, או יותר?`;
+    anchor = tr('לקוח שעבדתי איתו במצב דומה — {gain}. אצלך זה דומה, פחות, או יותר?', {gain: S.gain});
   }else{
-    anchor = `אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך [כאן נכנס המספר מהעסקה האחרונה שלכם]. אצלך זה יותר או פחות?`;
+    anchor = tr('אצל לקוח שעבדתי איתו במצב דומה, הפער הזה היה שווה בערך [כאן נכנס המספר מהעסקה האחרונה שלכם]. אצלך זה יותר או פחות?');
   }
 
   /* --- ownership move ---
@@ -393,14 +467,16 @@ function render(){
   let own, sayLine = '', ownGap = '';
   const edgeFull = S.edge ? S.edge.split('\n').map(l=>l.trim()).filter(Boolean).join(' ') : '';
   if(S.pown){
-    own = `אמרו לו את המשפט שהכנתם, ואז שאלו:`;
+    own = tr('אמרו לו את המשפט שהכנתם, ואז שאלו:');
     sayLine = `<div class="say">${esc(S.pown)}</div>`;
   }else if(S.edge){
-    own = `מה שאתם רואים אצל לקוחות כאלה, והם עצמם לא: "${edgeFull}" — זו אבחנה כללית שלכם, לא עובדה עליו. נסחו ממנה משפט אחד עליו, בגוף שני, מעט לא מדויק בכוונה. ואז שאלו:`;
-    ownGap = `<div class="gap"><b>המשפט הזה לא הוכן.</b> ניסוח בזמן השיחה הוא מה שנשמע כמו קריאה מדף. חזרו לשלב 3, לשדה "המשפט שתגידו בשאלה 10", ונסחו אותו לפני שאתם מתקשרים.</div>`;
+    own = tr('מה שאתם רואים אצל לקוחות כאלה, והם עצמם לא: "{edge}" — זו אבחנה כללית שלכם, לא עובדה עליו. נסחו ממנה משפט אחד עליו, בגוף שני, מעט לא מדויק בכוונה. ואז שאלו:', {edge: edgeFull});
+    ownGap = '<div class="gap"><b>' + tr('המשפט הזה לא הוכן.') + '</b> ' +
+      tr('ניסוח בזמן השיחה הוא מה שנשמע כמו קריאה מדף. חזרו לשלב 2, לשדה "המשפט שתגידו בשאלה 10", ונסחו אותו לפני שאתם מתקשרים.') + '</div>';
   }else{
-    own = `נסחו לו את הצוואר שלו במשפט אחד, מעט לא מדויק בכוונה, ואז שאלו:`;
-    ownGap = `<div class="gap"><b>אין ממה לנסח את המשפט.</b> מלאו את "מה רק אתם רואים" בשלב 2, ואז את המשפט עצמו בשלב 3. בלי שניהם שאלה 10 מבקשת מכם להמציא ניסוח באוויר, מול אדם שמחכה.</div>`;
+    own = tr('נסחו לו את הצוואר שלו במשפט אחד, מעט לא מדויק בכוונה, ואז שאלו:');
+    ownGap = '<div class="gap"><b>' + tr('אין ממה לנסח את המשפט.') + '</b> ' +
+      tr('מלאו את "מה רק אתם רואים" בשלב 1, ואז את המשפט עצמו בשלב 2. בלי שניהם שאלה 10 מבקשת מכם להמציא ניסוח באוויר, מול אדם שמחכה.') + '</div>';
   }
 
   /* --- contextual openers ---
@@ -409,13 +485,13 @@ function render(){
      inside the document that gets copied and printed, under a label saying not to say
      them out loud. They now render outside #outArea entirely. */
   const openers=[], priv=[];
-  if(S.phow==='in') openers.push('הוא פנה אליכם. אל תסבירו מה אתם עושים. פתחו בשאלה, ותנו לו לתאר למה פנה.');
-  if(S.phow==='out') openers.push('אתם פניתם אליו. תנו משפט אחד על למה פניתם דווקא אליו, ומיד עברו לשאלה. לא הצגה עצמית ארוכה.');
-  if(S.phow==='ref') openers.push('הגעתם דרך הפניה. שאלו קודם מה נאמר לו עליכם. זה מגלה איזו ציפייה כבר נבנתה.');
-  if(S.ptrig) openers.push(`יש טריגר ידוע: ${S.ptrig}. אל תזכירו אותו ראשונים. חכו לראות אם הוא מעלה אותו בשאלה 3.`);
-  if(S.ppair==='2') openers.push('שניים בשיחה. בשאלת הבעלות, בקשו תשובה מכל אחד בנפרד. אם ענו שונה, ההצעה מותנית בסבב שני עם שניהם.');
-  if(S.ptext) openers.push('יש לכם טקסט ציבורי עליו. השוו בשאלה 6 בין מה שהוא כתב על עצמו למה שהוא אומר עכשיו. הפער הוא הסימן.');
-  if(!S.unit) openers.push('אין לכם יחידה תחומה. שימו לב לשאלה 8. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.');
+  if(S.phow==='in') openers.push(tr('הוא פנה אליכם. אל תסבירו מה אתם עושים. פתחו בשאלה, ותנו לו לתאר למה פנה.'));
+  if(S.phow==='out') openers.push(tr('אתם פניתם אליו. תנו משפט אחד על למה פניתם דווקא אליו, ומיד עברו לשאלה. לא הצגה עצמית ארוכה.'));
+  if(S.phow==='ref') openers.push(tr('הגעתם דרך הפניה. שאלו קודם מה נאמר לו עליכם. זה מגלה איזו ציפייה כבר נבנתה.'));
+  if(S.ptrig) openers.push(tr('יש טריגר ידוע: {trig}. אל תזכירו אותו ראשונים. חכו לראות אם הוא מעלה אותו בשאלה 3.', {trig: S.ptrig}));
+  if(S.ppair==='2') openers.push(tr('שניים בשיחה. בשאלת הבעלות, בקשו תשובה מכל אחד בנפרד. אם ענו שונה, ההצעה מותנית בסבב שני עם שניהם.'));
+  if(S.ptext) openers.push(tr('יש לכם טקסט ציבורי עליו. השוו בשאלה 6 בין מה שהוא כתב על עצמו למה שהוא אומר עכשיו. הפער הוא הסימן.'));
+  if(!S.unit) openers.push(tr('אין לכם יחידה תחומה. שימו לב לשאלה 8. אם גם לו אין, השיחה הזאת עוסקת בבניית יחידה, לא בהצעה רחבה.'));
 
   /* --- what the ledger already knows about the person holding this script ---
      A beginner and a veteran need opposite things from the same twelve questions.
@@ -439,17 +515,18 @@ function render(){
     ? PC.deals.tenure() : null;
   if(ten){
     if(ten.selfOffered > 0){
-      openers.push('בפנקס שלכם ' + (ten.selfOffered === 1 ? 'עסקה אחת שבה ירדתם' :
-        ten.selfOffered + ' עסקאות שבהן ירדתם') + ' במחיר לפני שהלקוח ביקש. ' +
-        'שאלה 12 היא המקום שזה מתחיל בו — החליטו עכשיו מה לא תיתנו, לפני שהוא שואל.');
+      /* Two branches, not one string glued around a count: singular and plural
+         are different sentences in both languages, so each is its own tr() key. */
+      openers.push(ten.selfOffered === 1
+        ? tr('בפנקס שלכם עסקה אחת שבה ירדתם במחיר לפני שהלקוח ביקש. שאלה 12 היא המקום שזה מתחיל בו — החליטו עכשיו מה לא תיתנו, לפני שהוא שואל.')
+        : tr('בפנקס שלכם {n} עסקאות שבהן ירדתם במחיר לפני שהלקוח ביקש. שאלה 12 היא המקום שזה מתחיל בו — החליטו עכשיו מה לא תיתנו, לפני שהוא שואל.', {n: ten.selfOffered}));
     /* priceEverMoved, not !discounted. A loss tests the price as surely as a
        discount does — that is ceiling()'s own argument in pc-history.js — and this
        branch used to ignore losses, so one ledger could read "untested" here and
        "tested" in the panel. The boolean comes from deals.js so there is one rule
        and not two. Raised in review. */
     } else if(ten.closed >= 2 && !ten.priceEverMoved){
-      openers.push(ten.closed + ' העסקאות שסגרתם נסגרו במחיר שנקבתם, ואף אחת לא ירדה — ' +
-        'כלומר לא בדקתם את התקרה שלכם. בשאלה 11 נקבו במספר גבוה מהאחרון, ותקשיבו לתשובה.');
+      openers.push(tr('{n} העסקאות שסגרתם נסגרו במחיר שנקבתם, ואף אחת לא ירדה — כלומר לא בדקתם את התקרה שלכם. בשאלה 11 נקבו במספר גבוה מהאחרון, ותקשיבו לתשובה.', {n: ten.closed}));
     /* `total > 0` and not merely `closed === 0`, which is the difference between
        a ledger with nothing closed in it and no ledger at all. Somebody who has
        never opened POST-CALL is the likeliest person holding this script, and
@@ -459,15 +536,14 @@ function render(){
        over one sentence, which a test in this file has protected since before any
        of this. */
     } else if(ten.total > 0 && ten.closed === 0){
-      openers.push('יש בפנקס הצעות, אבל אף אחת לא נסגרה — כלומר אין לכם מספר משלכם לעוגן. ' +
-        'בשאלות 2 ו-8 תשמעו את המספרים שלו — הם עדיפים על אומדן שלכם.');
+      openers.push(tr('יש בפנקס הצעות, אבל אף אחת לא נסגרה — כלומר אין לכם מספר משלכם לעוגן. בשאלות 2 ו-8 תשמעו את המספרים שלו — הם עדיפים על אומדן שלכם.'));
     }
   }
-  if(S.src) openers.push(`הלקוח האחרון שלכם הגיע דרך ${SRC_LABEL[S.src]||S.src}. בשאלה 5 תשמעו מאיפה הגיע הלקוח שלו — אם זה ערוץ אחר משלכם, זה סימן שהערוץ ששכנע אתכם לא בהכרח ישכנע אותו.`);
+  if(S.src) openers.push(tr('הלקוח האחרון שלכם הגיע דרך {src}. בשאלה 5 תשמעו מאיפה הגיע הלקוח שלו — אם זה ערוץ אחר משלכם, זה סימן שהערוץ ששכנע אתכם לא בהכרח ישכנע אותו.', {src: SRC_LABEL[S.src]||S.src}));
 
-  if(S.last && S.gain) priv.push(`העסקה האחרונה שלכם: ${S.last}. הרווח שהערכתם אצל הלקוח: ${S.gain}. היחס הזה הוא הכיול שלכם בראש לפני שאלה 11.`);
-  else if(S.last) priv.push(`העסקה האחרונה שלכם: ${S.last}.`);
-  if(S.price) priv.push(`מחיר היחידה שלכם: ${S.price}. רצפה פנימית למה שכדאי בכלל להמשיך אליו.`);
+  if(S.last && S.gain) priv.push(tr('העסקה האחרונה שלכם: {last}. הרווח שהערכתם אצל הלקוח: {gain}. היחס הזה הוא הכיול שלכם בראש לפני שאלה 11.', {last: S.last, gain: S.gain}));
+  else if(S.last) priv.push(tr('העסקה האחרונה שלכם: {last}.', {last: S.last}));
+  if(S.price) priv.push(tr('מחיר היחידה שלכם: {price}. רצפה פנימית למה שכדאי בכלל להמשיך אליו.', {price: S.price}));
   S.priv = priv;
 
   // the space after the badge is load-bearing: without it innerText (what the copy
@@ -494,99 +570,99 @@ function render(){
     '</tbody></table>\n  </div>';
 
   return `
-<h3>תסריט שיחת אפיון · ${esc(name)}</h3>
+<h3>${tr('תסריט שיחת אפיון · {name}', {name: esc(name)})}</h3>
 <div class="meta">
-  ${esc(S.what)}${S.who?' · '+esc(S.who):''} · הוכן ${dstr}<br>
-  משך מוערך 25 עד 35 דקות. סדר השאלות הוא חלק מהכלי. אל תדלגו קדימה.
+  ${esc(S.what)}${S.who?' · '+esc(S.who):''} · ${tr('הוכן {date}', {date: dstr})}<br>
+  ${tr('משך מוערך 25 עד 35 דקות. סדר השאלות הוא חלק מהכלי. אל תדלגו קדימה.')}
 </div>
 
 ${openers.length?`<div class="blk">
-  <div class="blk-h">לפני שמתחילים</div>
+  <div class="blk-h">${tr('לפני שמתחילים')}</div>
   <ul class="prep">${openers.map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
 </div>`:''}
 
 <div class="blk">
-  <div class="blk-h">חלק א · 7 דקות</div>
-  <div class="blk-t">האם יש כאן בכלל עסקה</div>
-  <div class="blk-d">שלוש השאלות האלה קובעות אם שווה להמשיך. אם שתיים מהן נופלות, אין הצעה בסוף השיחה, ועדיף לדעת את זה עכשיו ולא אחרי שכתבתם מסמך.</div>
-  ${q(1,'מה אתה צריך ממני?','הפתיחה. אל תמלאו את השקט. מה שהוא אומר ראשון הוא מה שהוא באמת בא בשבילו.')}
-  ${q(2,'מתי בפעם האחרונה מישהו העביר לך כסף על זה. מתי, כמה, ממי.','אתם מחפשים מספר וזהות. "היה לי פעם", "פרו בונו", "התנסות" זה לא מספר. אז שאלו: וכמה לקוחות משלמים יש לך עכשיו.')}
-  ${q(3,'מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?','בלי אירוע ספציפי אין דחיפות, ובלי דחיפות ההצעה תישאר פתוחה חודשים.')}
-  ${q(4,'בעוד שנה מהיום, איפה אתה רואה את עצמך?','תשובה שמכילה משרה, ביטחון או "אחרי שאתבסס" מסמנת שהמטרה היא עבודה ולא עסק. תשובה שמכילה לקוחות, מחזור או מוצר, ממשיכים.')}
-  <div class="stop"><b>עצירה.</b> ממשיכים רק כשיש שלושה יחד: לקוחות משלמים בהווה, אירוע שקרה, ויעד עסקי. שניים מתוך שלושה זה שיחת המשך בעוד חודשיים, לא הצעה.</div>
+  <div class="blk-h">${tr('חלק א · 7 דקות')}</div>
+  <div class="blk-t">${tr('האם יש כאן בכלל עסקה')}</div>
+  <div class="blk-d">${tr('שלוש השאלות האלה קובעות אם שווה להמשיך. אם שתיים מהן נופלות, אין הצעה בסוף השיחה, ועדיף לדעת את זה עכשיו ולא אחרי שכתבתם מסמך.')}</div>
+  ${q(1,tr('מה אתה צריך ממני?'),tr('הפתיחה. אל תמלאו את השקט. מה שהוא אומר ראשון הוא מה שהוא באמת בא בשבילו.'))}
+  ${q(2,tr('מתי בפעם האחרונה מישהו העביר לך כסף על זה. מתי, כמה, ממי.'),tr('אתם מחפשים מספר וזהות. "היה לי פעם", "פרו בונו", "התנסות" זה לא מספר. אז שאלו: וכמה לקוחות משלמים יש לך עכשיו.'))}
+  ${q(3,tr('מה קרה לאחרונה שגרם לך לחפש פתרון דווקא עכשיו?'),tr('בלי אירוע ספציפי אין דחיפות, ובלי דחיפות ההצעה תישאר פתוחה חודשים.'))}
+  ${q(4,tr('בעוד שנה מהיום, איפה אתה רואה את עצמך?'),tr('תשובה שמכילה משרה, ביטחון או "אחרי שאתבסס" מסמנת שהמטרה היא עבודה ולא עסק. תשובה שמכילה לקוחות, מחזור או מוצר, ממשיכים.'))}
+  <div class="stop"><b>${tr('עצירה.')}</b> ${tr('ממשיכים רק כשיש שלושה יחד: לקוחות משלמים בהווה, אירוע שקרה, ויעד עסקי. שניים מתוך שלושה זה שיחת המשך בעוד חודשיים, לא הצעה.')}</div>
 </div>
 
 <div class="blk">
-  <div class="blk-h">חלק ב · 12 דקות</div>
-  <div class="blk-t">איפה בדיוק זה נעצר אצלו</div>
-  <div class="blk-d">חמש שאלות, בסדר הזה. הן חותכות בין חמש סיבות שונות לכך שעסק לא זז. הכרטיס בסוף המסמך מתרגם את התשובות.</div>
-  ${q(5,'מאיפה הגיע הלקוח האחרון שלך?','הפניה, תוכן, או פנייה יזומה. שלוש תשובות, שלושה מסלולים שונים.')}
-  ${q(6,'מה מפורסם היום בחוץ שמתאר את מה שאתה עושה?','"כלום" זו תשובה משמעותית. "יש, אבל זה כללי" זו תשובה אחרת לגמרי.')}
-  ${q(7,'כמה שעות בשבוע הולכות לפנייה יזומה, ומתי הן ביומן?','שאלו על היומן, לא על הכוונה. "אני משתדל" זה אפס.')}
-  ${q(8,'כשלקוח שואל כמה זה עולה, מה אתה עונה לו?','תעריף שעה, "תלוי", או "אני לא כל כך מבין בזה" מסמנים שאין לו יחידה. זו הסיבה השכיחה ביותר.')}
-  ${q(9,'הלקוח האחרון שסיים, מה קרה אחרי?','רק אם יש לו לקוחות שסיימו. "עבר לעשות לבד" או "התשלום נגרר" הם סימן נפרד.')}
-  <div class="rule">אם שתי סיבות מתחרות, רשמו ראשית ומשנית. אל תמזגו אותן להצעה אחת רחבה.</div>
+  <div class="blk-h">${tr('חלק ב · 12 דקות')}</div>
+  <div class="blk-t">${tr('איפה בדיוק זה נעצר אצלו')}</div>
+  <div class="blk-d">${tr('חמש שאלות, בסדר הזה. הן חותכות בין חמש סיבות שונות לכך שעסק לא זז. הכרטיס בסוף המסמך מתרגם את התשובות.')}</div>
+  ${q(5,tr('מאיפה הגיע הלקוח האחרון שלך?'),tr('הפניה, תוכן, או פנייה יזומה. שלוש תשובות, שלושה מסלולים שונים.'))}
+  ${q(6,tr('מה מפורסם היום בחוץ שמתאר את מה שאתה עושה?'),tr('"כלום" זו תשובה משמעותית. "יש, אבל זה כללי" זו תשובה אחרת לגמרי.'))}
+  ${q(7,tr('כמה שעות בשבוע הולכות לפנייה יזומה, ומתי הן ביומן?'),tr('שאלו על היומן, לא על הכוונה. "אני משתדל" זה אפס.'))}
+  ${q(8,tr('כשלקוח שואל כמה זה עולה, מה אתה עונה לו?'),tr('תעריף שעה, "תלוי", או "אני לא כל כך מבין בזה" מסמנים שאין לו יחידה. זו הסיבה השכיחה ביותר.'))}
+  ${q(9,tr('הלקוח האחרון שסיים, מה קרה אחרי?'),tr('רק אם יש לו לקוחות שסיימו. "עבר לעשות לבד" או "התשלום נגרר" הם סימן נפרד.'))}
+  <div class="rule">${tr('אם שתי סיבות מתחרות, רשמו ראשית ומשנית. אל תמזגו אותן להצעה אחת רחבה.')}</div>
 </div>
 
 <div class="blk">
-  <div class="blk-h">חלק ג · מהלך אחד</div>
-  <div class="blk-t">מי מנסח את הבעיה</div>
+  <div class="blk-h">${tr('חלק ג · מהלך אחד')}</div>
+  <div class="blk-t">${tr('מי מנסח את הבעיה')}</div>
   <div class="blk-d">${esc(own)}</div>
   ${sayLine}
-  ${q(10,'זה נשמע לך מדויק, או שאתה היית מנסח אחרת?','בקשו אישור על אבחנה, לא על כיוון. "הכיוון בסדר?" מקבל "כן" ומעביר נושא.')}
+  ${q(10,tr('זה נשמע לך מדויק, או שאתה היית מנסח אחרת?'),tr('בקשו אישור על אבחנה, לא על כיוון. "הכיוון בסדר?" מקבל "כן" ומעביר נושא.'))}
   ${ownGap}
   ${readTable(
-    ['מה שהוא עושה','מה זה אומר','מה מותר להציע'],
+    [tr('מה שהוא עושה'),tr('מה זה אומר'),tr('מה מותר להציע')],
     [
-      ['מנסח מחדש בשפתו ומוסיף חומר','הוא הבעלים של הבעיה','תהליך מלא'],
-      ['דוחה ומחדד גרסה משלו','יש בעלות, הניסוח שלכם החטיא','תהליך שמתחיל מהניסוח שלו'],
-      ['מהנהן, "כן", "נכון"','הוא לא אוחז בבעיה',{t:'לא תהליך. מפגש בודד או שיחת המשך.',no:true}]
+      [tr('מנסח מחדש בשפתו ומוסיף חומר'),tr('הוא הבעלים של הבעיה'),tr('תהליך מלא')],
+      [tr('דוחה ומחדד גרסה משלו'),tr('יש בעלות, הניסוח שלכם החטיא'),tr('תהליך שמתחיל מהניסוח שלו')],
+      [tr('מהנהן, "כן", "נכון"'),tr('הוא לא אוחז בבעיה'),{t:tr('לא תהליך. מפגש בודד או שיחת המשך.'),no:true}]
     ])}
 </div>
 
 <div class="blk">
-  <div class="blk-h">חלק ד · הנעילה</div>
-  <div class="blk-t">המספר, ומי מחזיק אותו</div>
-  <div class="blk-d">אל תשאלו "כמה זה שווה לך לדעתך". השאלה הזו מייצרת "אני לא יודע" כמעט תמיד, ואז הלחץ נשאר בחדר. תנו עוגן שהוא מכייל.</div>
-  ${q(11,anchor,'הוא מכייל מספר קיים במקום לייצר מאפס. אם הוא אומר "פחות", בקשו כמה פחות. זה עדיין מספר שלו.')}
-  ${!S.gain?`<div class="gap"><b>אין לכם מספר לעוגן.</b> שאלה 11 מכילה סוגריים במקום סכום, ולכן היא מבקשת מכם להמציא מספר בזמן השיחה — וזה המספר שכל ההצעה נגזרת ממנו. מלאו "מה הלקוח האחרון הרוויח" בשלב 2.</div>`:''}
-  ${q(12,'עד מתי, ואיזה מספר קונקרטי צריך לזוז כדי שתגיד שזה היה שווה?','זו הנעילה. חסר תאריך או חסר מספר, לא עוברים לדבר על מחיר.')}
-  <div class="stop"><b>הכלל.</b> אם בסוף החלק הזה אין מספר שהוא אמר, אין מחיר בשיחה הזאת. שלחו את ההצעה אחרי שהוא נקב, לא לפני.</div>
+  <div class="blk-h">${tr('חלק ד · הנעילה')}</div>
+  <div class="blk-t">${tr('המספר, ומי מחזיק אותו')}</div>
+  <div class="blk-d">${tr('אל תשאלו "כמה זה שווה לך לדעתך". השאלה הזו מייצרת "אני לא יודע" כמעט תמיד, ואז הלחץ נשאר בחדר. תנו עוגן שהוא מכייל.')}</div>
+  ${q(11,anchor,tr('הוא מכייל מספר קיים במקום לייצר מאפס. אם הוא אומר "פחות", בקשו כמה פחות. זה עדיין מספר שלו.'))}
+  ${!S.gain?`<div class="gap"><b>${tr('אין לכם מספר לעוגן.')}</b> ${tr('שאלה 11 מכילה סוגריים במקום סכום, ולכן היא מבקשת מכם להמציא מספר בזמן השיחה — וזה המספר שכל ההצעה נגזרת ממנו. מלאו "מה הלקוח האחרון הרוויח" בשלב 1.')}</div>`:''}
+  ${q(12,tr('עד מתי, ואיזה מספר קונקרטי צריך לזוז כדי שתגיד שזה היה שווה?'),tr('זו הנעילה. חסר תאריך או חסר מספר, לא עוברים לדבר על מחיר.'))}
+  <div class="stop"><b>${tr('הכלל.')}</b> ${tr('אם בסוף החלק הזה אין מספר שהוא אמר, אין מחיר בשיחה הזאת. שלחו את ההצעה אחרי שהוא נקב, לא לפני.')}</div>
 </div>
 
 <!-- .blk-post: useful only once the last answer is in. Call mode hides these
      two so the room holds the questions and nothing else; the bar's second
      button brings them back at the moment the call ends. Print keeps them. -->
 <div class="blk blk-post" id="afterCall">
-  <div class="blk-h">אחרי השיחה</div>
-  <div class="blk-t">כרטיס קריאה · חמש הסיבות</div>
-  <div class="blk-d">מצאו את השורה שמתאימה לתשובות בחלק ב. העמודה האחרונה היא מה שלא לכתוב בהצעה, גם אם מתחשק.</div>
+  <div class="blk-h">${tr('אחרי השיחה')}</div>
+  <div class="blk-t">${tr('כרטיס קריאה · חמש הסיבות')}</div>
+  <div class="blk-d">${tr('מצאו את השורה שמתאימה לתשובות בחלק ב. העמודה האחרונה היא מה שלא לכתוב בהצעה, גם אם מתחשק.')}</div>
   ${readTable(
-    ['אם שמעתם','מה נעצר','מה ההצעה מכילה','מה לא להציע'],
+    [tr('אם שמעתם'),tr('מה נעצר'),tr('מה ההצעה מכילה'),tr('מה לא להציע')],
     [
-      ['שאלה 8: תעריף שעה או "תלוי"','אין לו יחידה מתומחרת',
-       'בניית יחידה אחת. פורמט, תוצר, מחיר, רציונל.',
-       {t:'תמחור לפי ערך לפני שיש יחידה. תפריט אפשרויות.',no:true}],
-      ['שאלה 5 "מהתוכן" + שאלה 6 "יש אבל כללי"','הערוץ לא נושא את הערך',
-       'העברת האבחון שהוא כבר עושה בשיחה, אל תוך הערוץ. תוצר ספיר.',
-       {t:'תוכנית תוכן. שיפור פוסטים.',no:true}],
-      ['שאלה 6 "כלום" + שאלה 5 "היכרות"','שום דבר לא יוצא החוצה',
-       'הוצאה של נכס אחד קיים, בשבוע. עם נמען מוגדר.',
-       {t:'בניית מוצר חדש. תיק עבודות. הוא לא צריך עוד נכס.',no:true}],
-      ['שאלה 7 "אין שעות" ויש לו נכסים','הקשב לא מוקצה לרכישה',
-       'שעה קבועה, רשימה תחומה, מדד שבועי אחד.',
-       {t:'אסטרטגיה. מיצוב. זה לא הצוואר שלו.',no:true}],
-      ['שאלה 9 "עבר לעשות לבד" או "נגרר"','אין ניסוח למה עדיין צריך אותו',
-       'שלב שני שהוא לא המשך של הראשון, עם קריטריון סיום כתוב.',
-       {t:'ליווי חודשי. הרחבת סקופ. הבעיה היא הגבול.',no:true}]
+      [tr('שאלה 8: תעריף שעה או "תלוי"'),tr('אין לו יחידה מתומחרת'),
+       tr('בניית יחידה אחת. פורמט, תוצר, מחיר, רציונל.'),
+       {t:tr('תמחור לפי ערך לפני שיש יחידה. תפריט אפשרויות.'),no:true}],
+      [tr('שאלה 5 "מהתוכן" + שאלה 6 "יש אבל כללי"'),tr('הערוץ לא נושא את הערך'),
+       tr('העברת האבחון שהוא כבר עושה בשיחה, אל תוך הערוץ. תוצר ספיר.'),
+       {t:tr('תוכנית תוכן. שיפור פוסטים.'),no:true}],
+      [tr('שאלה 6 "כלום" + שאלה 5 "היכרות"'),tr('שום דבר לא יוצא החוצה'),
+       tr('הוצאה של נכס אחד קיים, בשבוע. עם נמען מוגדר.'),
+       {t:tr('בניית מוצר חדש. תיק עבודות. הוא לא צריך עוד נכס.'),no:true}],
+      [tr('שאלה 7 "אין שעות" ויש לו נכסים'),tr('הקשב לא מוקצה לרכישה'),
+       tr('שעה קבועה, רשימה תחומה, מדד שבועי אחד.'),
+       {t:tr('אסטרטגיה. מיצוב. זה לא הצוואר שלו.'),no:true}],
+      [tr('שאלה 9 "עבר לעשות לבד" או "נגרר"'),tr('אין ניסוח למה עדיין צריך אותו'),
+       tr('שלב שני שהוא לא המשך של הראשון, עם קריטריון סיום כתוב.'),
+       {t:tr('ליווי חודשי. הרחבת סקופ. הבעיה היא הגבול.'),no:true}]
     ])}
 </div>
 
 <div class="blk blk-post">
-  <div class="blk-h">שלושה כללים לכתיבת ההצעה</div>
-  <div class="rule">המספר בהצעה נגזר מהעוגן שהוא נקב בשאלה 11, לא מהשוק ולא משעות.</div>
-  <div class="rule">אין הנחה יזומה. אם צריך להוריד, מורידים סקופ ולא מחיר.</div>
-  ${S.no?`<div class="rule">הגבול שהגדרתם: ${esc(S.no)}. אם ההצעה חורגת ממנו, זו כבר לא ההצעה שלכם.</div>`:''}
+  <div class="blk-h">${tr('שלושה כללים לכתיבת ההצעה')}</div>
+  <div class="rule">${tr('המספר בהצעה נגזר מהעוגן שהוא נקב בשאלה 11, לא מהשוק ולא משעות.')}</div>
+  <div class="rule">${tr('אין הנחה יזומה. אם צריך להוריד, מורידים סקופ ולא מחיר.')}</div>
+  ${S.no?`<div class="rule">${tr('הגבול שהגדרתם: {no}. אם ההצעה חורגת ממנו, זו כבר לא ההצעה שלכם.', {no: esc(S.no)})}</div>`:''}
 </div>
 `;
 }
@@ -625,17 +701,18 @@ function handleBackupFile(e){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = () => restoreBackup(reader.result);
-  reader.onerror = () => backupFlash('לא הצלחתי לקרוא את הקובץ', true);
+  reader.onerror = () => backupFlash(tr('לא הצלחתי לקרוא את הקובץ'), true);
   reader.readAsText(file);
 }
 function restoreBackup(text){
   const p = PC.backup.preview(text, localStorage);
-  if(!p.ok){ backupFlash('הקובץ לא נראה כמו גיבוי תקין מהכלי הזה', true); return; }
-  const overwriting = p.willOverwrite.length ? '\n\nזה ידרוס: ' + p.willOverwrite.join(', ') : '';
-  const at = p.at ? new Date(p.at).toLocaleDateString('he-IL') : 'תאריך לא ידוע';
-  if(!confirm('לשחזר גיבוי מ-' + at + '?' + overwriting)) return;
+  if(!p.ok){ backupFlash(tr('הקובץ לא נראה כמו גיבוי תקין מהכלי הזה'), true); return; }
+  const overwriting = p.willOverwrite.length ? '\n\n' + tr('זה ידרוס: {list}', {list: p.willOverwrite.join(', ')}) : '';
+  const locale = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.locale() : 'he-IL';
+  const at = p.at ? new Date(p.at).toLocaleDateString(locale) : tr('תאריך לא ידוע');
+  if(!confirm(tr('לשחזר גיבוי מ-{date}?', {date: at}) + overwriting)) return;
   PC.backup.importAll(text, localStorage);
-  backupFlash('שוחזר. טוען מחדש...');
+  backupFlash(tr('שוחזר. טוען מחדש...'));
   setTimeout(()=>location.reload(), 600);
 }
 
@@ -661,7 +738,7 @@ const ACTIONS = {
   'cp-out':       () => cpText('outArea', 'c3'),
   parse:          parseBiz,
   clearprofile:   clearProfile,
-  go3:            () => go(3),
+  go2:            () => go(2),
   newprospect:    newProspect,
   build:          build,
   'callmode-on':  () => callMode(true),

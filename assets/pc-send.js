@@ -22,6 +22,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   /* WhatsApp's documented message ceiling is 65,536 characters, but the
      wa.me URL is the real constraint and browsers vary; 4,000 is the number
      that survives everywhere in practice. mailto is far worse — Outlook and
@@ -84,7 +87,7 @@
   }
 
   const subjectFor = client =>
-    'הצעת מחיר' + (client && client.trim() ? ' · ' + client.trim() : '');
+    tr('הצעת מחיר') + (client && client.trim() ? ' · ' + client.trim() : '');
 
   /* What to offer, given this document and what is known about the client.
      Each route reports whether it can actually carry this proposal, so the
@@ -95,14 +98,14 @@
     const w = whatsapp({ phone, text });
     const m = mailto({ to: email, subject: subjectFor(client), text });
     return [
-      { id: 'whatsapp', label: 'וואטסאפ', ok: w.ok, url: w.url,
-        note: w.ok ? (w.addressed ? 'נפתח בצ׳אט של הלקוח' : 'ייפתח וואטסאפ ותבחר את הצ׳אט')
-                   : 'ההצעה ארוכה מדי לוואטסאפ (' + w.length + ' תווים). העתק ושלח ידנית.' },
-      { id: 'email', label: 'אימייל', ok: m.ok, url: m.url,
-        note: m.ok ? 'ייפתח תוכנת המייל עם הטקסט בפנים'
-                   : 'ההצעה ארוכה מדי לפתיחה אוטומטית במייל. העתק, פתח מייל חדש והדבק.' },
-      { id: 'copy', label: 'העתק את הטקסט', ok: true, url: null,
-        note: 'תמיד עובד. הדבק לאן שתרצה.' }
+      { id: 'whatsapp', label: tr('וואטסאפ'), ok: w.ok, url: w.url,
+        note: w.ok ? (w.addressed ? tr('נפתח בצ׳אט של הלקוח') : tr('ייפתח וואטסאפ ותבחר את הצ׳אט'))
+                   : tr('ההצעה ארוכה מדי לוואטסאפ ({n} תווים). העתק ושלח ידנית.', { n: w.length }) },
+      { id: 'email', label: tr('אימייל'), ok: m.ok, url: m.url,
+        note: m.ok ? tr('ייפתח תוכנת המייל עם הטקסט בפנים')
+                   : tr('ההצעה ארוכה מדי לפתיחה אוטומטית במייל. העתק, פתח מייל חדש והדבק.') },
+      { id: 'copy', label: tr('העתק את הטקסט'), ok: true, url: null,
+        note: tr('תמיד עובד. הדבק לאן שתרצה.') }
     ];
   }
 

@@ -166,7 +166,61 @@ test('pre-call still prints the script and never the private notes', () => {
   const rules = block.slice(0, block.indexOf('\n  }'));
   assert.ok(/[,\s]\.priv[,\s]/.test(rules),
     'the private calibration notes are for the seller, not for the printed script');
-  assert.ok(/#p1,#p2,#p3/.test(rules), 'the input steps must not print');
+  assert.ok(/#p1,#p2[,\s]/.test(rules), 'the input steps must not print');
+  assert.ok(!/[,\s]#p3[,\s{]/.test(rules.replace(/#p3 \.box:first-of-type/, '')),
+    'the script panel is #p3 now — hiding it prints a blank page');
+});
+
+console.log('\nlandmarks and the way past them');
+/* WCAG 2.4.1 is satisfied by something being present, which is exactly the
+   shape of requirement that rots: nobody notices its absence, and axe
+   reports nothing because nothing is wrong — there is simply nothing
+   there. A new page added to this product would arrive without either of
+   these unless a test asks for them by name. */
+for (const f of ['index.html', 'pre-call.html', 'post-call.html', 'privacy.html']) {
+  test(f + ' opens with a skip link that points at a real landmark', () => {
+    const page = read(f);
+    const skip = page.match(/<a class="skip" href="#([\w-]+)"[^>]*>/);
+    assert.ok(skip, 'no skip link — every visit crosses the whole chrome on the keyboard');
+    /* First in the body, or it is not a bypass: a skip link that comes
+       after the preferences strip has already made you tab through it. */
+    const body = page.slice(page.indexOf('<body>') + 6).trim();
+    assert.ok(body.startsWith('<a class="skip"'),
+      'the skip link is not the first thing in the body, so it is not the first stop');
+    const target = new RegExp('id="' + skip[1] + '"');
+    assert.ok(target.test(page), 'the skip link points at #' + skip[1] + ', which does not exist');
+  });
+  test(f + ' has exactly one main landmark and one h1', () => {
+    const page = read(f);
+    assert.strictEqual((page.match(/<main[\s>]/g) || []).length, 1, 'a page has one main region');
+    assert.strictEqual((page.match(/<\/main>/g) || []).length, 1, 'the main region is not closed exactly once');
+    assert.strictEqual((page.match(/<h1[\s>]/g) || []).length, 1, 'a page has one first-level heading');
+  });
+}
+
+test('the step nav declares the pattern it behaves like, and wires every part of it', () => {
+  /* role="tablist" is a promise about the keyboard. Making it in the markup
+     and not keeping it in the script is worse than never making it: a
+     screen reader tells its user arrows will work, and they do not. */
+  const page = read('pre-call.html');
+  assert.ok(/role="tablist"/.test(page), 'the step nav no longer declares itself a tablist');
+  const tabs = [...page.matchAll(/<button class="stepbtn[^"]*"[^>]*>/g)].map(m => m[0]);
+  assert.strictEqual(tabs.length, 3, 'expected three steps, found ' + tabs.length);
+  tabs.forEach(t => {
+    assert.ok(/role="tab"/.test(t), 'a step button is not a tab: ' + t.slice(0, 70));
+    assert.ok(/aria-controls="p\d"/.test(t), 'a tab does not say which panel it controls');
+    assert.ok(/aria-selected="(true|false)"/.test(t), 'a tab does not report whether it is selected');
+  });
+  const selected = tabs.filter(t => /aria-selected="true"/.test(t));
+  assert.strictEqual(selected.length, 1, 'exactly one step is current, found ' + selected.length);
+  /* the roving tabindex: every tab but the current one is out of the tab order */
+  assert.strictEqual(tabs.filter(t => /tabindex="-1"/.test(t)).length, 2,
+    'a tablist is one stop in the tab order — the other two tabs need tabindex="-1"');
+  const src = read('assets/pre-call.js');
+  assert.ok(/ArrowRight/.test(src) && /ArrowLeft/.test(src),
+    'the markup promises arrow keys and the script does not implement them');
+  assert.ok(/panel\.focus\(/.test(src),
+    'changing step must move focus into the panel, or the keyboard user is left behind');
 });
 
 console.log('\nshow/hide mechanism');
@@ -318,7 +372,7 @@ const callBlock = (() => {
 })();
 
 test('call mode hides on screen the same chrome the print sheet hides on paper', () => {
-  ['header', '.steps', '.backupbox', 'footer', '.next-tool', '#p4 .box:first-of-type']
+  ['header', '.steps', '.backupbox', 'footer', '.next-tool', '#p3 .box:first-of-type']
     .forEach(sel => {
       assert.ok(printBlock.includes(sel), 'setup: ' + sel + ' is no longer in the print sheet');
       assert.ok(callBlock.includes('body.callmode ' + sel),
@@ -339,16 +393,23 @@ test('call mode is screen-only, so printing from inside it still prints everythi
   assert.ok(!/callmode/.test(printBlock),
     'the print sheet must not know about call mode at all');
 });
-test('the control box stays the first div in #p4, or the print sheet loses its target', () => {
+test('the control box stays the first div in #p3, or the print sheet loses its target', () => {
   /* `#p4 .box:first-of-type` is first-of-ELEMENT-type: it matches the first div
      child of #p4 only if that div also carries .box. .callbar is a div, so
      inserting it above the control box would silently start printing the button
      row. This pins the order the selector depends on. */
-  const open = '<div class="panel" id="p4">';
-  const p4 = html['pre-call.html'].slice(html['pre-call.html'].indexOf(open) + open.length);
-  const firstDiv = p4.match(/<div class="([^"]+)"/);
+  /* Matched by id rather than by the exact opening tag: the panel grew
+     role="tabpanel" and aria-labelledby when the step nav became a real
+     tablist, and an exact-string indexOf silently returned -1 — which
+     sliced from the top of the document and reported the preferences
+     strip as the first div in #p3. A test that fails for the wrong
+     reason is worth less than no test. */
+  const opened = html['pre-call.html'].match(/<div class="panel"[^>]*id="p3"[^>]*>/);
+  assert.ok(opened, 'the #p3 panel opening tag is not where this test can find it');
+  const p3 = html['pre-call.html'].slice(opened.index + opened[0].length);
+  const firstDiv = p3.match(/<div class="([^"]+)"/);
   assert.ok(/\bbox\b/.test(firstDiv[1]),
-    'the first div inside #p4 is now class="' + firstDiv[1] + '" — the print sheet targets .box:first-of-type');
+    'the first div inside #p3 is now class="' + firstDiv[1] + '" — the print sheet targets .box:first-of-type');
 });
 test('copy reads the script with call mode off, or it emits a truncated one', () => {
   /* innerText excludes anything CSS has hidden, so copying from inside call
@@ -742,7 +803,20 @@ console.log('\nmodule loading');
 test('every module the assets directory defines is actually loaded', () => {
   const linked = PAGES.flatMap(p =>
     [...html[p].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1]));
-  const orphans = SCRIPTS.filter(f => !linked.includes(f));
+  /* The English dictionaries are loaded by assets/pc-boot.js via
+     document.write, and only when the visitor chose English — that is
+     what keeps a Hebrew visit paying zero bytes for the second
+     language. They are therefore invisible to the tag scan above, and
+     exempting them by name alone would let a renamed dictionary rot
+     unreferenced. So the exemption is earned, not granted: an en-*.js
+     file passes only if pc-boot.js still contains the loader that
+     reaches it. */
+  const boot = read('assets/pc-boot.js');
+  const bootLoads = f => /^assets\/en-[\w-]+\.js$/.test(f) &&
+    /document\.write\([\s\S]*assets\/en-/.test(boot) &&
+    (f === 'assets/en-common.js' ||
+     new RegExp("'" + f.replace('assets/en-', '').replace('.js', '') + "'").test(boot));
+  const orphans = SCRIPTS.filter(f => !linked.includes(f) && !bootLoads(f));
   assert.deepStrictEqual(orphans, [], 'written but never loaded by any page');
 });
 test('the shell loads after everything it depends on', () => {

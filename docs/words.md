@@ -250,6 +250,34 @@ on screen 5. It can tell you that they leave before the product delivers
 anything, in both tools, under every assumption tried — and it can tell you what
 each available fix is worth relative to the others.
 
+---
+
+## What the strongest finding bought (added after the restructure)
+
+The ceiling verdict above did its job: PRE-CALL's four steps became three.
+The form is the path now — four fields on step 1, five more behind a
+disclosure — and the external-LLM run is an offer behind another disclosure
+instead of the opening instruction. Nothing was deleted; what changed is who
+pays for what.
+
+Scored the honest way — the method of this file applied to both versions,
+one visitor patience for both sides:
+
+| | before | after |
+|---|---|---|
+| words on the path | 589 | 368 |
+| fields on the path | 18 | 10 |
+| hand-offs | 1 | 0 |
+| structural ceiling | **30.6% — below the benchmark** | **65.8%** |
+| reach the script, same visitor | 29.5% | **63.9%** |
+
+The funnel tables above are the measurement that motivated the change and
+are kept as they were. One method note: the extractor now charges only what
+is on screen at rest — a closed `<details>` contributes its summary line and
+nothing else, which is the same fact the scope step already reads from the
+CSS. The before column was computed with the new method, not remembered
+from the old one.
+
 None of this is measured on real users. Ten of them would replace the assumed
 constants with observed ones; see [first-ten.md](first-ten.md).
 

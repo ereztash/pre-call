@@ -20,6 +20,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   const KEY = 'postcall_draft_v1';
 
   /* Every field whose value is worth an unfinished session. Listed rather
@@ -85,11 +88,11 @@
         const ms = (now || new Date()).getTime() - Date.parse(d.at);
         if (!isFinite(ms) || ms < 0) return null;
         const min = Math.floor(ms / 60000);
-        if (min < 1) return 'לפני פחות מדקה';
-        if (min < 60) return 'לפני ' + min + ' דקות';
+        if (min < 1) return tr('לפני פחות מדקה');
+        if (min < 60) return tr('לפני {min} דקות', { min: min });
         const hr = Math.floor(min / 60);
-        if (hr < 24) return 'לפני ' + hr + ' שעות';
-        return 'לפני ' + Math.floor(hr / 24) + ' ימים';
+        if (hr < 24) return tr('לפני {hr} שעות', { hr: hr });
+        return tr('לפני {d} ימים', { d: Math.floor(hr / 24) });
       }
     };
     return api;

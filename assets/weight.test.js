@@ -70,10 +70,21 @@ function wire(f) {
 /* Per page, because the entry page is the one a first-time visitor pays
    for before they have decided the product is worth anything. It has a
    much tighter ceiling than the working surfaces on purpose. */
+/* 16 → 21 on the two small pages, 48 → 54 and 136 → 142 on the tools,
+   all on the same day and all for the same capability: a dark theme and
+   a second language. What every page now carries: pc-boot.js (theme and
+   direction before first paint), theme.css (the dark ramp), pc-i18n.js
+   (the dictionary runtime and the preferences strip) — about 5KB over
+   the wire together. What no page carries: the English dictionaries
+   themselves, which pc-boot.js loads only after the visitor chooses
+   English, so the default Hebrew visit pays for the toggle and not for
+   the translation. That split is the difference between a 5KB raise and
+   a 15KB one, and it is asserted by the orphan-module test in
+   assets/markup.test.js. */
 const BUDGETS = {
-  'index.html':     16 * 1024,
-  'privacy.html':   16 * 1024,
-  'pre-call.html':  48 * 1024,
+  'index.html':     21 * 1024,
+  'privacy.html':   21 * 1024,
+  'pre-call.html':  54 * 1024,
   /* 120 → 128 → 136KB, and the second raise happened the same day as the first,
      which is worth saying plainly rather than burying: a budget moved twice in a
      day by 13% is not holding anything back yet.
@@ -90,7 +101,7 @@ const BUDGETS = {
      capability, the growth has stopped being features and the trim is overdue.
      index.html and pre-call.html keep their tight ceilings either way — they are
      what a first visit pays for. */
-  'post-call.html': 136 * 1024
+  'post-call.html': 142 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

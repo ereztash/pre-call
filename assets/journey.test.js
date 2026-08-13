@@ -112,6 +112,44 @@ async function journey(engineName, base) {
     assert.strictEqual(visible, false, 'a cold visit showed a "pick up where you left off" box');
   });
 
+  /* The two preferences the page carries: a theme and a language. The theme
+     button cycles auto → dark → light and each choice must survive a
+     reload, because a preference that resets is a control that lied. The
+     language button reloads the page left-to-right — the dictionaries'
+     completeness is i18n.test.js's job; the journey's job is that the
+     mechanism actually turns the page around and comes back. */
+  await test(label('the theme toggle cycles, applies, and survives a reload'), async () => {
+    await page.goto(base + '/');
+    await page.waitForLoadState('domcontentloaded');
+    const btn = page.locator('.prefs button').first();
+    await btn.click();                       // auto → dark
+    let theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    assert.strictEqual(theme, 'dark', 'first click should pin the dark theme');
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    assert.strictEqual(theme, 'dark', 'the chosen theme did not survive a reload');
+    await page.locator('.prefs button').first().click();   // dark → light
+    await page.locator('.prefs button').first().click();   // light → auto
+    theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    assert.strictEqual(theme, null, 'the cycle must come back to following the system');
+  });
+
+  await test(label('the language button turns the page around and back'), async () => {
+    await page.goto(base + '/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.locator('.prefs button').nth(1).click();    // עברית → English
+    await page.waitForLoadState('domcontentloaded');
+    const dir = await page.evaluate(() => document.documentElement.dir);
+    const lang = await page.evaluate(() => document.documentElement.lang);
+    assert.strictEqual(dir, 'ltr', 'English must lay out left-to-right');
+    assert.strictEqual(lang, 'en', 'the document language must say what it is');
+    await page.locator('.prefs button').nth(1).click();    // English → עברית
+    await page.waitForLoadState('domcontentloaded');
+    assert.strictEqual(await page.evaluate(() => document.documentElement.dir), 'rtl',
+      'the way back to Hebrew must restore right-to-left');
+  });
+
   // --- situation: about to have a call ---
   await test(label('"I have a call coming up" lands on the script builder'), async () => {
     await page.goto(base + '/');
@@ -122,10 +160,10 @@ async function journey(engineName, base) {
   });
 
   await test(label('a script builds end to end and carries the business into the output'), async () => {
-    await page.click('.stepbtn[data-s="2"]');
+    // the profile IS step 1 now — no navigation before the first field
     await page.fill('#f_what', 'מסדר תהליכי גבייה לעסקים קטנים');
     await page.fill('#f_gain', 'כ-40,000 ₪ תזרים');
-    await page.click('[data-act="go3"]');
+    await page.click('[data-act="go2"]');
     await page.fill('#p_name', 'דנה');
     await page.click('[data-act="build"]');
     const out = await page.textContent('#outArea');
@@ -278,9 +316,8 @@ async function journey(engineName, base) {
     const errs = [];
     fresh.on('pageerror', e => errs.push(e.message));
     await fresh.goto(base + '/pre-call.html');
-    await fresh.click('.stepbtn[data-s="2"]');
     await fresh.fill('#f_what', 'מסדר תהליכי גבייה');
-    await fresh.click('[data-act="go3"]');
+    await fresh.click('[data-act="go2"]');
     await fresh.fill('#p_co', 'מסעדת הדר');
     await fresh.click('[data-act="build"]');
     await fresh.waitForTimeout(400);

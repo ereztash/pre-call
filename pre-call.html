@@ -26,10 +26,15 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="מהשיחה להצעה מתומחרת — PRE-CALL ו-POST-CALL">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#16191d">
+<meta name="theme-color" content="#e2e5e9">
+<script src="assets/pc-i18n.js"></script>
+<script src="assets/pc-boot.js"></script>
 <link rel="stylesheet" href="assets/pre-call.css">
+<link rel="stylesheet" href="assets/theme.css">
 </head>
 <body>
+<a class="skip" href="#main">דלג לתוכן</a>
+<div class="prefs" id="prefsBar"></div>
 <div class="wrap">
 
 <header>
@@ -45,53 +50,32 @@
      silently did nothing — same mechanism as errBoundary in post-call.html. -->
 <div class="errbound hidden" id="errBoundary" role="status" aria-live="polite"></div>
 
-<div class="steps">
-  <button class="stepbtn on" data-s="1"><span class="n">שלב 1</span>אפיון העסק שלכם</button>
-  <button class="stepbtn" data-s="2"><span class="n">שלב 2</span>הזנת הפרופיל</button>
-  <button class="stepbtn" data-s="3"><span class="n">שלב 3</span>הצד השני</button>
-  <button class="stepbtn" data-s="4"><span class="n">שלב 4</span>התסריט</button>
-</div>
+<!-- role="tablist": three buttons that swap which panel is showing IS a
+     tab set, and saying so is what makes the arrow keys expected rather
+     than surprising (WAI-ARIA Authoring Practices, tabs pattern). The
+     wiring — roving tabindex, aria-selected, arrow/Home/End — is in
+     assets/pre-call.js. -->
+<nav class="steps" role="tablist" aria-label="שלבי הכלי">
+  <button class="stepbtn on" data-s="1" role="tab" id="tab1" aria-controls="p1" aria-selected="true"><span class="n">שלב 1</span>הפרופיל העסקי</button>
+  <button class="stepbtn" data-s="2" role="tab" id="tab2" aria-controls="p2" aria-selected="false" tabindex="-1"><span class="n">שלב 2</span>הצד השני</button>
+  <button class="stepbtn" data-s="3" role="tab" id="tab3" aria-controls="p3" aria-selected="false" tabindex="-1"><span class="n">שלב 3</span>התסריט</button>
+</nav>
 
-<!-- ============ STEP 1 ============ -->
-<div class="panel on" id="p1">
-  <h2>שלב 1 · אפיון העסק שלכם</h2>
-  <p class="lead">העתיקו את הפרומפט, הריצו אותו ב-Claude או ב-ChatGPT, וענו על מה שהוא שואל. הוא יחזיר פרופיל מובנה. את הפרופיל תדביקו בשלב 2.</p>
-
-  <div class="box">
-    <h3>פרומפט לאפיון העסק</h3>
-    <!-- tabindex + role: the prompt overflows its 340px box, and a
-         scrolling region that cannot be reached by keyboard traps its own
-         content away from anyone not using a mouse (WCAG 2.1.1). Flagged
-         by axe against the painted page, not visible in the markup. -->
-    <pre class="prompt" id="promptBiz" tabindex="0" role="region" aria-label="פרומפט לאפיון העסק"></pre>
-    <button class="act" data-act="cp-biz">העתק פרומפט</button>
-    <span class="copied" id="c1">הועתק</span>
-  </div>
-
-  <div class="box">
-    <h3>למה זה נדרש פעם אחת בלבד</h3>
-    <p class="body-p">
-      עוגן המחיר בהצעה לא מגיע מהשוק. הוא מגיע מהעסקה האחרונה שלכם, ומהמספר שהלקוח הקודם הרוויח.
-      בלי שני אלה, השאלות בשיחה יישארו כלליות ותצאו ממנה עם תיאור במקום עם מספר.
-      הפרופיל נשמר בדפדפן הזה (localStorage) גם אחרי שסוגרים את הדף, ונטען אוטומטית בפעם הבאה.
-      הנתונים על הצד השני בשיחה, בשלב 3, לא נשמרים ונמחקים בסגירת הדף — בכוונה, כי אלה פרטים על אדם ספציפי לכל שיחה.
-    </p>
-  </div>
-</div>
-
-<!-- ============ STEP 2 ============ -->
-<div class="panel" id="p2">
-  <h2>שלב 2 · הזנת הפרופיל</h2>
-  <p class="lead">הדביקו את מה שחזר, או מלאו ידנית. שדות ריקים לא שוברים כלום, הם רק מקטינים את הדיוק של התסריט.</p>
-
-  <div class="box">
-    <h3>הדבקה מהירה</h3>
-    <label for="pasteBiz">הדביקו כאן את הפלט מהפרומפט
-      <span class="hint">הכלי ינסה לחלץ את השדות לבד. אפשר גם לדלג ולמלא ידנית למטה.</span>
-    </label>
-    <textarea id="pasteBiz" class="ta-md" placeholder="הדביקו כאן..."></textarea>
-    <button class="ghost" data-act="parse">חלץ שדות מההדבקה</button>
-  </div>
+<!-- ============ STEP 1 ============
+     Until this commit the tool opened on an instruction to leave: copy a
+     prompt, run it in an external LLM, come back, paste the result. The
+     attention model priced that hand-off at 35% of everyone who arrives,
+     and printed a structural ceiling BELOW the average-web-form benchmark
+     with the exit as the largest single term (docs/words.md). No copy
+     edit moves a number like that — only the structure can. So the form
+     is the path now: four fields build a sharp script, five more refine
+     it behind a disclosure, and the prompt waits behind another one for
+     whoever would rather have the machine type. Nothing was deleted;
+     what changed is who pays for what. -->
+<main id="main" tabindex="-1">
+<div class="panel on" id="p1" role="tabpanel" aria-labelledby="tab1" tabindex="-1">
+  <h2>שלב 1 · הפרופיל העסקי</h2>
+  <p class="lead">ממלאים פעם אחת — נשמר בדפדפן הזה ומשמש כל שיחה. ארבעה שדות מספיקים לתסריט חד; שדות ריקים לא שוברים כלום, הם רק מכהים אותו.</p>
 
   <div class="box">
     <h3>הפרופיל <span id="profileSaved" class="copied tiny">✓ נשמר בדפדפן</span></h3>
@@ -106,52 +90,84 @@
           <span class="hint">הקהל שבפועל שילם, לא הקהל שאתם רוצים.</span></label>
         <input type="text" id="f_who" placeholder="למשל: משרדי רו״ח עד 10 עובדים">
       </div>
-      <div>
-        <label for="f_unit">היחידה התחומה שלכם, אם יש
-          <span class="hint">פורמט + תוצר. אם אין, השאירו ריק. זה משנה את התסריט.</span></label>
-        <input type="text" id="f_unit" placeholder="למשל: 3 מפגשים, יוצא מהם נוהל גבייה כתוב">
-      </div>
-      <div>
-        <label for="f_price">מחיר היחידה, אם יש
-          <span class="hint">הרצפה הפנימית שלכם. לא נאמרת בשיחה, רק תזכורת לכם לפני שאלה 11.</span></label>
-        <input type="text" id="f_price" placeholder="למשל: 6,500 ₪">
-      </div>
-      <div>
-        <label for="f_last">העסקה האחרונה, סכום
-          <span class="hint">מה שהוא שילם לכם. לא נכנס לשיחה בקול, רק לכיול הפנימי שלכם מול מה שהרוויח.</span></label>
-        <input type="text" id="f_last" placeholder="למשל: 8,000 ₪">
-      </div>
-      <div>
-        <label for="f_src">איך הלקוח האחרון הגיע אליכם</label>
-        <select id="f_src">
-          <option value="">בחרו</option>
-          <option value="ref">הפניה או היכרות אישית</option>
-          <option value="content">מהתוכן שאני מפרסם</option>
-          <option value="out">מפנייה יזומה שלי</option>
-          <option value="other">אחר</option>
-        </select>
-      </div>
     </div>
     <label for="f_gain">מה הלקוח האחרון הרוויח מזה, במספר
-      <span class="hint">התחילו במספר או בטווח, ואז הקשר קצר אם צריך. זה נכנס ישירות למשפט העוגן בשיחה.</span></label>
+      <span class="hint">התחילו במספר או בטווח, ואז הקשר קצר אם צריך. זה נכנס ישירות למשפט העוגן בשיחה — בלעדיו שאלה 11 נשארת עם סוגריים ריקים.</span></label>
     <input type="text" id="f_gain" placeholder="למשל: כ-40,000 ₪ תזרים, אחרי שקיצר את זמן הגבייה מ-60 ל-25 יום">
     <label for="f_edge">מה רק אתם רואים אצל הלקוחות שלכם, שאחרים לא רואים
-      <span class="hint">זה מה שהופך את שאלת הבעלות בשיחה למדויקת. שתיים או שלוש שורות, שיאוחדו למשפט אחד מצוטט בתסריט.</span></label>
+      <span class="hint">זה מה שהופך את שאלת הבעלות בשיחה למדויקת. שתיים או שלוש שורות.</span></label>
     <textarea id="f_edge" placeholder="למשל: שהבעיה אף פעם לא בתוכנה, היא בזה שאף אחד לא הוגדר כאחראי על המעקב"></textarea>
-    <label for="f_no">מה אתם לא מוכרים
-      <span class="hint">הגבול. מונע מכם להגיד כן בשיחה למשהו שתתחרטו עליו.</span></label>
-    <input type="text" id="f_no" placeholder="למשל: לא מפעיל את התהליך במקומם, לא ליווי חודשי">
+
+    <!-- Optional refinement, off the critical path on purpose: each of
+         these sharpens one specific line of the script, and the script
+         builds without all five. tools/attention-report.js declares them
+         off-path and the coverage audit holds it to that. -->
+    <details class="morefields">
+      <summary>עוד חמישה שדות שמחדדים את התסריט</summary>
+      <div class="grid2">
+        <div>
+          <label for="f_unit">היחידה התחומה שלכם, אם יש
+            <span class="hint">פורמט + תוצר. אם אין, השאירו ריק. זה משנה את התסריט.</span></label>
+          <input type="text" id="f_unit" placeholder="למשל: 3 מפגשים, יוצא מהם נוהל גבייה כתוב">
+        </div>
+        <div>
+          <label for="f_price">מחיר היחידה, אם יש
+            <span class="hint">הרצפה הפנימית שלכם. לא נאמרת בשיחה, רק תזכורת לכם לפני שאלה 11.</span></label>
+          <input type="text" id="f_price" placeholder="למשל: 6,500 ₪">
+        </div>
+        <div>
+          <label for="f_last">העסקה האחרונה, סכום
+            <span class="hint">לא נכנס לשיחה בקול, רק לכיול הפנימי שלכם מול מה שהרוויח.</span></label>
+          <input type="text" id="f_last" placeholder="למשל: 8,000 ₪">
+        </div>
+        <div>
+          <label for="f_src">איך הלקוח האחרון הגיע אליכם</label>
+          <select id="f_src">
+            <option value="">בחרו</option>
+            <option value="ref">הפניה או היכרות אישית</option>
+            <option value="content">מהתוכן שאני מפרסם</option>
+            <option value="out">מפנייה יזומה שלי</option>
+            <option value="other">אחר</option>
+          </select>
+        </div>
+      </div>
+      <label for="f_no">מה אתם לא מוכרים
+        <span class="hint">הגבול. מונע מכם להגיד כן בשיחה למשהו שתתחרטו עליו.</span></label>
+      <input type="text" id="f_no" placeholder="למשל: לא מפעיל את התהליך במקומם, לא ליווי חודשי">
+    </details>
     <button class="ghost" data-act="clearprofile">מחק פרופיל שמור מהדפדפן הזה</button>
     <span class="copied" id="c4">נמחק</span>
   </div>
 
+  <!-- The old step 1, demoted from an instruction to an offer. The prompt
+       interviews you and returns the profile in a fixed format; the paste
+       box feeds the fields above. An alternative to typing, never a
+       prerequisite for anything. -->
+  <details class="aihelper">
+    <summary>מילוי מהיר עם AI · במקום להקליד</summary>
+    <div class="box">
+      <h3>פרומפט לאפיון העסק</h3>
+      <!-- tabindex + role: the prompt overflows its box, and a scrolling
+           region that cannot be reached by keyboard traps its own content
+           away from anyone not using a mouse (WCAG 2.1.1). -->
+      <pre class="prompt" id="promptBiz" tabindex="0" role="region" aria-label="פרומפט לאפיון העסק"></pre>
+      <button class="act" data-act="cp-biz">העתק פרומפט</button>
+      <span class="copied" id="c1">הועתק</span>
+      <label for="pasteBiz">הריצו אותו ב-Claude או ב-ChatGPT, והדביקו כאן את מה שחזר
+        <span class="hint">הכלי יחלץ את השדות לבד וימלא את הטופס למעלה.</span>
+      </label>
+      <textarea id="pasteBiz" class="ta-md" placeholder="הדביקו כאן..."></textarea>
+      <button class="ghost" data-act="parse">חלץ שדות מההדבקה</button>
+    </div>
+  </details>
+
   <div class="err hidden" id="err2"></div>
-  <button class="act" data-act="go3">המשך לצד השני</button>
+  <button class="act" data-act="go2">המשך לצד השני</button>
 </div>
 
-<!-- ============ STEP 3 ============ -->
-<div class="panel" id="p3">
-  <h2>שלב 3 · הצד השני</h2>
+<!-- ============ STEP 2 ============ -->
+<div class="panel" id="p2" role="tabpanel" aria-labelledby="tab2" tabindex="-1">
+  <h2>שלב 2 · הצד השני</h2>
   <p class="lead">שתי דרכים. מהירה, או מעמיקה. הפרטים כאן משנים את הניסוח של השאלות, לא את המבנה.</p>
   <button data-act="newprospect" class="ghost mb6">שיחה חדשה · נקה פרטי לקוח קודם</button>
   <p class="hint-p tight">אם זו הכנה לשיחה עם מישהו אחר, לחצו כאן קודם — אחרת פרטים מהשיחה הקודמת עלולים להישאר בטופס.</p>
@@ -223,10 +239,10 @@
   <div class="err hidden" id="err"></div>
 </div>
 
-<!-- ============ STEP 4 ============ -->
-<div class="panel" id="p4">
+<!-- ============ STEP 3 ============ -->
+<div class="panel" id="p3" role="tabpanel" aria-labelledby="tab3" tabindex="-1">
   <!-- This box must stay the FIRST div inside #p4: the print sheet hides it
-       with `#p4 .box:first-of-type`, which is first-of-*element*-type, so a
+       with `#p3 .box:first-of-type`, which is first-of-*element*-type, so a
        div inserted above it would stop matching and the button row would
        start appearing in the PDF. .callbar therefore sits below it, and
        markup.test.js pins the assumption so a future insert breaks a test
@@ -235,7 +251,7 @@
     <button class="act" data-act="callmode-on">מצב שיחה · רק מה שאומרים</button>
     <button class="ghost" data-act="cp-out">העתק את התסריט כטקסט</button>
     <button class="ghost" data-act="print">הדפסה או PDF</button>
-    <button class="ghost" data-act="go3">חזרה לעריכה</button>
+    <button class="ghost" data-act="go2">חזרה לעריכה</button>
     <span class="copied" id="c3">הועתק</span>
   </div>
 
@@ -250,7 +266,10 @@
        during step 4 are two more things to read while preparing for a call. -->
   <details class="callcal">
     <summary>תזכורת ליומן לשיחה הזאת</summary>
-    <p class="hint-p">
+    <!-- data-i18n: the <b> sits mid-sentence, so the walker swaps the whole
+         innerHTML rather than translating the three text fragments around it
+         in an order English does not share. -->
+    <p class="hint-p" data-i18n>
       אירוע אחד ביומן שלכם עם שתי תזכורות: אחת חצי שעה לפני, ואחת
       <b>רבע שעה אחרי שהשיחה נגמרת</b> — לתמחר בעודה באוזניים. שם הלקוח נכתב
       בכותרת האירוע, כדי שהתזכורת תדע על מה היא.
@@ -287,6 +306,8 @@
     <a class="act" href="post-call.html">לתמחור ההצעה · POST-CALL</a>
   </div>
 </div>
+
+</main>
 
 <!-- ============ גיבוי ושחזור ============
      Everything above lives only in this browser's localStorage. Clearing

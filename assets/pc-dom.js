@@ -7,6 +7,9 @@
    so these names are visible to every file loaded after this one.
    ============================================================ */
 
+var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+  : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
 const el = id => document.getElementById(id);
 
 /* Everything that hides is hidden by the .hidden class, and everything that
@@ -53,11 +56,11 @@ function guard(name, fn, opts) {
 }
 
 const FAIL_LABEL = {
-  recompute:  'המספרים',
-  proposal:   'המסמך',
-  scope:      'רשימת הסקופ',
-  ledger:     'ספר העסקאות',
-  templates:  'התבניות'
+  recompute:  tr('המספרים'),
+  proposal:   tr('המסמך'),
+  scope:      tr('רשימת הסקופ'),
+  ledger:     tr('ספר העסקאות'),
+  templates:  tr('התבניות')
 };
 
 function renderFailures() {
@@ -66,9 +69,9 @@ function renderFailures() {
   if (!_failed.size) { show('errBoundary', false); box.innerHTML = ''; return; }
   const names = [..._failed].map(n => FAIL_LABEL[n] || n);
   box.innerHTML =
-    '<b>חלק מהמסך לא התרענן: ' + esc(names.join(', ')) + '.</b> ' +
-    'שאר הכלי ממשיך לעבוד, והנתונים ששמרת לא נפגעו. ' +
-    'רענון הדף בדרך כלל פותר את זה; אם לא, פתח את הקונסולה — הפירוט שם.';
+    '<b>' + tr('חלק מהמסך לא התרענן: {names}.', { names: esc(names.join(', ')) }) + '</b> ' +
+    tr('שאר הכלי ממשיך לעבוד, והנתונים ששמרת לא נפגעו.') + ' ' +
+    tr('רענון הדף בדרך כלל פותר את זה; אם לא, פתח את הקונסולה — הפירוט שם.');
   show('errBoundary', true);
 }
 
@@ -76,7 +79,7 @@ function renderFailures() {
    registered elsewhere — still ends up visible instead of silent. */
 window.addEventListener('error', e => {
   if (!e.filename || !/post-call|pc-/.test(e.filename)) return;
-  _failed.add('כללי'); renderFailures();
+  _failed.add(tr('כללי')); renderFailures();
 });
 window.addEventListener('unhandledrejection', () => { /* logged by the browser */ });
 
