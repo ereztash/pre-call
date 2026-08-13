@@ -11,13 +11,16 @@
    its own tests. This file is only what the ledger looks like.
    ============================================================ */
 
+var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+  : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
 let currentDealId = null;
 
 function dealSnapshot(){
   const m = model();
   return {
     id: currentDealId || undefined,
-    client: txt('q_client') || 'ללא שם',
+    client: txt('q_client') || tr('ללא שם'),
     process: txt('q_process').slice(0, 120),
     estimatedHours: m.effort,      // locked at save time — see deals.js
     priceQuoted: m.price,
@@ -69,16 +72,16 @@ function dealSnapshot(){
    — and the operator is about to send whatever is on it. */
 function loadDeal(id){
   const d = PC.deals.get(id);
-  if (!d || !d.form) { flashDoc('העסקה הזאת נשמרה לפני שהיה אפשר לפתוח מחדש'); return; }
+  if (!d || !d.form) { flashDoc(tr('העסקה הזאת נשמרה לפני שהיה אפשר לפתוח מחדש')); return; }
   applyDraft(d.form);
   currentDealId = d.id;
   renderScope(); renderLedger(); recompute(); renderGuide();
   saveDraft();
   const note = el('draftNote');
   if (note) {
-    note.innerHTML = 'נפתחה לעריכה: ' + esc(d.client) +
-      ' · נשמרה ' + (d.created || '').slice(0, 10) +
-      ' <button type="button" class="ghost" data-act="newdeal">הצעה חדשה במקום</button>';
+    note.innerHTML = tr('נפתחה לעריכה: {client} · נשמרה {date}',
+        { client: esc(d.client), date: (d.created || '').slice(0, 10) }) +
+      ' <button type="button" class="ghost" data-act="newdeal">' + tr('הצעה חדשה במקום') + '</button>';
     show('draftNote', true);
   }
   scrollToEl('proposal', 'start');
@@ -90,9 +93,9 @@ function loadDeal(id){
 function saveCurrentDeal(announce){
   const before = announce === false ? null : reportNow();
   const rec = PC.deals.save(dealSnapshot());
-  if (!rec) { flashDoc('השמירה נכשלה — ייתכן שאחסון הדפדפן חסום'); return; }
+  if (!rec) { flashDoc(tr('השמירה נכשלה — ייתכן שאחסון הדפדפן חסום')); return; }
   currentDealId = rec.id;
-  renderLedger(); flashDoc('נשמר'); track('deal_saved');
+  renderLedger(); flashDoc(tr('נשמר')); track('deal_saved');
   if (announce !== false) announceCrossings(before);
 }
 
@@ -120,15 +123,16 @@ function offerFollowup(id){
   const d = PC.deals.get(id);
   const due = d && PC.followup.dueState(d);
   const bar = el('draftNote');
-  if (!d || !due || !bar) { flashDoc('סומנה כנשלחה'); return; }
+  if (!d || !due || !bar) { flashDoc(tr('סומנה כנשלחה')); return; }
   const when = new Date(Math.max(
     new Date(d.sentAt).getTime() + PC.followup.NUDGE_AFTER_DAYS * 864e5,
     due.expires.getTime() - PC.followup.CLOSING_WINDOW_DAYS * 864e5));
-  bar.innerHTML = '<b>נשלחה.</b> התוקף שכתוב במסמך הוא ' +
-    due.expires.toLocaleDateString('he-IL') + '. ' +
-    'רוצה תזכורת ל-' + when.toLocaleDateString('he-IL') + ' לבדוק מה קרה? ' +
+  const loc = (typeof PC !== 'undefined' && PC.i18n ? PC.i18n.locale() : 'he-IL');
+  bar.innerHTML = '<b>' + tr('נשלחה.') + '</b> ' +
+    tr('התוקף שכתוב במסמך הוא {date}.', { date: due.expires.toLocaleDateString(loc) }) + ' ' +
+    tr('רוצה תזכורת ל-{date} לבדוק מה קרה?', { date: when.toLocaleDateString(loc) }) + ' ' +
     '<button type="button" class="ghost" data-deal="' + esc(id) + '" data-status="__ics">' +
-    'הוסף ליומן</button>';
+    tr('הוסף ליומן') + '</button>';
   show('draftNote', true);
 }
 
@@ -136,13 +140,13 @@ function downloadFollowup(id){
   const d = PC.deals.get(id);
   if (!d) return;
   const text = PC.followup.icsFor(d, { ils });
-  if (!text) { flashDoc('אין תאריך שליחה להצעה הזאת'); return; }
+  if (!text) { flashDoc(tr('אין תאריך שליחה להצעה הזאת')); return; }
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url; a.download = PC.followup.filenameFor(d);
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  flashDoc('התזכורת ירדה — פתח את הקובץ כדי להוסיף אותה ליומן');
+  flashDoc(tr('התזכורת ירדה — פתח את הקובץ כדי להוסיף אותה ליומן'));
   track('followup_added');
 }
 
@@ -199,15 +203,16 @@ function addPastDeal(lost){
   });
   if (!rec) {
     const q = parseFloat(el('rp_quoted').value), c = parseFloat(el('rp_closed').value);
-    say(!(q > 0) ? 'צריך את המחיר שנקבת'
-      : (!lost && c > q) ? 'המחיר שנסגר גבוה מהמחיר שנקבת — שווה לבדוק את המספרים'
-      : !lost ? 'צריך את המחיר שנסגר, או ללחוץ "לא נסגרה"'
-      : 'לא הצלחתי לשמור — ייתכן שאחסון הדפדפן חסום');
+    say(!(q > 0) ? tr('צריך את המחיר שנקבת')
+      : (!lost && c > q) ? tr('המחיר שנסגר גבוה מהמחיר שנקבת — שווה לבדוק את המספרים')
+      : !lost ? tr('צריך את המחיר שנסגר, או ללחוץ "לא נסגרה"')
+      : tr('לא הצלחתי לשמור — ייתכן שאחסון הדפדפן חסום'));
     return;
   }
   ['rp_client', 'rp_quoted', 'rp_closed'].forEach(id => { el(id).value = ''; });
   el('rp_conc').value = 'unknown';
-  say('נוספה: ' + rec.client + ' · ' + (lost ? 'לא נסגרה' : ils(rec.outcome.closedPrice)));
+  say(tr('נוספה: {client} · {result}',
+    { client: rec.client, result: lost ? tr('לא נסגרה') : ils(rec.outcome.closedPrice) }));
   el('rp_client').focus();
   renderLedger(); recompute();
   track('past_deal_added');
@@ -243,10 +248,10 @@ function announceCrossings(before){
      piece of news — but clobbering one with the other would leave telemetry
      counting an announcement nobody could read. Both stand, the offer first. */
   const line = '<div><b>' + (gained.length === 1
-      ? 'עכשיו אפשר לומר משהו נוסף:'
-      : 'עכשיו אפשר לומר עוד ' + gained.length + ' דברים:') + '</b> ' +
+      ? tr('עכשיו אפשר לומר משהו נוסף:')
+      : tr('עכשיו אפשר לומר עוד {n} דברים:', { n: gained.length })) + '</b> ' +
     gained.map(esc).join(' · ') +
-    '<span class="ledger-act-n">הפאנל "כמה הייעוץ הזה היה שווה לך" עודכן.</span></div>';
+    '<span class="ledger-act-n">' + tr('הפאנל "כמה הייעוץ הזה היה שווה לך" עודכן.') + '</span></div>';
   const claimed = !bar.classList.contains('hidden') && bar.innerHTML.trim();
   bar.innerHTML = claimed ? bar.innerHTML + line : line;
   show('draftNote', true);
@@ -289,11 +294,15 @@ function movementLine(id, rows){
   const m = PC.journal.movement(id, rows);
   const bits = [];
   if (m.droppedBeforeSending)
-    bits.push(`המחיר ירד מ־${ils(m.priceFrom)} ל־${ils(m.priceTo)} <b>לפני</b> שההצעה יצאה — הנחה שאף אחד לא ביקש`);
+    bits.push(tr('המחיר ירד מ־{from} ל־{to} <b>לפני</b> שההצעה יצאה — הנחה שאף אחד לא ביקש',
+      { from: ils(m.priceFrom), to: ils(m.priceTo) }));
   else if (m.priceMoves > 0)
-    bits.push(`המחיר זז ${m.priceMoves === 1 ? 'פעם אחת' : m.priceMoves + ' פעמים'}, מ־${ils(m.priceFrom)} ל־${ils(m.priceTo)}`);
+    bits.push(tr('המחיר זז {times}, מ־{from} ל־{to}', {
+      times: m.priceMoves === 1 ? tr('פעם אחת') : tr('{n} פעמים', { n: m.priceMoves }),
+      from: ils(m.priceFrom), to: ils(m.priceTo)
+    }));
   if (m.grewAfterSending)
-    bits.push('ההיקף גדל אחרי שההצעה נשלחה, והמחיר לא');
+    bits.push(tr('ההיקף גדל אחרי שההצעה נשלחה, והמחיר לא'));
   return bits.length ? `<div class="deal-mv">${bits.join('. ')}.</div>` : '';
 }
 

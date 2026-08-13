@@ -653,27 +653,30 @@ const recompute = guard('recompute', function (){
   // as an outlier instead of quietly setting the price
   const tri = el('triangulate');
   if (m.available.length) {
-    tri.innerHTML = '<div class="tri-h">מה כל שיטה אומרת</div>' +
+    tri.innerHTML = '<div class="tri-h">' + tr('מה כל שיטה אומרת') + '</div>' +
       m.available.map(k => {
         const x = m.M[k], on = k === m.method;
         return '<div class="tri-row' + (on ? ' on' : '') + '">' +
-          '<span class="tri-n">' + x.label + (on ? ' · נבחרה' : '') + '</span>' +
+          '<span class="tri-n">' + x.label + (on ? ' · ' + tr('נבחרה') : '') + '</span>' +
           '<span class="tri-v">' + ils(x.value) + '</span>' +
           '<span class="tri-b">' + x.basis +
-          (x.raised ? ' · הועלה לרצפת העלות ' + ils(m.costFloor) +
-                      ', השיטה עצמה נתנה ' + ils(x.raw) : '') + '</span></div>';
+          (x.raised ? ' · ' + tr('הועלה לרצפת העלות {floor}, השיטה עצמה נתנה {raw}',
+            { floor: ils(m.costFloor), raw: ils(x.raw) }) : '') + '</span></div>';
       }).join('') +
       // A big gap between cost and value is the point of value pricing, not an
       // error — warning on it would teach distrust of exactly the case that pays.
       // What deserves a warning is the one input the client invents on the spot.
-      (m.errShare > 0.55 ? '<div class="tri-warn">' + Math.round(m.errShare * 100) +
-        '% מהערך השנתי מגיע מהערכת התקלות בשאלה 6 — מספר שהלקוח שלף בעל פה. ' +
-        'המחיר שלך תלוי בו יותר מאשר בכל השאר. בקש ממנו דוגמה אחת קונקרטית לפני שאתה שולח.</div>' : '') +
+      (m.errShare > 0.55 ? '<div class="tri-warn">' +
+        tr('{pct}% מהערך השנתי מגיע מהערכת התקלות בשאלה 6 — מספר שהלקוח שלף בעל פה.',
+          { pct: Math.round(m.errShare * 100) }) + ' ' +
+        tr('המחיר שלך תלוי בו יותר מאשר בכל השאר. בקש ממנו דוגמה אחת קונקרטית לפני שאתה שולח.') +
+        '</div>' : '') +
       provenanceWarning(m) +
       (m.M.cost && m.M.market && Math.max(m.M.cost.value, m.M.market.value) /
         Math.min(m.M.cost.value, m.M.market.value) >= 2
-        ? '<div class="tri-warn">אומדן העלות שלך רחוק מטווח השוק. או שהאומדן שגוי, ' +
-          'או שהתעריף שלך לא מתאים לסוג העבודה הזה.</div>' : '');
+        ? '<div class="tri-warn">' +
+          tr('אומדן העלות שלך רחוק מטווח השוק. או שהאומדן שגוי, או שהתעריף שלך לא מתאים לסוג העבודה הזה.') +
+          '</div>' : '');
   } else tri.innerHTML = '';
 
   /* Which method pays most is a property of THIS deal, not a general truth.
@@ -684,40 +687,45 @@ const recompute = guard('recompute', function (){
   if (!m.best || m.available.length < 2) {
     rec.innerHTML = '';
   } else if (m.best === m.method) {
-    rec.innerHTML = '<div class="ok"><b>זו גם השיטה שמניבה הכי הרבה כאן</b> מבין אלה שיש לך נתונים עבורן, ' +
-      'בלי לחרוג ממה שניתן להגנה מול הלקוח.</div>';
+    rec.innerHTML = '<div class="ok"><b>' + tr('זו גם השיטה שמניבה הכי הרבה כאן') + '</b> ' +
+      tr('מבין אלה שיש לך נתונים עבורן, בלי לחרוג ממה שניתן להגנה מול הלקוח.') + '</div>';
   } else {
     const gap = m.M[m.best].value - m.price;
-    rec.innerHTML = '<div class="ok"><b>' + m.M[m.best].label + ' מניבה כאן ' + ils(gap) + ' יותר</b> ' +
-      '(' + ils(m.M[m.best].value) + ' מול ' + ils(m.price) + '), ועדיין בטווח שניתן להגנה. ' +
+    rec.innerHTML = '<div class="ok"><b>' +
+      tr('{label} מניבה כאן {gap} יותר', { label: m.M[m.best].label, gap: ils(gap) }) + '</b> ' +
+      tr('({best} מול {price}), ועדיין בטווח שניתן להגנה.',
+        { best: ils(m.M[m.best].value), price: ils(m.price) }) + ' ' +
       (m.best === 'value'
-        ? 'תמחור לפי ערך מציב את העוגן על מה שהתהליך עולה ללקוח במקום על התעריף שלך, וזה מה שמזיז את המספר.'
-        : 'בעסקה הזאת הערך של התהליך קטן מדי מכדי שתמחור לפי ערך ינצח. זה לא תמיד המצב.') +
+        ? tr('תמחור לפי ערך מציב את העוגן על מה שהתהליך עולה ללקוח במקום על התעריף שלך, וזה מה שמזיז את המספר.')
+        : tr('בעסקה הזאת הערך של התהליך קטן מדי מכדי שתמחור לפי ערך ינצח. זה לא תמיד המצב.')) +
       '</div>';
   }
   if (!m.annualValue && m.method !== 'value') {
-    rec.innerHTML += '<div class="ok">אין לך עדיין את המספרים לתמחור לפי ערך. ' +
-      'שאלות 2, 3, 4 ו-6 הן מה שפותח אותו — ובעסקאות שבהן התהליך יקר, זו השיטה שמזיזה הכי הרבה כסף.</div>';
+    rec.innerHTML += '<div class="ok">' + tr('אין לך עדיין את המספרים לתמחור לפי ערך.') + ' ' +
+      tr('שאלות 2, 3, 4 ו-6 הן מה שפותח אותו — ובעסקאות שבהן התהליך יקר, זו השיטה שמזיזה הכי הרבה כסף.') +
+      '</div>';
   }
 
   const v = el('verdict');
   if (!m.annualValue) {
-    v.innerHTML = '<div class="ok">מלא את שאלות 2, 3 ו-4 וקבל את המספר. שאלה 6 מוסיפה לו את ערך התקלות.</div>';
+    v.innerHTML = '<div class="ok">' +
+      tr('מלא את שאלות 2, 3 ו-4 וקבל את המספר. שאלה 6 מוסיפה לו את ערך התקלות.') + '</div>';
   } else if (m.tooThin) {
-    v.innerHTML = '<div class="flag"><b>הבנייה יקרה מהערך שהיא מייצרת.</b> ' +
-      'עלות הבנייה מחייבת אותך לגבות לפחות ' + ils(m.price) + ', אבל תהליך ששווה ' +
-      ils(m.annualValue) + ' בשנה מצדיק עד ' + ils(m.high) + ' לכל היותר. ' +
-      'בסקופ הזה הלקוח לא מחזיר את ההשקעה בזמן סביר. צמצם לחלק אחד של התהליך שבו רוב הזמן נשרף, ' +
-      'או אמור לו בשיחה שזה לא משתלם. הצעה שלא מחזירה את עצמה חוזרת אליך כתלונה.</div>';
+    v.innerHTML = '<div class="flag"><b>' + tr('הבנייה יקרה מהערך שהיא מייצרת.') + '</b> ' +
+      tr('עלות הבנייה מחייבת אותך לגבות לפחות {price}, אבל תהליך ששווה {value} בשנה מצדיק עד {high} לכל היותר.',
+        { price: ils(m.price), value: ils(m.annualValue), high: ils(m.high) }) + ' ' +
+      tr('בסקופ הזה הלקוח לא מחזיר את ההשקעה בזמן סביר. צמצם לחלק אחד של התהליך שבו רוב הזמן נשרף, או אמור לו בשיחה שזה לא משתלם. הצעה שלא מחזירה את עצמה חוזרת אליך כתלונה.') + '</div>';
   } else if (m.payback > 20) {
-    v.innerHTML = '<div class="flag"><b>ההחזר איטי, ' + m.payback.toFixed(0) + ' שבועות.</b> ' +
-      'רוב פרויקטי האוטומציה מחזירים תוך 4 עד 12 שבועות. צמצם סקופ או הורד מחיר, ' +
-      'אחרת הלקוח יגלה את זה בעצמו אחרי החתימה.</div>';
+    v.innerHTML = '<div class="flag"><b>' +
+      tr('ההחזר איטי, {weeks} שבועות.', { weeks: m.payback.toFixed(0) }) + '</b> ' +
+      tr('רוב פרויקטי האוטומציה מחזירים תוך 4 עד 12 שבועות. צמצם סקופ או הורד מחיר, אחרת הלקוח יגלה את זה בעצמו אחרי החתימה.') + '</div>';
   } else {
-    v.innerHTML = '<div class="ok"><b>ההחזר תוך ' + m.payback.toFixed(1) + ' שבועות.</b> ' +
-      'המשפט לשיחה: "התהליך הזה עולה לך בערך ' + ils(m.annualValue) +
-      ' בשנה. ההשקעה מחזירה את עצמה תוך פחות מ' +
-      (m.payback < 4 ? '-חודש' : '-' + Math.ceil(m.payback / 4.3) + ' חודשים') + '."</div>';
+    const months = m.payback < 4 ? tr('תוך פחות מחודש')
+      : tr('תוך פחות מ-{n} חודשים', { n: Math.ceil(m.payback / 4.3) });
+    v.innerHTML = '<div class="ok"><b>' +
+      tr('ההחזר תוך {weeks} שבועות.', { weeks: m.payback.toFixed(1) }) + '</b> ' +
+      tr('המשפט לשיחה: "התהליך הזה עולה לך בערך {value} בשנה. ההשקעה מחזירה את עצמה {months}."',
+        { value: ils(m.annualValue), months: months }) + '</div>';
   }
   renderClientRead();
   renderProposal();
@@ -847,9 +855,9 @@ const renderGuide = guard('guide', function (){
       // an optional step must not claim a number in the sequence — saying
       // "step 5 of 5" over something skippable is a small lie that costs
       // trust exactly where the user has none to spare
-      '<span class="guide-step">' + (g.ready && g.stepId === 'send' ? 'הכול מוכן'
-        : g.optional ? 'לא חובה, אבל שווה'
-        : 'שלב ' + g.index + ' מתוך ' + g.total) + '</span>' +
+      '<span class="guide-step">' + (g.ready && g.stepId === 'send' ? tr('הכול מוכן')
+        : g.optional ? tr('לא חובה, אבל שווה')
+        : tr('שלב {index} מתוך {total}', { index: g.index, total: g.total })) + '</span>' +
       '<span class="guide-t">' + esc(g.title) + '</span>' +
     '</div>' +
     '<div class="guide-ask">' + esc(g.ask) + '</div>' +
@@ -861,20 +869,20 @@ const renderGuide = guard('guide', function (){
         : '<button type="button" class="act" data-act="goto" data-anchor="' + g.anchor +
           '" data-fields="' + esc(g.fields.join(',')) + '">' + esc(g.cta) + '</button>') +
       (g.optional ? '<button type="button" class="guide-skip" data-act="skip" data-step="' +
-        g.stepId + '">לדלג על זה</button>' : '') +
+        g.stepId + '">' + tr('לדלג על זה') + '</button>' : '') +
     '</div>' +
     // a suggestion sits under the instruction, never instead of it
-    (g.suggestion ? '<div class="guide-sug"><b>אפשר לחדד:</b> ' + esc(g.suggestion.title) + '. ' +
+    (g.suggestion ? '<div class="guide-sug"><b>' + tr('אפשר לחדד:') + '</b> ' + esc(g.suggestion.title) + '. ' +
       esc(g.suggestion.why) +
       '<span class="guide-sug-a"><button type="button" class="ghost" data-act="goto" ' +
       'data-anchor="' + g.suggestion.anchor + '" data-fields="' +
       esc(g.suggestion.fields.join(',')) + '">' + esc(g.suggestion.cta) + '</button>' +
       '<button type="button" class="guide-skip" data-act="skip" data-step="' +
-      g.suggestion.stepId + '">לא צריך</button></span></div>' : '') +
+      g.suggestion.stepId + '">' + tr('לא צריך') + '</button></span></div>' : '') +
     g.problems.map(pr =>
       '<div class="guide-prob"><span>' + esc(pr.text) + '</span>' +
       '<button type="button" class="ghost" data-act="goto" data-anchor="' + pr.field + '">' +
-      'לתקן</button></div>').join('') +
+      tr('לתקן') + '</button></div>').join('') +
     '<div class="guide-bar"><div class="guide-fill"></div></div>' +
     '<div class="guide-dots">' + g.steps.map(st =>
       '<span class="guide-dot' + (st.complete ? ' done' : '') +
@@ -956,7 +964,7 @@ function skipStep(id){ skipped.add(id); renderGuide(); }
 function resetScopeConfirm(){
   scopeConfirmed = false;
   const w = el('scopeConfirmBtn');
-  if (w) { w.textContent = 'עברתי על הרשימה, ממשיכים'; w.parentElement.classList.remove('done'); }
+  if (w) { w.textContent = tr('עברתי על הרשימה, ממשיכים'); w.parentElement.classList.remove('done'); }
 }
 
 function resetGuide(){
@@ -973,7 +981,7 @@ function resetGuide(){
 function confirmScopeSilently(){
   scopeConfirmed = true;
   const w = el('scopeConfirmBtn');
-  if (w) { w.textContent = '✓ אושר'; w.parentElement.classList.add('done'); }
+  if (w) { w.textContent = tr('✓ אושר'); w.parentElement.classList.add('done'); }
 }
 
 /* ---------- reading the specific client ----------
@@ -996,10 +1004,10 @@ function clientProfile(){
   }), clientOverride);
 }
 
-const SIZE_LABEL = { solo: 'עסק קטן שמנוהל ישירות', small: 'עסק קטן־בינוני',
-                     mid: 'ארגון עם תהליך פנימי' };
-const DECIDE_LABEL = { single: 'מחליט אחד', shared: 'שניים מחליטים',
-                       committee: 'יותר מאדם אחד מחליט', unknown: 'לא ידוע מי מחליט' };
+const SIZE_LABEL = { solo: tr('עסק קטן שמנוהל ישירות'), small: tr('עסק קטן־בינוני'),
+                     mid: tr('ארגון עם תהליך פנימי') };
+const DECIDE_LABEL = { single: tr('מחליט אחד'), shared: tr('שניים מחליטים'),
+                       committee: tr('יותר מאדם אחד מחליט'), unknown: tr('לא ידוע מי מחליט') };
 
 const renderClientRead = guard('client', function (){
   const box = el('clientRead'); if (!box) return;
@@ -1018,13 +1026,13 @@ const renderClientRead = guard('client', function (){
 
   box.innerHTML =
     '<div class="cread-h">' +
-      '<span class="cread-t">הקריאה על הלקוח הזה</span>' +
+      '<span class="cread-t">' + tr('הקריאה על הלקוח הזה') + '</span>' +
       '<span class="cread-c">' + esc(SIZE_LABEL[p.size]) + ' · ' + esc(DECIDE_LABEL[p.decision]) +
-        ' · ביטחון ' + Math.round(p.confidence * 100) + '%</span>' +
-      '<label class="cread-o" for="clientShape">אם טעיתי</label>' +
+        ' · ' + tr('ביטחון {pct}%', { pct: Math.round(p.confidence * 100) }) + '</span>' +
+      '<label class="cread-o" for="clientShape">' + tr('אם טעיתי') + '</label>' +
       '<select id="clientShape">' +
-        [['auto','זהה לבד'],['solo','עסק קטן'],['small','עסק קטן־בינוני'],
-         ['mid','ארגון עם רכש']].map(([v, t]) =>
+        [['auto', tr('זהה לבד')], ['solo', tr('עסק קטן')], ['small', tr('עסק קטן־בינוני')],
+         ['mid', tr('ארגון עם רכש')]].map(([v, t]) =>
           '<option value="' + v + '"' + (clientOverride === v ? ' selected' : '') + '>' +
           t + '</option>').join('') +
       '</select>' +
@@ -1032,9 +1040,10 @@ const renderClientRead = guard('client', function (){
     (p.evidence.length ? '<ul class="cread-e">' +
       p.evidence.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' : '') +
     (a.changes.length
-      ? '<div class="cread-ch"><b>מה זה שינה במסמך</b><ul>' +
+      ? '<div class="cread-ch"><b>' + tr('מה זה שינה במסמך') + '</b><ul>' +
         a.changes.map(c => '<li>' + esc(c) + '</li>').join('') + '</ul></div>'
-      : '<div class="cread-ch cread-none">המסמך לא שונה. הקריאה הזאת לא מצדיקה סטייה מברירת המחדל.</div>');
+      : '<div class="cread-ch cread-none">' +
+        tr('המסמך לא שונה. הקריאה הזאת לא מצדיקה סטייה מברירת המחדל.') + '</div>');
 
   el('clientShape').onchange = e => { clientOverride = e.target.value; recompute(); };
   show('clientRead', true);
@@ -1067,9 +1076,9 @@ const renderFlow = guard('flow', function (){
   const weak = PC.flow.weakest(m);
   const head = PC.flow.headline(m, rows);
   box.innerHTML =
-    '<summary>מאיפה יצא המחיר הזה' +
-      (appliedCites.length ? '<span class="flow-tag">' + appliedCites.length +
-        ' מספרים עם ציטוט מהשיחה</span>' : '') + '</summary>' +
+    '<summary>' + tr('מאיפה יצא המחיר הזה') +
+      (appliedCites.length ? '<span class="flow-tag">' +
+        esc(tr('{n} מספרים עם ציטוט מהשיחה', { n: appliedCites.length })) + '</span>' : '') + '</summary>' +
     '<div class="flow-body">' +
       (head ? '<p class="flow-head">' + esc(head) + '</p>' : '') +
       rows.map((r, ix) => {
@@ -1081,11 +1090,11 @@ const renderFlow = guard('flow', function (){
             '<div class="flow-f">' + esc(r.formula) + '</div>' +
             '<div class="flow-o">' + esc(r.out) + '</div>' +
             (r.note ? '<div class="flow-note">' + esc(r.note) + '</div>' : '') +
-            (soft ? '<div class="flow-weak">' + weak.share +
-              '% מהערך נשען על הצעד הזה. אם מספר אחד כאן לא מדויק, המחיר זז איתו.</div>' : '') +
+            (soft ? '<div class="flow-weak">' + esc(tr('{share}% מהערך נשען על הצעד הזה. אם מספר אחד כאן לא מדויק, המחיר זז איתו.',
+              { share: weak.share })) + '</div>' : '') +
             (r.said.length ? '<div class="flow-said">' + r.said.map(q =>
               '«' + esc(q.quote) + '»<span class="flow-who">' +
-              (q.speaker === 'client' ? 'הלקוח אמר' : q.speaker === 'seller' ? 'אתם אמרתם' : '') +
+              (q.speaker === 'client' ? tr('הלקוח אמר') : q.speaker === 'seller' ? tr('אתם אמרתם') : '') +
               '</span>').join('') + '</div>' : '') +
           '</div></div>';
       }).join('') +
@@ -1107,7 +1116,7 @@ const renderViz = guard('viz', function (){
   if (v.payback) {
     // one cell per week; the verdict is a word first and a hue second, so the
     // meaning survives a colour vision deficiency, glare, or a bad screen
-    html += '<div class="viz-b"><div class="viz-h">מתי ההשקעה חוזרת ללקוח' +
+    html += '<div class="viz-b"><div class="viz-h">' + tr('מתי ההשקעה חוזרת ללקוח') +
       '<span class="viz-tag v-' + v.payback.verdict + '">' + esc(v.payback.verdictText) + '</span></div>' +
       '<div class="wks" role="img" aria-label="' + esc(v.payback.label) + '">' +
       Array.from({ length: v.payback.cells }, (_, i) =>
@@ -1116,7 +1125,7 @@ const renderViz = guard('viz', function (){
       '<div class="viz-s">' + esc(v.payback.sentence) + '</div></div>';
   }
   if (v.share) {
-    html += '<div class="viz-b"><div class="viz-h">המחיר מול מה שזה עולה לו בשנה</div>' +
+    html += '<div class="viz-b"><div class="viz-h">' + tr('המחיר מול מה שזה עולה לו בשנה') + '</div>' +
       '<div class="shr' + (v.share.over ? ' over' : '') + '" role="img" aria-label="' +
       esc(v.share.label) + '"><span class="shr-f"></span>' +
       '<span class="shr-l">' + v.share.percent + '%</span></div>' +
@@ -1157,18 +1166,19 @@ const renderSend = guard('send', function (){
      from fixing, and still the operator's decision. */
   const anonymous = PC.senderMissing(readSender());
 
-  box.innerHTML = '<div class="send-h">לשלוח ללקוח</div>' +
-    (anonymous ? '<div class="send-anon"><b>אין שם על ההצעה.</b> ' +
-      'הלקוח יקבל מסמך בלי מי שולח אותו ובלי דרך לחזור אליך. ' +
+  box.innerHTML = '<div class="send-h">' + tr('לשלוח ללקוח') + '</div>' +
+    (anonymous ? '<div class="send-anon"><b>' + tr('אין שם על ההצעה.') + '</b> ' +
+      tr('הלקוח יקבל מסמך בלי מי שולח אותו ובלי דרך לחזור אליך.') + ' ' +
       '<button type="button" class="ghost" data-act="goto" data-anchor="s_name" ' +
-      'data-fields="s_name,s_phone">להוסיף את השם שלי</button></div>' : '') +
+      'data-fields="s_name,s_phone">' + tr('להוסיף את השם שלי') + '</button></div>' : '') +
     '<div class="send-rows">' + rs.map(r =>
       '<div class="send-row' + (r.ok ? '' : ' off') + '">' +
         '<button type="button" class="' + (r.ok ? 'act' : 'ghost') + '" data-act="sendvia" ' +
           'data-route="' + r.id + '"' + (r.ok ? '' : ' disabled') + '>' + esc(r.label) + '</button>' +
         '<span class="send-n">' + esc(r.note) + '</span>' +
       '</div>').join('') + '</div>' +
-    '<div class="send-f">אחרי השליחה ההצעה תסומן אוטומטית כ"נשלחה" בפנקס, כדי שתדע על מה עוד לא ענו.</div>';
+    '<div class="send-f">' +
+      tr('אחרי השליחה ההצעה תסומן אוטומטית כ"נשלחה" בפנקס, כדי שתדע על מה עוד לא ענו.') + '</div>';
 });
 
 function openSend(){ show('sendBox', true); renderSend();
@@ -1252,7 +1262,7 @@ const renderProposal = guard('proposal', function (){
 function copyProposal(){
   const t = el('proposal').innerText;
   const done = ok => { const f = el('cpFlag');
-    f.textContent = ok ? 'הועתק' : 'ההעתקה נכשלה, סמן והעתק ידנית';
+    f.textContent = ok ? tr('הועתק') : tr('ההעתקה נכשלה, סמן והעתק ידנית');
     f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2200); };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(t).then(() => done(true)).catch(() => fallbackCopy(t, done));
@@ -1301,7 +1311,7 @@ function saveDraft(){
   if (PC.draft.save(state)) { draftWarned = false; return; }
   if (draftWarned) return;
   draftWarned = true;
-  flashDoc('הדפדפן חוסם שמירה — הטיוטה לא תשרוד רענון');
+  flashDoc(tr('הדפדפן חוסם שמירה — הטיוטה לא תשרוד רענון'));
 }
 // debounced: one write per pause, not one per keystroke
 function saveDraftSoon(){ clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 500); }
@@ -1376,9 +1386,9 @@ function restoreDraft(){
      and the operator is about to send whatever is on it. */
   const bar = el('draftNote');
   if (bar) {
-    bar.innerHTML = 'שוחזרה טיוטה שלא הסתיימה' +
-      (PC.draft.age(d) ? ' · נשמרה ' + esc(PC.draft.age(d)) : '') +
-      ' <button type="button" class="ghost" data-act="discard">התחל מחדש</button>';
+    bar.innerHTML = tr('שוחזרה טיוטה שלא הסתיימה') +
+      (PC.draft.age(d) ? ' · ' + tr('נשמרה {age}', { age: esc(PC.draft.age(d)) }) : '') +
+      ' <button type="button" class="ghost" data-act="discard">' + tr('התחל מחדש') + '</button>';
     show('draftNote', true);
   }
 }
@@ -1398,7 +1408,7 @@ function discardDraft(){
    starts over exactly as before, with no interruption. */
 function confirmNewDeal(){
   if (PC.draft && !PC.draft.isEmpty(collectDraft(), PRISTINE)) {
-    if (!confirm('להתחיל הצעה חדשה? הטופס הנוכחי והטיוטה שנשמרה יימחקו.')) return;
+    if (!confirm(tr('להתחיל הצעה חדשה? הטופס הנוכחי והטיוטה שנשמרה יימחקו.'))) return;
   }
   newDeal();
 }
@@ -1437,17 +1447,19 @@ function handleBackupFile(e){
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => restoreBackup(reader.result);
-  reader.onerror = () => backupFlash('לא הצלחתי לקרוא את הקובץ', true);
+  reader.onerror = () => backupFlash(tr('לא הצלחתי לקרוא את הקובץ'), true);
   reader.readAsText(file);
 }
 function restoreBackup(text){
   const p = PC.backup.preview(text, localStorage);
-  if (!p.ok) { backupFlash('הקובץ לא נראה כמו גיבוי תקין מהכלי הזה', true); return; }
-  const overwriting = p.willOverwrite.length ? '\n\nזה ידרוס: ' + p.willOverwrite.join(', ') : '';
-  const at = p.at ? new Date(p.at).toLocaleDateString('he-IL') : 'תאריך לא ידוע';
-  if (!confirm('לשחזר גיבוי מ-' + at + '?' + overwriting)) return;
+  if (!p.ok) { backupFlash(tr('הקובץ לא נראה כמו גיבוי תקין מהכלי הזה'), true); return; }
+  const overwriting = p.willOverwrite.length
+    ? tr('\n\nזה ידרוס: {list}', { list: p.willOverwrite.join(', ') }) : '';
+  const locale = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.locale() : 'he-IL';
+  const at = p.at ? new Date(p.at).toLocaleDateString(locale) : tr('תאריך לא ידוע');
+  if (!confirm(tr('לשחזר גיבוי מ-{at}?{overwriting}', { at: at, overwriting: overwriting }))) return;
   PC.backup.importAll(text, localStorage);
-  backupFlash('שוחזר. טוען מחדש...');
+  backupFlash(tr('שוחזר. טוען מחדש...'));
   setTimeout(() => location.reload(), 600);
 }
 
@@ -1606,8 +1618,8 @@ function applyEntryRoute(){
        proposal with no example and no explanation of why. Asking is the
        only version where both answers are what the person meant. */
     const busy = PC.draft && !PC.draft.isEmpty(collectDraft(), PRISTINE);
-    if (busy && !confirm('יש כאן הצעה שלא סיימת. לטעון את שיחת הדוגמה במקומה?\n\nההצעה הנוכחית תוחלף.')) {
-      flashDoc('הדוגמה לא נטענה. ההצעה שלך נשארה כמו שהיא.');
+    if (busy && !confirm(tr('יש כאן הצעה שלא סיימת. לטעון את שיחת הדוגמה במקומה?\n\nההצעה הנוכחית תוחלף.'))) {
+      flashDoc(tr('הדוגמה לא נטענה. ההצעה שלך נשארה כמו שהיא.'));
       return;
     }
     loadDemo();

@@ -37,8 +37,14 @@ const EXEMPT = {
     (s) => /^(מה אני מוכר|למי|יחידה תחומה|מחיר היחידה|עסקה אחרונה|מקור הלקוח האחרון|מה הלקוח הרוויח|מה רק אני רואה|מה אני לא מוכר):?$/.test(s.replace(/:\s*$/, ':')),
   ],
   'assets/pc-transcript.js': [
-    /* the extraction prompt's answer format, same argument as above */
-    (s) => /תשובה|שדה|מספר|ציטוט/.test(s) && s.length < 40,
+    /* UNIT_VALUES keys: the literal freqUnit words the extraction prompt
+       asks the model to answer with, and the same words the local
+       heuristic matches back out of a pasted answer. Translating the key
+       would make the lookup track the UI language instead of whatever the
+       model actually wrote — the English equivalents ('day'/'week'/
+       'month') are already added alongside them as separate, untranslated
+       keys in the same object, so both languages work at once. */
+    (s) => s === 'יום' || s === 'שבוע' || s === 'חודש',
   ],
 };
 

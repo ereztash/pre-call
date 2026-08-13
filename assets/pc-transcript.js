@@ -36,30 +36,58 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   /* The contract the prompt asks for. Kept small on purpose: every field
      here is one the operator would otherwise type, and nothing here is a
      judgement the model should be making — no prices, no scope decisions,
      no recommendations. Extraction only. */
   const FIELDS = [
-    { key: 'process',  target: 'q_process',   kind: 'text',   label: 'התהליך הידני' },
-    { key: 'freq',     target: 'q_freq',      kind: 'number', label: 'כמה פעמים' },
-    { key: 'freqUnit', target: 'q_freq_unit', kind: 'unit',   label: 'לכל' },
-    { key: 'minutes',  target: 'q_minutes',   kind: 'number', label: 'דקות לכל פעם' },
-    { key: 'systems',  target: null,          kind: 'list',   label: 'תוכנות' },
-    { key: 'errFreq',  target: 'q_err_freq',  kind: 'number', label: 'תקלות בחודש' },
-    { key: 'errCost',  target: 'q_err_cost',  kind: 'number', label: 'עלות לתקלה' },
-    { key: 'client',   target: 'q_client',    kind: 'text',   label: 'שם הלקוח' },
-    { key: 'decider',  target: 'q_decider',   kind: 'text',   label: 'מי מאשר' },
-    { key: 'trigger',  target: 'q_trigger',   kind: 'text',   label: 'מה קרה לאחרונה' },
-    { key: 'prev',     target: 'q_prev',      kind: 'text',   label: 'מה ניסו קודם' },
-    { key: 'deadline', target: 'q_deadline',  kind: 'text',   label: 'יעד בזמן' },
-    { key: 'success',  target: 'q_success',   kind: 'text',   label: 'איך נדע שהצליח' }
+    { key: 'process',  target: 'q_process',   kind: 'text',   label: tr('התהליך הידני') },
+    { key: 'freq',     target: 'q_freq',      kind: 'number', label: tr('כמה פעמים') },
+    { key: 'freqUnit', target: 'q_freq_unit', kind: 'unit',   label: tr('לכל') },
+    { key: 'minutes',  target: 'q_minutes',   kind: 'number', label: tr('דקות לכל פעם') },
+    { key: 'systems',  target: null,          kind: 'list',   label: tr('תוכנות') },
+    { key: 'errFreq',  target: 'q_err_freq',  kind: 'number', label: tr('תקלות בחודש') },
+    { key: 'errCost',  target: 'q_err_cost',  kind: 'number', label: tr('עלות לתקלה') },
+    { key: 'client',   target: 'q_client',    kind: 'text',   label: tr('שם הלקוח') },
+    { key: 'decider',  target: 'q_decider',   kind: 'text',   label: tr('מי מאשר') },
+    { key: 'trigger',  target: 'q_trigger',   kind: 'text',   label: tr('מה קרה לאחרונה') },
+    { key: 'prev',     target: 'q_prev',      kind: 'text',   label: tr('מה ניסו קודם') },
+    { key: 'deadline', target: 'q_deadline',  kind: 'text',   label: tr('יעד בזמן') },
+    { key: 'success',  target: 'q_success',   kind: 'text',   label: tr('איך נדע שהצליח') }
   ];
 
-  const UNIT_VALUES = { 'יום': '365', 'שבוע': '52', 'חודש': '12' };
+  /* Literal words the extraction prompt asks the model to answer freqUnit
+     with, in whichever language the prompt itself shipped in — and the
+     literal word the local heuristic matches back out of a pasted answer.
+     These are match keys, not prose: translating them through tr() would
+     make the lookup track the CURRENT UI language instead of whatever the
+     model actually wrote, which breaks the very case of a Hebrew-UI
+     operator pasting back an answer to an English prompt they ran
+     elsewhere. Both language's words are kept, always, side by side. */
+  const UNIT_VALUES = { 'יום': '365', 'שבוע': '52', 'חודש': '12',
+                        'day': '365', 'week': '52', 'month': '12' };
 
   function buildPrompt(transcript) {
-    return `להלן תמלול של שיחת מכירה בין נותן שירות אוטומציה ללקוח פוטנציאלי.
+    const quoteWord = tr('המשפט המדויק מהתמלול');
+    const clientWord = tr('לקוח');
+    const sellerWord = tr('מוכר');
+    const fieldsBlock = FIELDS.map(f => `    "${f.key}": { "value": ${
+        f.kind === 'list' ? '["..."]' : f.kind === 'number' ? '0' : '"..."'
+      }, "quote": "${quoteWord}", "speaker": "${clientWord}" | "${sellerWord}" }`)
+      .join(',\n');
+
+    /* The header and the rules are each one tr() call, translated whole —
+       an LLM prompt reads as an instruction to a reader, not as a bag of
+       fragments, and splicing a translated clause into the middle of one
+       would produce exactly the stilted, glued-together English a
+       professional prompt cannot afford. The one truly dynamic piece,
+       the transcript itself, is never translated — it is the operator's
+       own paste, in whatever language they have it — so it travels as a
+       {transcript} parameter rather than sitting inside the literal. */
+    const header = tr(`להלן תמלול של שיחת מכירה בין נותן שירות אוטומציה ללקוח פוטנציאלי.
 
 המשימה שלך היא חילוץ בלבד. אל תעריך, אל תשלים ואל תנחש — אם משהו לא נאמר, החזר null.
 לכל ערך שאתה מחלץ, החזר גם את הציטוט המדויק שממנו לקחת אותו ומי אמר אותו.
@@ -67,25 +95,25 @@
 החזר JSON יחיד, בתוך בלוק \`\`\`json, במבנה הבא:
 
 {
-  "fields": {
-${FIELDS.map(f => `    "${f.key}": { "value": ${f.kind === 'list' ? '["..."]' :
-      f.kind === 'number' ? '0' : '"..."'}, "quote": "המשפט המדויק מהתמלול", "speaker": "לקוח" | "מוכר" }`)
-      .join(',\n')}
-  }
+  "fields": {`);
+
+    const footer = tr(`  }
 }
 
 כללים:
 1. "value" הוא null אם זה לא נאמר בשיחה. אל תמציא.
 2. "quote" חייב להיות טקסט שמופיע בתמלול מילה במילה. בלי ציטוט, החזר null גם ל-value.
-3. "speaker" הוא מי אמר את הציטוט: "לקוח" או "מוכר".
+3. "speaker" הוא מי אמר את הציטוט: "{clientWord}" או "{sellerWord}".
 4. freqUnit הוא אחד מ: "יום", "שבוע", "חודש".
 5. מספרים בספרות בלבד, בלי פסיקים ובלי סימן מטבע.
 6. systems הוא רשימת שמות תוכנות שהוזכרו, כמו וואטסאפ, אקסל, CRM.
 
 התמלול:
 ---
-${(transcript || '').trim()}
----`;
+{transcript}
+---`, { clientWord: clientWord, sellerWord: sellerWord, transcript: (transcript || '').trim() });
+
+    return header + '\n' + fieldsBlock + '\n' + footer;
   }
 
   /* Models wrap JSON in prose, in fences, or in both. Find the object rather
@@ -132,7 +160,7 @@ ${(transcript || '').trim()}
         if (!isFinite(n) || n <= 0) return;
         value = n;
       } else if (f.kind === 'unit') {
-        value = UNIT_VALUES[clean(value)] || null;
+        value = UNIT_VALUES[clean(value)] || UNIT_VALUES[clean(value).toLowerCase()] || null;
         if (!value) return;
       } else {
         value = clean(value);
@@ -168,12 +196,12 @@ ${(transcript || '').trim()}
      appears on request may be measuring the question rather than the
      business. The tool already says so; until now it had to take the
      operator's word for which case this was. */
-  const ASKED = /כמה|בערך|מספר|כמות|תוך כמה|מה הנפח|באיזה תדירות/;
+  const ASKED = /כמה|בערך|מספר|כמות|תוך כמה|מה הנפח|באיזה תדירות|how many|how much|about how|roughly|approximately|what volume|how often/i;
 
   function provenance(cands, transcript) {
     const numeric = cands.filter(c => c.kind === 'number' && c.key !== 'errFreq');
     const fromClient = numeric.filter(c => c.speaker === 'client');
-    if (!fromClient.length) return { value: 'mine', why: 'אף מספר בשיחה לא נאמר על ידי הלקוח' };
+    if (!fromClient.length) return { value: 'mine', why: tr('אף מספר בשיחה לא נאמר על ידי הלקוח') };
 
     const src = String(transcript || '').replace(/\s+/g, ' ');
     const steered = fromClient.some(c => {
@@ -184,18 +212,23 @@ ${(transcript || '').trim()}
     });
 
     return steered
-      ? { value: 'prompted', why: 'המספר נאמר אחרי שאלה שכיוונה אליו' }
-      : { value: 'unprompted', why: 'הלקוח נקב במספר מעצמו' };
+      ? { value: 'prompted', why: tr('המספר נאמר אחרי שאלה שכיוונה אליו') }
+      : { value: 'unprompted', why: tr('הלקוח נקב במספר מעצמו') };
   }
 
   /* A last resort for a transcript with no model available: pull numbers
      that sit next to a unit word and keep the sentence around them. Weaker
      than an extraction and honest about it — every row still carries its
-     quote, and the operator confirms exactly as they would otherwise. */
+     quote, and the operator confirms exactly as they would otherwise.
+
+     Each pattern matches its Hebrew wording and an English equivalent
+     side by side (case-insensitive, so "Minutes" and "minutes" both
+     land), so a transcript pasted in either language still yields
+     candidates. */
   const CUES = [
-    { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?)/, label: 'דקות לכל פעם' },
-    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח)/, label: 'עלות לתקלה' },
-    { key: 'freq',    re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות)/, label: 'כמה פעמים' }
+    { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?|\bminutes?\b|\bmins?\b)/i, label: tr('דקות לכל פעם') },
+    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה') },
+    { key: 'freq',    re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|\btimes?\b(?:\s*(?:a|per)\s*(?:day|week|month))?|\borders?\b|\bleads?\b|\brequests?\b)/i, label: tr('כמה פעמים') }
   ];
 
   function heuristics(transcript) {

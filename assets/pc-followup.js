@@ -39,6 +39,9 @@
 (function (root) {
   'use strict';
 
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
   /* Chasing on day one reads as desperate and on day thirty as an
      afterthought. Three days is long enough that silence means something
      and short enough that the call is still fresh for both sides. */
@@ -49,6 +52,7 @@
   const DAY = 864e5;
   const startOfDay = d => { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; };
   const daysBetween = (a, b) => Math.round((startOfDay(b) - startOfDay(a)) / DAY);
+  const locale = () => (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.locale() : 'he-IL';
 
   /* ---------- the date the client themselves named ----------
 
@@ -66,9 +70,17 @@
 
      Local Date parts throughout, never UTC getters — the same defect the
      all-day event above carries a comment about. A date the client named is a
-     calendar date in their week, not an instant. */
-  const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני',
-                  'יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+     calendar date in their week, not an instant.
+
+     MONTHS is parser data, not display copy — it matches whatever month name
+     the client used in their own words, in either language, and is never
+     itself shown on screen. Kept as regex literals rather than string
+     literals for exactly that reason: this is the same kind of match as the
+     תחילת/סוף checks below it, not a sentence someone reads. */
+  const MONTHS = [/ינואר|january|jan\b/i, /פברואר|february|feb\b/i, /מרץ|march|mar\b/i,
+                  /אפריל|april|apr\b/i, /מאי|\bmay\b/i, /יוני|june|jun\b/i,
+                  /יולי|july|jul\b/i, /אוגוסט|august|aug\b/i, /ספטמבר|september|sep\b/i,
+                  /אוקטובר|october|oct\b/i, /נובמבר|november|nov\b/i, /דצמבר|december|dec\b/i];
   const lastDay = (y, m) => new Date(y, m + 1, 0).getDate();
 
   function deadlineDate(text, now) {
@@ -100,13 +112,13 @@
       return mk(y, m, d);
     }
 
-    const mi = MONTHS.findIndex(name => s.includes(name));
+    const mi = MONTHS.findIndex(re => re.test(s));
     if (mi === -1) return null;
     /* Which part of the month was actually said. A bare month name is read as
        its middle, which is the honest midpoint of what the person told you —
        not the 1st, which would invent urgency they did not express. */
-    if (/תחילת|ראשית|בתחילת/.test(s)) return forward(mi, 1);
-    if (/סוף|בסוף|לקראת סוף/.test(s)) {
+    if (/תחילת|ראשית|בתחילת|\b(?:start|beginning) of\b|\bearly\b/i.test(s)) return forward(mi, 1);
+    if (/סוף|בסוף|לקראת סוף|\bend of\b|\blate\b/i.test(s)) {
       const y = today.getFullYear();
       const end = mk(y, mi, lastDay(y, mi));
       return end && end >= today ? end : mk(y + 1, mi, lastDay(y + 1, mi));
@@ -147,21 +159,26 @@
     let state, label;
     if (daysLeft < 0) {
       state = 'expired';
+      const n = Math.abs(daysLeft);
       label = byClient
-        ? 'התאריך שהלקוח נקב עבר לפני ' + Math.abs(daysLeft) + ' ימים'
-        : 'פג התוקף לפני ' + Math.abs(daysLeft) + ' ימים';
+        ? tr('התאריך שהלקוח נקב עבר לפני {n} ימים', { n: n })
+        : tr('פג התוקף לפני {n} ימים', { n: n });
     } else if (daysLeft <= CLOSING_WINDOW_DAYS) {
       state = 'closing';
-      const when = daysLeft === 0 ? 'היום'
-                 : 'בעוד ' + daysLeft + (daysLeft === 1 ? ' יום' : ' ימים');
-      label = byClient ? 'הלקוח צריך שזה יעבוד ' + when : 'התוקף פג ' + when;
+      const when = daysLeft === 0 ? tr('היום')
+                 : daysLeft === 1 ? tr('בעוד {n} יום', { n: daysLeft })
+                 : tr('בעוד {n} ימים', { n: daysLeft });
+      label = byClient
+        ? tr('הלקוח צריך שזה יעבוד {when}', { when: when })
+        : tr('התוקף פג {when}', { when: when });
     } else if (silentFor >= NUDGE_AFTER_DAYS) {
       state = 'quiet';
-      label = 'נשלחה לפני ' + silentFor + ' ימים, בלי תשובה';
+      label = tr('נשלחה לפני {n} ימים, בלי תשובה', { n: silentFor });
     } else {
       state = 'fresh';
-      label = silentFor === 0 ? 'נשלחה היום'
-            : 'נשלחה לפני ' + silentFor + (silentFor === 1 ? ' יום' : ' ימים');
+      label = silentFor === 0 ? tr('נשלחה היום')
+            : silentFor === 1 ? tr('נשלחה לפני {n} יום', { n: silentFor })
+            : tr('נשלחה לפני {n} ימים', { n: silentFor });
     }
     return { state, label, silentFor, daysLeft, expires,
              needsAction: state === 'quiet' || state === 'closing' || state === 'expired' };
@@ -179,9 +196,9 @@
     const closing = acting.filter(s => s.state === 'closing').length;
     const quiet = acting.filter(s => s.state === 'quiet').length;
     const parts = [];
-    if (expired) parts.push(expired === 1 ? 'אחת פג תוקפה' : expired + ' פג תוקפן');
-    if (closing) parts.push(closing === 1 ? 'אחת עומדת לפוג' : closing + ' עומדות לפוג');
-    if (quiet) parts.push(quiet === 1 ? 'אחת שותקת כבר כמה ימים' : quiet + ' שותקות כבר כמה ימים');
+    if (expired) parts.push(expired === 1 ? tr('אחת פג תוקפה') : tr('{n} פג תוקפן', { n: expired }));
+    if (closing) parts.push(closing === 1 ? tr('אחת עומדת לפוג') : tr('{n} עומדות לפוג', { n: closing }));
+    if (quiet) parts.push(quiet === 1 ? tr('אחת שותקת כבר כמה ימים') : tr('{n} שותקות כבר כמה ימים', { n: quiet }));
     return { count: acting.length, expired, closing, quiet, text: parts.join(' · ') };
   }
 
@@ -223,9 +240,31 @@
       expires.getTime() - CLOSING_WINDOW_DAYS * DAY));
     const end = new Date(when.getTime() + DAY);
 
-    const client = (d.client || 'הלקוח').trim();
+    const client = (d.client || tr('הלקוח')).trim();
     const price = o.ils && d.priceQuoted ? o.ils(d.priceQuoted) : (d.priceQuoted || '');
     const stamp = o.now || new Date();
+    const loc = locale();
+
+    const summaryText = tr('לבדוק מה קרה עם ההצעה ל{client}', { client: client });
+
+    /* Four small variants rather than one template with embedded ${}: the
+       price line and the client's own deadline line are each independently
+       present or absent, and a translated fragment cannot be spliced into
+       the middle of a tr() literal — each combination gets its own
+       sentence, in full, so the English reads naturally rather than as
+       parts glued together. */
+    let desc;
+    const dateArgs = { sentDate: at.toLocaleDateString(loc), price: price, expDate: docExpires.toLocaleDateString(loc),
+                       namedDate: named && isFinite(named.getTime()) ? named.toLocaleDateString(loc) : '' };
+    if (price && named && isFinite(named.getTime())) {
+      desc = tr('ההצעה נשלחה ב-{sentDate} על {price}. התוקף שנכתב במסמך: {expDate}.\nהלקוח אמר שהוא צריך שזה יעבוד עד {namedDate}.\n\nאם הוא ענה — עדכן בפנקס אם נסגרה או נדחתה, וכמה שעות עבודה זה לקח בפועל. זה מה שהופך את האומדן ממותאם-אחורה למדוד.', dateArgs);
+    } else if (price) {
+      desc = tr('ההצעה נשלחה ב-{sentDate} על {price}. התוקף שנכתב במסמך: {expDate}.\n\nאם הוא ענה — עדכן בפנקס אם נסגרה או נדחתה, וכמה שעות עבודה זה לקח בפועל. זה מה שהופך את האומדן ממותאם-אחורה למדוד.', dateArgs);
+    } else if (named && isFinite(named.getTime())) {
+      desc = tr('ההצעה נשלחה ב-{sentDate}. התוקף שנכתב במסמך: {expDate}.\nהלקוח אמר שהוא צריך שזה יעבוד עד {namedDate}.\n\nאם הוא ענה — עדכן בפנקס אם נסגרה או נדחתה, וכמה שעות עבודה זה לקח בפועל. זה מה שהופך את האומדן ממותאם-אחורה למדוד.', dateArgs);
+    } else {
+      desc = tr('ההצעה נשלחה ב-{sentDate}. התוקף שנכתב במסמך: {expDate}.\n\nאם הוא ענה — עדכן בפנקס אם נסגרה או נדחתה, וכמה שעות עבודה זה לקח בפועל. זה מה שהופך את האומדן ממותאם-אחורה למדוד.', dateArgs);
+    }
 
     const lines = [
       'BEGIN:VCALENDAR',
@@ -238,20 +277,12 @@
       'DTSTAMP:' + stampUTC(stamp),
       'DTSTART;VALUE=DATE:' + stampDate(when),
       'DTEND;VALUE=DATE:' + stampDate(end),
-      'SUMMARY:' + esc('לבדוק מה קרה עם ההצעה ל' + client),
-      'DESCRIPTION:' + esc(
-        'ההצעה נשלחה ב-' + at.toLocaleDateString('he-IL') +
-        (price ? ' על ' + price : '') +
-        '. התוקף שנכתב במסמך: ' + docExpires.toLocaleDateString('he-IL') + '.' +
-        (named && isFinite(named.getTime())
-          ? '\nהלקוח אמר שהוא צריך שזה יעבוד עד ' + named.toLocaleDateString('he-IL') + '.' : '') +
-        '\n\n' +
-        'אם הוא ענה — עדכן בפנקס אם נסגרה או נדחתה, וכמה שעות עבודה זה לקח בפועל. ' +
-        'זה מה שהופך את האומדן ממותאם-אחורה למדוד.'),
+      'SUMMARY:' + esc(summaryText),
+      'DESCRIPTION:' + esc(desc),
       'BEGIN:VALARM',
       'TRIGGER:PT9H',           // 09:00 on the day, in the reader's own zone
       'ACTION:DISPLAY',
-      'DESCRIPTION:' + esc('לבדוק מה קרה עם ההצעה ל' + client),
+      'DESCRIPTION:' + esc(summaryText),
       'END:VALARM',
       'END:VEVENT',
       'END:VCALENDAR'
