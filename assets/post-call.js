@@ -18,6 +18,9 @@
      pc-dom.js      el/show/esc/guard
    ============================================================ */
 
+var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+  : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
 const { SYSTEMS, METHODS, SCOPE_ITEMS, SCOPE_LABEL, PRESETS, EXAMPLES, TEMPLATES,
         visibleScope, defaultScopeState, scopeStateFor } = PC.catalog;
 const ils = PC.model.ils;
@@ -157,8 +160,9 @@ function applyTemplate(id){
   const note = el('tplNote');
   if (note) {
     note.innerHTML = templateNote(t) +
-      '<span class="tpl-caveat">המספרים כאן טיפוסיים, לא נמדדו אצל הלקוח שלך. ' +
-      'תקן אותם מולו — הם קיימים כדי שיהיה מה לתקן, לא כדי להישלח כמו שהם.</span>';
+      '<span class="tpl-caveat">' +
+      tr('המספרים כאן טיפוסיים, לא נמדדו אצל הלקוח שלך. תקן אותם מולו — הם קיימים כדי שיהיה מה לתקן, לא כדי להישלח כמו שהם.') +
+      '</span>';
     show('tplNote', true);
   }
   renderTemplates();
@@ -188,16 +192,16 @@ function trText(){ const t = el('trIn'); return t ? t.value : ''; }
 
 function showPrompt(){
   const t = trText().trim();
-  if (!t) { flashDoc('קודם הדבק את התמלול'); goTo('trIn'); return; }
+  if (!t) { flashDoc(tr('קודם הדבק את התמלול')); goTo('trIn'); return; }
   const box = el('trPrompt');
   box.innerHTML =
-    '<div class="tr-h">1 · העתק את זה והרץ ב-Claude או ב-ChatGPT</div>' +
+    '<div class="tr-h">' + tr('1 · העתק את זה והרץ ב-Claude או ב-ChatGPT') + '</div>' +
     '<pre class="tr-p" id="trPromptText"></pre>' +
-    '<div class="tr-acts"><button type="button" class="act" data-act="trcopy">העתק את הפרומפט</button>' +
-    '<span class="copied" id="trFlag">הועתק</span></div>' +
-    '<div class="tr-h mt14">2 · הדבק כאן את מה שחזר</div>' +
-    '<textarea id="trOut" aria-label="הפלט מהחילוץ" placeholder="הדבק כאן את התשובה..."></textarea>' +
-    '<div class="tr-acts"><button type="button" class="act" data-act="trparse">הצג מה נמצא</button></div>';
+    '<div class="tr-acts"><button type="button" class="act" data-act="trcopy">' + tr('העתק את הפרומפט') + '</button>' +
+    '<span class="copied" id="trFlag">' + tr('הועתק') + '</span></div>' +
+    '<div class="tr-h mt14">' + tr('2 · הדבק כאן את מה שחזר') + '</div>' +
+    '<textarea id="trOut" aria-label="' + tr('הפלט מהחילוץ') + '" placeholder="' + tr('הדבק כאן את התשובה...') + '"></textarea>' +
+    '<div class="tr-acts"><button type="button" class="act" data-act="trparse">' + tr('הצג מה נמצא') + '</button></div>';
   // textContent, never innerHTML: the prompt contains the transcript verbatim
   el('trPromptText').textContent = PC.transcript.buildPrompt(t);
   show('trPrompt', true);
@@ -207,7 +211,7 @@ function showPrompt(){
 function copyPrompt(){
   const txt = el('trPromptText') ? el('trPromptText').textContent : '';
   const done = ok => { const f = el('trFlag'); if (!f) return;
-    f.textContent = ok ? 'הועתק' : 'ההעתקה נכשלה, סמן והעתק ידנית';
+    f.textContent = ok ? tr('הועתק') : tr('ההעתקה נכשלה, סמן והעתק ידנית');
     f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 2200); };
   if (navigator.clipboard && navigator.clipboard.writeText)
     navigator.clipboard.writeText(txt).then(() => done(true)).catch(() => fallbackCopy(txt, done));
@@ -217,21 +221,21 @@ function copyPrompt(){
 function parseExtraction(){
   const out = el('trOut') ? el('trOut').value : '';
   const fields = PC.transcript.parseExtraction(out);
-  if (!fields) { flashDoc('לא הצלחתי לקרוא את הפלט. ודא שהעתקת את כל התשובה.'); return; }
+  if (!fields) { flashDoc(tr('לא הצלחתי לקרוא את הפלט. ודא שהעתקת את כל התשובה.')); return; }
   trCandidates = PC.transcript.candidates(fields, trText());
   trRejected.clear();
-  if (!trCandidates.length) { flashDoc('לא נמצא שום ערך עם ציטוט'); return; }
+  if (!trCandidates.length) { flashDoc(tr('לא נמצא שום ערך עם ציטוט')); return; }
   renderReview();
   track('transcript_parsed');
 }
 
 function localExtraction(){
   const t = trText().trim();
-  if (!t) { flashDoc('קודם הדבק את התמלול'); goTo('trIn'); return; }
+  if (!t) { flashDoc(tr('קודם הדבק את התמלול')); goTo('trIn'); return; }
   trCandidates = PC.transcript.heuristics(t);
   trRejected.clear();
   if (!trCandidates.length) {
-    flashDoc('לא נמצאו מספרים ברורים. עדיף דרך הפרומפט.'); showPrompt(); return;
+    flashDoc(tr('לא נמצאו מספרים ברורים. עדיף דרך הפרומפט.')); showPrompt(); return;
   }
   renderReview();
 }
@@ -245,7 +249,7 @@ function loadDemo(){
   track('example_loaded');
 }
 
-const SPEAKER = { client: 'הלקוח אמר', seller: 'אתם אמרתם', unknown: 'לא ידוע מי אמר' };
+const SPEAKER = { client: tr('הלקוח אמר'), seller: tr('אתם אמרתם'), unknown: tr('לא ידוע מי אמר') };
 
 /* Every row shows the sentence it came from. That is the whole point: a
    number you cannot trace is the thing this tool exists to keep out of a
@@ -257,30 +261,30 @@ const renderReview = guard('transcript', function (){
     trCandidates.filter(c => !trRejected.has(c.key)), trText());
 
   box.innerHTML =
-    '<div class="tr-h">3 · עבור על מה שנמצא ואשר</div>' +
-    '<p class="hint-p">כל שורה עם המשפט שממנו היא נלקחה. מה שלא מתאים — הסר, ומה שחסר תמלא ידנית אחר כך.</p>' +
+    '<div class="tr-h">' + tr('3 · עבור על מה שנמצא ואשר') + '</div>' +
+    '<p class="hint-p">' + tr('כל שורה עם המשפט שממנו היא נלקחה. מה שלא מתאים — הסר, ומה שחסר תמלא ידנית אחר כך.') + '</p>' +
     trCandidates.map(c => {
       const off = trRejected.has(c.key);
       return '<div class="tr-row' + (off ? ' off' : '') + '">' +
         '<div class="tr-v"><b>' + esc(c.label) + ':</b> ' +
           esc(c.kind === 'list' ? c.value.join(', ') : String(c.value)) +
-          (c.guessed ? '<span class="tr-tag t-guess">ניחוש מקומי</span>' : '') +
-          (!c.verified ? '<span class="tr-tag t-unver">הציטוט לא נמצא בתמלול — קרא בעצמך</span>' : '') +
+          (c.guessed ? '<span class="tr-tag t-guess">' + tr('ניחוש מקומי') + '</span>' : '') +
+          (!c.verified ? '<span class="tr-tag t-unver">' + tr('הציטוט לא נמצא בתמלול — קרא בעצמך') + '</span>' : '') +
         '</div>' +
         '<div class="tr-q">«' + esc(c.quote) + '»<span class="tr-s">' +
           esc(SPEAKER[c.speaker]) + '</span></div>' +
         '<button type="button" class="ghost tr-x" data-act="trtoggle" data-key="' +
-          esc(c.key) + '">' + (off ? 'להחזיר' : 'להסיר') + '</button>' +
+          esc(c.key) + '">' + (off ? tr('להחזיר') : tr('להסיר')) + '</button>' +
       '</div>';
     }).join('') +
-    '<div class="tr-prov"><b>מאיפה הגיעו המספרים:</b> ' + esc(prov.why) + '. ' +
+    '<div class="tr-prov"><b>' + tr('מאיפה הגיעו המספרים:') + '</b> ' + esc(prov.why) + '. ' +
       esc(prov.value === 'unprompted'
-        ? 'זה המצב החזק ביותר — המחיר יישען על מה שהוא עצמו אמר.'
+        ? tr('זה המצב החזק ביותר — המחיר יישען על מה שהוא עצמו אמר.')
         : prov.value === 'prompted'
-        ? 'הכלי יסמן את זה, כי מספר שנאמר אחרי שאלה עשוי למדוד את השאלה ולא את העסק.'
-        : 'הכלי לא ייתן למספר הזה להיכנס למסמך כהצדקה.') + '</div>' +
-    '<div class="tr-acts"><button type="button" class="act" data-act="trapply">מלא את הטופס</button>' +
-    '<span class="hint-p">אפשר לשנות הכול אחר כך.</span></div>';
+        ? tr('הכלי יסמן את זה, כי מספר שנאמר אחרי שאלה עשוי למדוד את השאלה ולא את העסק.')
+        : tr('הכלי לא ייתן למספר הזה להיכנס למסמך כהצדקה.')) + '</div>' +
+    '<div class="tr-acts"><button type="button" class="act" data-act="trapply">' + tr('מלא את הטופס') + '</button>' +
+    '<span class="hint-p">' + tr('אפשר לשנות הכול אחר כך.') + '</span></div>';
   show('trReview', true);
 });
 
@@ -291,7 +295,7 @@ function toggleRow(key){
 
 function applyExtraction(){
   const keep = trCandidates.filter(c => !trRejected.has(c.key));
-  if (!keep.length) { flashDoc('לא נשאר מה למלא'); return; }
+  if (!keep.length) { flashDoc(tr('לא נשאר מה למלא')); return; }
   const st = PC.transcript.toState(keep);
   appliedCites = keep;   // the evidence outlives the confirmation
   Object.entries(st.fields).forEach(([id, v]) => { const f = el(id); if (f) f.value = v; });
@@ -304,7 +308,7 @@ function applyExtraction(){
   show('customRateWrap', el('q_role').value === 'custom');
   renderScope(); recompute(); renderGuide(); saveDraft();
   track('transcript_applied');
-  flashDoc('הטופס מולא מהשיחה');
+  flashDoc(tr('הטופס מולא מהשיחה'));
   scrollToEl('proposal', 'start');
 }
 
@@ -349,7 +353,7 @@ Object.entries(EXAMPLES).forEach(([id, text]) => {
   const row = document.createElement('div'); row.className = 'presets';
   const c = document.createElement('button');
   c.type = 'button'; c.className = 'chip chip-sm';
-  c.textContent = 'מלא דוגמה ואז ערוך';
+  c.textContent = tr('מלא דוגמה ואז ערוך');
   c.onclick = () => {
     field.value = text;
     field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -387,9 +391,9 @@ Object.entries(EXAMPLES).forEach(([id, text]) => {
    move. Fifty-one controls become thirty-four, and the ones that remain
    read as actions on an item instead of as a choice between three equals. */
 const SCOPE_GROUPS = [
-  { s: 'in',    mark: '✓', h: 'כלול במחיר' },
-  { s: 'out',   mark: '—', h: 'לא כלול' },
-  { s: 'extra', mark: '+', h: 'בתוספת תשלום' }
+  { s: 'in',    mark: '✓', h: tr('כלול במחיר') },
+  { s: 'out',   mark: '—', h: tr('לא כלול') },
+  { s: 'extra', mark: '+', h: tr('בתוספת תשלום') }
 ];
 
 const renderScope = guard('scope', function (){
@@ -400,7 +404,7 @@ const renderScope = guard('scope', function (){
   const toggle = withWhy
     ? `<button type="button" class="scope-whyt" id="scopeWhyT"
          aria-pressed="${scopeWhy}" aria-controls="scopeBox"
-       >${scopeWhy ? 'הסתר נימוקים' : 'למה ההמלצות האלה'}<span class="scope-n">${withWhy}</span></button>`
+       >${scopeWhy ? tr('הסתר נימוקים') : tr('למה ההמלצות האלה')}<span class="scope-n">${withWhy}</span></button>`
     : '';
 
   box.classList.toggle('show-why', scopeWhy);
@@ -422,13 +426,13 @@ const renderScope = guard('scope', function (){
             SCOPE_GROUPS.filter(o => o.s !== g.s).map(o =>
               `<button type="button" class="smove smove-${o.s}"
                  data-i="${esc(i.id)}" data-s="${o.s}"
-                 aria-label="${esc(i.t)} — העבר ל${esc(SCOPE_LABEL[o.s])}"
+                 aria-label="${esc(tr('{item} — העבר ל{state}', { item: i.t, state: SCOPE_LABEL[o.s] }))}"
                >${esc(SCOPE_LABEL[o.s])}</button>`).join('')
           }</div>
         </li>`).join('')}</ul>
     </section>`;
   }).join('') ||
-    '<p class="lead nomargin">אין עדיין פריטי סקופ — בחר את המערכות למעלה.</p>';
+    '<p class="lead nomargin">' + tr('אין עדיין פריטי סקופ — בחר את המערכות למעלה.') + '</p>';
 
   const wt = el('scopeWhyT');
   if (wt) wt.onclick = () => {
@@ -479,7 +483,7 @@ function announceScopeMove(item, to){
 
   const say = el('scopeLive');
   if (say && item) say.textContent =
-    item.t + ' — הועבר ל' + SCOPE_LABEL[to] + '.';
+    tr('{item} — הועבר ל{state}.', { item: item.t, state: SCOPE_LABEL[to] });
 }
 
 /* ---------- method selector ----------
@@ -582,15 +586,12 @@ function provenanceWarning(m){
      the 'prompted' warning — wrong, but at least a warning. With an explicit
      unanswered default it would have produced silence on the one field that
      decides whether the number may be quoted, which is worse than either. */
-  if (p === 'unset') return '<div class="tri-warn"><b>לא סימנת מאיפה הגיע המספר.</b> ' +
-    'זו השאלה שקובעת אם אפשר לצטט אותו ללקוח כמספר שלו, ועד שתסמן פסקת ההחזר לא נכנסת למסמך. ' +
-    'העדר הסימון לא שינה את המחיר — רק את מה שנכנס למסמך.</div>';
-  if (p === 'prompted') return '<div class="tri-warn">המספר הגיע אחרי ששאלת. ' +
-    'ייתכן שהוא אמיתי, וייתכן שהוא נבנה בשבילך בזמן השיחה. לפני שאתה שולח מחיר שנשען עליו, ' +
-    'שאל אותו שאלה אחת: "איך אתה יודע את זה?" — אם אין תשובה, זה אומדן ולא מדידה.</div>';
-  if (p === 'mine') return '<div class="tri-warn"><b>המספר הוא שלך, לא שלו.</b> ' +
-    'תמחור לפי ערך שנשען על מספר שאתה המצאת הוא תמחור לפי עלות עם שכבת הצדקה. ' +
-    'או שתוציא ממנו מספר, או שתתמחר לפי שיטה אחרת ותציג את הערך כהערכה מפורשת.</div>';
+  if (p === 'unset') return '<div class="tri-warn"><b>' + tr('לא סימנת מאיפה הגיע המספר.') + '</b> ' +
+    tr('זו השאלה שקובעת אם אפשר לצטט אותו ללקוח כמספר שלו, ועד שתסמן פסקת ההחזר לא נכנסת למסמך. העדר הסימון לא שינה את המחיר — רק את מה שנכנס למסמך.') + '</div>';
+  if (p === 'prompted') return '<div class="tri-warn">' +
+    tr('המספר הגיע אחרי ששאלת. ייתכן שהוא אמיתי, וייתכן שהוא נבנה בשבילך בזמן השיחה. לפני שאתה שולח מחיר שנשען עליו, שאל אותו שאלה אחת: "איך אתה יודע את זה?" — אם אין תשובה, זה אומדן ולא מדידה.') + '</div>';
+  if (p === 'mine') return '<div class="tri-warn"><b>' + tr('המספר הוא שלך, לא שלו.') + '</b> ' +
+    tr('תמחור לפי ערך שנשען על מספר שאתה המצאת הוא תמחור לפי עלות עם שכבת הצדקה. או שתוציא ממנו מספר, או שתתמחר לפי שיטה אחרת ותציג את הערך כהערכה מפורשת.') + '</div>';
   return '';
 }
 

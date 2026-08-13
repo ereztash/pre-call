@@ -24,7 +24,10 @@
 (function (root) {
   'use strict';
 
-  const TRANSCRIPT = `מוכר: תודה שמצאת זמן. לפני שאני מציע משהו — ספר לי מה קורה אצלכם היום, צעד אחר צעד.
+  var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
+    : function (s, p) { if (p) for (var k in p) s = s.split('{' + k + '}').join(p[k]); return s; };
+
+  const TRANSCRIPT = tr(`מוכר: תודה שמצאת זמן. לפני שאני מציע משהו — ספר לי מה קורה אצלכם היום, צעד אחר צעד.
 
 לקוח: אז תראה, אנחנו יבואנים של ציוד למטבחים מקצועיים. רוב ההזמנות מגיעות אלינו בוואטסאפ, מהמסעדות עצמן. מישהי אצלנו במשרד לוקחת את ההודעה, מקלידה את הפרטים לגיליון בגוגל, ואז נכנסת למורנינג ופותחת חשבונית ידנית. אחר כך היא שולחת את החשבונית חזרה בוואטסאפ.
 
@@ -60,15 +63,16 @@
 
 מוכר: ואם זה יעבוד, מה יגיד לך שזה הצליח?
 
-לקוח: שאף הזמנה לא תיפול, ושרינת תעשה משהו אחר בחצי יום הזה.`;
+לקוח: שאף הזמנה לא תיפול, ושרינת תעשה משהו אחר בחצי יום הזה.`);
 
   /* What a correct extraction of the transcript above looks like. This is
      not a shortcut around the language model — it is what the demo pastes so
      the first run works with no account, no key and no network, and it is
      what the tests assert against so the parser is checked on the shape a
      model actually returns rather than on a shape invented for testing. */
-  const EXTRACTION = `\`\`\`json
-{
+  /* The fence stays outside the tr() seam: the dictionary key is the JSON
+     body alone, so neither language's entry carries backticks. */
+  const EXTRACTION = '```json\n' + tr(`{
   "fields": {
     "process": { "value": "הזמנות מגיעות בוואטסאפ מהמסעדות, מוקלדות ידנית לגיליון בגוגל, ואז נפתחת חשבונית במורנינג ונשלחת חזרה בוואטסאפ", "quote": "רוב ההזמנות מגיעות אלינו בוואטסאפ, מהמסעדות עצמן. מישהי אצלנו במשרד לוקחת את ההודעה, מקלידה את הפרטים לגיליון בגוגל, ואז נכנסת למורנינג ופותחת חשבונית ידנית", "speaker": "לקוח" },
     "freq": { "value": 40, "quote": "בערך ארבעים ביום", "speaker": "לקוח" },
@@ -84,8 +88,7 @@
     "deadline": { "value": "לפני עונת החגים, אמצע ספטמבר", "quote": "הייתי רוצה שזה יעבוד לפני עונת החגים, זאת אומרת אמצע ספטמבר", "speaker": "לקוח" },
     "success": { "value": "שאף הזמנה לא תיפול, ושרכזת התפעול תתפנה לחצי יום עבודה אחר", "quote": "שאף הזמנה לא תיפול, ושרינת תעשה משהו אחר בחצי יום הזה", "speaker": "לקוח" }
   }
-}
-\`\`\``;
+}`) + '\n```';
 
   root.PC = root.PC || {};
   root.PC.example = { TRANSCRIPT, EXTRACTION };
