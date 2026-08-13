@@ -6,8 +6,8 @@ const S = {};
 /* ---------- nav ---------- */
 document.querySelectorAll('.stepbtn').forEach(b=>b.onclick=()=>go(+b.dataset.s));
 function go(n){
-  if(n!==4) callMode(false); // the step buttons are hidden in call mode; leaving step 4 must not hide them
-  if(n===3) refreshEdgeRef();
+  if(n!==3) callMode(false); // the step buttons are hidden in call mode; leaving the script step must not hide them
+  if(n===2) refreshEdgeRef();
   document.querySelectorAll('.stepbtn').forEach(b=>b.classList.toggle('on',+b.dataset.s===n));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.getElementById('p'+n).classList.add('on');
@@ -92,7 +92,7 @@ function refreshEdgeRef(){
   const edge=(document.getElementById('f_edge').value||'').split('\n').map(s=>s.trim()).filter(Boolean).join(' ');
   el.textContent = edge
     ? 'האבחנה הכללית שלכם, לגזור ממנה: "' + edge + '"'
-    : 'לא מילאתם "מה רק אתם רואים אצל הלקוחות שלכם" בשלב 2. בלי זה אין ממה לגזור את המשפט.';
+    : 'לא מילאתם "מה רק אתם רואים אצל הלקוחות שלכם" בשלב 1. בלי זה אין ממה לגזור את המשפט.';
 }
 
 /* ---------- copy ---------- */
@@ -321,7 +321,7 @@ const build = guard('build', function build(){
   if(!S.what){
     err2.innerText='חסר השדה "מה אתם מוכרים". בלעדיו התסריט יוצא כללי, ואז הוא לא שווה יותר מרשימת שאלות באינטרנט.';
     show('err2', true);
-    go(2);
+    go(1);
     setTimeout(()=>document.getElementById('f_what').focus(),250);
     return;
   }
@@ -329,7 +329,7 @@ const build = guard('build', function build(){
 
   document.getElementById('outArea').innerHTML=render();
   renderPrivate();
-  go(4);
+  go(3);
 });
 
 /* Rendered outside #outArea on purpose — see the .priv CSS note. */
@@ -343,7 +343,7 @@ function renderPrivate(){
   show('privArea', true);
 }
 
-const EMPTY_OUT = '<div class="empty">עוד לא נבנה תסריט.<br>מלאו את שלב 2, ואז לחצו "בנה את התסריט" בשלב 3.</div>';
+const EMPTY_OUT = '<div class="empty">עוד לא נבנה תסריט.<br>מלאו את שלב 1, ואז לחצו "בנה את התסריט" בשלב 2.</div>';
 function resetOutput(){
   document.getElementById('outArea').innerHTML=EMPTY_OUT;
   S.priv=[];
@@ -397,10 +397,10 @@ function render(){
     sayLine = `<div class="say">${esc(S.pown)}</div>`;
   }else if(S.edge){
     own = `מה שאתם רואים אצל לקוחות כאלה, והם עצמם לא: "${edgeFull}" — זו אבחנה כללית שלכם, לא עובדה עליו. נסחו ממנה משפט אחד עליו, בגוף שני, מעט לא מדויק בכוונה. ואז שאלו:`;
-    ownGap = `<div class="gap"><b>המשפט הזה לא הוכן.</b> ניסוח בזמן השיחה הוא מה שנשמע כמו קריאה מדף. חזרו לשלב 3, לשדה "המשפט שתגידו בשאלה 10", ונסחו אותו לפני שאתם מתקשרים.</div>`;
+    ownGap = `<div class="gap"><b>המשפט הזה לא הוכן.</b> ניסוח בזמן השיחה הוא מה שנשמע כמו קריאה מדף. חזרו לשלב 2, לשדה "המשפט שתגידו בשאלה 10", ונסחו אותו לפני שאתם מתקשרים.</div>`;
   }else{
     own = `נסחו לו את הצוואר שלו במשפט אחד, מעט לא מדויק בכוונה, ואז שאלו:`;
-    ownGap = `<div class="gap"><b>אין ממה לנסח את המשפט.</b> מלאו את "מה רק אתם רואים" בשלב 2, ואז את המשפט עצמו בשלב 3. בלי שניהם שאלה 10 מבקשת מכם להמציא ניסוח באוויר, מול אדם שמחכה.</div>`;
+    ownGap = `<div class="gap"><b>אין ממה לנסח את המשפט.</b> מלאו את "מה רק אתם רואים" בשלב 1, ואז את המשפט עצמו בשלב 2. בלי שניהם שאלה 10 מבקשת מכם להמציא ניסוח באוויר, מול אדם שמחכה.</div>`;
   }
 
   /* --- contextual openers ---
@@ -549,7 +549,7 @@ ${openers.length?`<div class="blk">
   <div class="blk-t">המספר, ומי מחזיק אותו</div>
   <div class="blk-d">אל תשאלו "כמה זה שווה לך לדעתך". השאלה הזו מייצרת "אני לא יודע" כמעט תמיד, ואז הלחץ נשאר בחדר. תנו עוגן שהוא מכייל.</div>
   ${q(11,anchor,'הוא מכייל מספר קיים במקום לייצר מאפס. אם הוא אומר "פחות", בקשו כמה פחות. זה עדיין מספר שלו.')}
-  ${!S.gain?`<div class="gap"><b>אין לכם מספר לעוגן.</b> שאלה 11 מכילה סוגריים במקום סכום, ולכן היא מבקשת מכם להמציא מספר בזמן השיחה — וזה המספר שכל ההצעה נגזרת ממנו. מלאו "מה הלקוח האחרון הרוויח" בשלב 2.</div>`:''}
+  ${!S.gain?`<div class="gap"><b>אין לכם מספר לעוגן.</b> שאלה 11 מכילה סוגריים במקום סכום, ולכן היא מבקשת מכם להמציא מספר בזמן השיחה — וזה המספר שכל ההצעה נגזרת ממנו. מלאו "מה הלקוח האחרון הרוויח" בשלב 1.</div>`:''}
   ${q(12,'עד מתי, ואיזה מספר קונקרטי צריך לזוז כדי שתגיד שזה היה שווה?','זו הנעילה. חסר תאריך או חסר מספר, לא עוברים לדבר על מחיר.')}
   <div class="stop"><b>הכלל.</b> אם בסוף החלק הזה אין מספר שהוא אמר, אין מחיר בשיחה הזאת. שלחו את ההצעה אחרי שהוא נקב, לא לפני.</div>
 </div>
@@ -661,7 +661,7 @@ const ACTIONS = {
   'cp-out':       () => cpText('outArea', 'c3'),
   parse:          parseBiz,
   clearprofile:   clearProfile,
-  go3:            () => go(3),
+  go2:            () => go(2),
   newprospect:    newProspect,
   build:          build,
   'callmode-on':  () => callMode(true),

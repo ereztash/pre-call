@@ -122,10 +122,10 @@ async function journey(engineName, base) {
   });
 
   await test(label('a script builds end to end and carries the business into the output'), async () => {
-    await page.click('.stepbtn[data-s="2"]');
+    // the profile IS step 1 now — no navigation before the first field
     await page.fill('#f_what', 'מסדר תהליכי גבייה לעסקים קטנים');
     await page.fill('#f_gain', 'כ-40,000 ₪ תזרים');
-    await page.click('[data-act="go3"]');
+    await page.click('[data-act="go2"]');
     await page.fill('#p_name', 'דנה');
     await page.click('[data-act="build"]');
     const out = await page.textContent('#outArea');
@@ -278,9 +278,8 @@ async function journey(engineName, base) {
     const errs = [];
     fresh.on('pageerror', e => errs.push(e.message));
     await fresh.goto(base + '/pre-call.html');
-    await fresh.click('.stepbtn[data-s="2"]');
     await fresh.fill('#f_what', 'מסדר תהליכי גבייה');
-    await fresh.click('[data-act="go3"]');
+    await fresh.click('[data-act="go2"]');
     await fresh.fill('#p_co', 'מסעדת הדר');
     await fresh.click('[data-act="build"]');
     await fresh.waitForTimeout(400);

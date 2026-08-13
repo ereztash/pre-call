@@ -152,14 +152,16 @@ const SCHEME = process.env.PW_SCHEME === 'dark' ? 'dark' : 'light';
     const p = await ctx.newPage();
     await p.goto(base + '/pre-call.html');
     await scan(p, 'pre-call.html · step 1');
-    await p.click('.stepbtn[data-s="2"]');
+    /* the profile is step 1 now; both disclosures open so axe scans the
+       refinement fields and the AI helper, not only the resting page */
     await p.fill('#f_what', 'מסדר תהליכי גבייה לעסקים קטנים');
     await p.fill('#f_gain', 'כ-40,000 ₪ תזרים');
+    await p.evaluate(() => document.querySelectorAll('#p1 details').forEach(d => d.open = true));
     await p.fill('#f_no', 'לא ליווי חודשי');
-    await scan(p, 'pre-call.html · step 2, filled');
-    await p.click('[data-act="go3"]');
+    await scan(p, 'pre-call.html · step 1, filled, disclosures open');
+    await p.click('[data-act="go2"]');
     await p.fill('#p_name', 'דנה');
-    await scan(p, 'pre-call.html · step 3');
+    await scan(p, 'pre-call.html · step 2, the prospect');
     await p.click('[data-act="build"]');
     await p.waitForTimeout(200);
     await scan(p, 'pre-call.html · step 4, script built');   // the output nobody had scanned
@@ -181,10 +183,9 @@ const SCHEME = process.env.PW_SCHEME === 'dark' ? 'dark' : 'light';
                                              colorScheme: SCHEME });
     const p = await phone.newPage();
     await p.goto(base + '/pre-call.html');
-    await p.click('.stepbtn[data-s="2"]');
     await p.fill('#f_what', 'מסדר תהליכי גבייה לעסקים קטנים');
     await p.fill('#f_gain', 'כ-40,000 ₪ תזרים');
-    await p.click('[data-act="go3"]');
+    await p.click('[data-act="go2"]');
     await p.fill('#p_own', 'אני מנחש שאצלכם אף אחד לא מוגדר כאחראי על המעקב');
     await p.click('[data-act="build"]');
     await p.waitForTimeout(200);

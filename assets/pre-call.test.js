@@ -468,7 +468,7 @@ test('an empty edge field says what is missing and where', () => {
   const p = page();
   p.call('refreshEdgeRef');
   const ref = p.run("document.getElementById('edgeRef').textContent");
-  assert.ok(/שלב 2/.test(ref), 'a blank reference line is just a blank line');
+  assert.ok(/שלב 1/.test(ref), 'a blank reference line is just a blank line');
 });
 
 console.log('\ncontextual openers — each condition is independent');

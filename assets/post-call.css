@@ -151,10 +151,10 @@
 
   label{display:block;font-size:var(--fs-xs);color:var(--nt-17);margin:var(--sp-4) 0 var(--sp-2);font-weight:500}
   input[type=text],input[type=number],textarea,select{
-    width:100%;background:var(--nt-90);border:1px solid var(--line);border-radius:var(--r-md);
+    width:100%;background:var(--nt-90);border:0;border-radius:var(--r-md);
     color:var(--ink);padding:var(--sp-4);font-size:var(--fs-md);font-family:inherit;
     min-height:44px;text-align:start}
-  input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--copper-dim);outline-offset:0}
   /* the border shift alone was two dark tones apart — invisible to a keyboard user */
   :focus-visible{outline:3px solid var(--cu-50);outline-offset:2px;border-radius:var(--r-sm)}
   .chip:focus-visible,.sbtn:focus-visible,button:focus-visible{outline:3px solid var(--cu-50);outline-offset:2px}

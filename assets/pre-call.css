@@ -179,10 +179,10 @@
   label{display:block;font-size:var(--fs-xs);color:var(--nt-17);margin:var(--sp-5) 0 var(--sp-2);font-weight:500}
   label .hint{display:block;color:var(--muted);font-size:var(--fs-xs);font-weight:400;margin-top:var(--sp-1)}
   input[type=text],textarea,select{
-    width:100%;background:var(--nt-90);border:1px solid var(--line);border-radius:var(--r-md);
+    width:100%;background:var(--nt-90);border:0;border-radius:var(--r-md);
     color:var(--ink);padding:var(--sp-4) var(--sp-4);font-size:var(--fs-md);font-family:inherit;min-height:44px;
     text-align:start}
-  input:focus,textarea:focus,select:focus{outline:0;border-color:var(--copper-dim)}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--copper-dim);outline-offset:0}
   :focus-visible{outline:3px solid var(--cu-50);outline-offset:2px;border-radius:var(--r-sm)}
   textarea{min-height:80px;resize:vertical;line-height:1.6}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--sp-6)}
@@ -293,11 +293,11 @@
   @media print{
     body{background:#fff;color:#000}
     .wrap{max-width:100%;padding:0}
-    /* #p1..#p3 explicitly: `.panel:not(.on)` only hides the INACTIVE panels, so printing
-       while standing on step 2 printed the form itself. Only the script ever prints. */
-    header,.steps,.note,button,.panel:not(.on),#p1,#p2,#p3,.priv,footer,
+    /* #p1..#p2 explicitly: `.panel:not(.on)` only hides the INACTIVE panels, so printing
+       while standing on the form printed the form itself. Only the script ever prints. */
+    header,.steps,.note,button,.panel:not(.on),#p1,#p2,.priv,footer,
     #errBoundary,.backupbox,.next-tool,
-    #p4 .box:first-of-type{display:none!important}
+    #p3 .box:first-of-type{display:none!important}
     .out{padding:0}
     .q{box-shadow:none;border-inline-start:3px solid var(--nt-34)}
   }
@@ -327,7 +327,7 @@
     body.callmode .backupbox,
     body.callmode footer,
     body.callmode .next-tool,
-    body.callmode #p4 .box:first-of-type{display:none}
+    body.callmode #p3 .box:first-of-type{display:none}
     body.callmode .wrap{padding-top:var(--sp-5)}
     /* The two things the room does not need. The `why` under each question
        is why that question earns its place — read once, before the call.

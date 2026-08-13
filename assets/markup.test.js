@@ -166,7 +166,9 @@ test('pre-call still prints the script and never the private notes', () => {
   const rules = block.slice(0, block.indexOf('\n  }'));
   assert.ok(/[,\s]\.priv[,\s]/.test(rules),
     'the private calibration notes are for the seller, not for the printed script');
-  assert.ok(/#p1,#p2,#p3/.test(rules), 'the input steps must not print');
+  assert.ok(/#p1,#p2[,\s]/.test(rules), 'the input steps must not print');
+  assert.ok(!/[,\s]#p3[,\s{]/.test(rules.replace(/#p3 \.box:first-of-type/, '')),
+    'the script panel is #p3 now — hiding it prints a blank page');
 });
 
 console.log('\nshow/hide mechanism');
@@ -318,7 +320,7 @@ const callBlock = (() => {
 })();
 
 test('call mode hides on screen the same chrome the print sheet hides on paper', () => {
-  ['header', '.steps', '.backupbox', 'footer', '.next-tool', '#p4 .box:first-of-type']
+  ['header', '.steps', '.backupbox', 'footer', '.next-tool', '#p3 .box:first-of-type']
     .forEach(sel => {
       assert.ok(printBlock.includes(sel), 'setup: ' + sel + ' is no longer in the print sheet');
       assert.ok(callBlock.includes('body.callmode ' + sel),
@@ -339,16 +341,16 @@ test('call mode is screen-only, so printing from inside it still prints everythi
   assert.ok(!/callmode/.test(printBlock),
     'the print sheet must not know about call mode at all');
 });
-test('the control box stays the first div in #p4, or the print sheet loses its target', () => {
+test('the control box stays the first div in #p3, or the print sheet loses its target', () => {
   /* `#p4 .box:first-of-type` is first-of-ELEMENT-type: it matches the first div
      child of #p4 only if that div also carries .box. .callbar is a div, so
      inserting it above the control box would silently start printing the button
      row. This pins the order the selector depends on. */
-  const open = '<div class="panel" id="p4">';
-  const p4 = html['pre-call.html'].slice(html['pre-call.html'].indexOf(open) + open.length);
-  const firstDiv = p4.match(/<div class="([^"]+)"/);
+  const open = '<div class="panel" id="p3">';
+  const p3 = html['pre-call.html'].slice(html['pre-call.html'].indexOf(open) + open.length);
+  const firstDiv = p3.match(/<div class="([^"]+)"/);
   assert.ok(/\bbox\b/.test(firstDiv[1]),
-    'the first div inside #p4 is now class="' + firstDiv[1] + '" — the print sheet targets .box:first-of-type');
+    'the first div inside #p3 is now class="' + firstDiv[1] + '" — the print sheet targets .box:first-of-type');
 });
 test('copy reads the script with call mode off, or it emits a truncated one', () => {
   /* innerText excludes anything CSS has hidden, so copying from inside call

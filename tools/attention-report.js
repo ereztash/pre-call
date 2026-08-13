@@ -34,10 +34,26 @@ const HEB = /[֐-׿]+(?:['"׳״]?[֐-׿]+)*/g;
 const words = s => (s.match(HEB) || []).length;
 
 function visible(html) {
-  return html
+  html = html
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ');
+  /* A closed <details> shows its summary and nothing else, so its body is
+     not on screen at rest and must not be charged as if it were — the
+     same fact the scope step already reads from the CSS. Innermost-first,
+     because the pricing drawer nests one details inside another. The
+     summary's words survive: they ARE read. */
+  for (let guard = 0; guard < 10; guard++) {
+    const before = html;
+    html = html.replace(
+      /<details(?![^>]*\bopen)[^>]*>((?:(?!<details)[\s\S])*?)<\/details>/gi,
+      (m, body) => {
+        const sum = body.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i);
+        return ' ' + (sum ? sum[1] : '') + ' ';
+      });
+    if (html === before) break;
+  }
+  return html
     /* placeholders, aria-labels and titles are read by someone */
     .replace(/(?:placeholder|aria-label|title)="([^"]*)"/gi, ' $1 ')
     .replace(/<[^>]+>/g, ' ')
@@ -265,31 +281,48 @@ function postCallFunnel() {
 /* ---------- PRE-CALL funnel ---------- */
 
 const PRE_CALL_OPTIONAL = {
-  backupFile: 'backup restore — outside the four steps',
-  pasteBiz: 'fast path — an alternative to typing the nine profile fields, not an extra demand',
-  p_paste: 'fast path — an alternative to typing the seven research fields'
+  backupFile: 'backup restore — outside the three steps',
+  pasteBiz: 'AI fast-fill — an alternative to typing, behind a disclosure',
+  p_paste: 'fast path — an alternative to typing the research fields',
+  /* the five refinement fields: each sharpens one line of the script, and
+     the script builds without all of them. Behind a disclosure, which is
+     the remove-a-field technique docs/words.md prices at 3–42× a copy
+     edit — words.md, "Progressive disclosure of fields". */
+  f_unit: 'profile refinement — optional, behind a disclosure',
+  f_price: 'profile refinement — optional, behind a disclosure',
+  f_last: 'profile refinement — optional, behind a disclosure',
+  f_src: 'profile refinement — optional, behind a disclosure',
+  f_no: 'profile refinement — optional, behind a disclosure',
+  /* the calendar reminder lives behind its own disclosure on the script
+     step, after the value has already been delivered */
+  cal_date: 'calendar reminder — optional, after the script exists',
+  cal_time: 'calendar reminder — optional, after the script exists',
+  cal_len: 'calendar reminder — optional, after the script exists'
 };
 
 function preCallFunnel() {
   const html = read('pre-call.html').replace(/<!--[\s\S]*?-->/g, ' ');
   const panel = n => {
     const a = html.indexOf('id="p' + n + '"');
-    const b = n < 4 ? html.indexOf('id="p' + (n + 1) + '"') : html.indexOf('id="callbar"');
+    const b = n < 3 ? html.indexOf('id="p' + (n + 1) + '"') : html.indexOf('id="callbar"');
     const c = countIn(html.slice(a, b > a ? b : html.length));
-    /* the paste shortcuts are alternatives to the fields beside them, so they
-       are not charged as additional demands */
+    /* off-path controls — the paste shortcuts, the five refinement fields
+       and the calendar reminder — are alternatives or optional sharpening,
+       every one behind a disclosure, not extra demands on the way through */
     const ids = c.ids.filter(i => !PRE_CALL_OPTIONAL[i]);
     return { ...c, fields: ids.length, ids };
   };
   const head = { ...countIn(html.slice(0, html.indexOf('<div class="steps">'))), fields: 0, ids: [] };
+  /* No exits flag anywhere: the external-LLM run is an offer behind a
+     disclosure now, not an instruction. That flag priced at 35% of
+     arrivals when step 1 WAS the instruction — the whole reason the
+     structure changed. See the commit that merged the four steps into
+     three. */
   return [
     { id: 'landing', label: 'נחיתה', ...head },
-    /* exits: this step's instruction is "copy this prompt, run it in Claude or
-       ChatGPT, then come back and paste the result". The user leaves. */
-    { id: 'p1', label: 'שלב 1 · אפיון העסק (יוצא ל-LLM חיצוני)', ...panel(1), exits: true },
-    { id: 'p2', label: 'שלב 2 · הזנת הפרופיל', ...panel(2) },
-    { id: 'p3', label: 'שלב 3 · הצד השני', ...panel(3) },
-    { id: 'p4', label: 'שלב 4 · התסריט', ...panel(4), value: true }
+    { id: 'p1', label: 'שלב 1 · הפרופיל העסקי', ...panel(1) },
+    { id: 'p2', label: 'שלב 2 · הצד השני', ...panel(2) },
+    { id: 'p3', label: 'שלב 3 · התסריט', ...panel(3), value: true }
   ];
 }
 
