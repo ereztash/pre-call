@@ -60,10 +60,21 @@ const T = {
      whether to keep reading. Thirty words is a title, a licence line, and
      nothing else. */
   wordsToPurpose: 30,
-  /* Every file in docs/ is an argument that took real work. If the first
-     link to one sits below the fold, it exists for people who already
-     decided to read — which is the audience that needed convincing least. */
-  evidenceAboveFold: true
+  /* Every file in docs/ is an argument that took real work, and it should be
+     reachable from the opening material rather than buried in the body.
+
+     "The opening material" and not "above the fold", and the difference was
+     forced by a real case rather than chosen: docs/strategy.md argues
+     forward and none of it is measured, so putting it in the first screen
+     beside three files that ARE measured would misrepresent all four. It
+     belongs one screen down, next to the layer table it explains.
+
+     The looser boundary is checked against the fault it was built for: the
+     original failure was docs/ referenced once at line 610 of 660 with two
+     files never linked at all, and that still fails here. What the fold
+     version was enforcing beyond this was never what the reasoning asked
+     for — burial is the defect, not absence from the opening 226 words. */
+  evidenceInOpening: true
 };
 
 /* ---------- the fold ----------
@@ -142,7 +153,15 @@ const backed = t =>
    first run reported two of them, which is how the rule got written. */
 const isLabel = b => !b.text.includes('\n') && /^\*\*[^*]+\*\*:?$/.test(b.text.trim());
 
-/* ---------- 4 · evidence nobody reaches ---------- */
+/* ---------- 4 · evidence nobody reaches ----------
+   The end of the opening: the first top-level section after the title. Past
+   it the document is body, and a first link there is a link for somebody who
+   already decided to read. */
+function openingEnd() {
+  for (let i = 1; i < lines.length; i++) if (/^# /.test(lines[i])) return i;
+  return lines.length;
+}
+
 function evidence() {
   const dir = path.join(root, 'docs');
   if (!fs.existsSync(dir)) return [];
@@ -193,7 +212,8 @@ const blocks = proseBlocks().filter(b => !isLabel(b));
 const unbackedAbove = blocks.filter(b => b.line < fold && !backed(b.text));
 const unbackedBelow = blocks.filter(b => b.line >= fold && !backed(b.text));
 const ev = evidence();
-const buried = ev.filter(e => e.line === null || e.line >= fold);
+const opening = openingEnd();
+const buried = ev.filter(e => e.line === null || e.line >= opening);
 const dead = deadLinks();
 
 const findings = [];
@@ -221,8 +241,8 @@ line(ok, 'words before the purpose', toPurpose + ' words', 'max ' + T.wordsToPur
 if (!ok) findings.push('purpose');
 
 ok = buried.length === 0;
-line(ok, 'evidence above the fold', (ev.length - buried.length) + '/' + ev.length + ' linked',
-     'all of them');
+line(ok, 'evidence linked in the opening',
+     (ev.length - buried.length) + '/' + ev.length + ' by line ' + opening, 'all of them');
 if (!ok) { findings.push('evidence'); buried.forEach(e =>
   console.log('        ' + e.file + ': ' + (e.line ? 'line ' + e.line : 'never linked'))); }
 
