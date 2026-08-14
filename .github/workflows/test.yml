@@ -95,6 +95,14 @@ jobs:
       - name: the attention model — what a word costs, and where the median leaves
         run: node tools/attention.test.js
 
+      # The README has one reader — someone deciding whether this is worth
+      # talking to — and its failure mode is not the product's. Length makes
+      # people leave a form; an unbacked sentence makes a reader re-read
+      # everything else as sales copy. Four numbers, same shape and same
+      # reason as tools/design-audit.js. Needs no browser, so it runs here.
+      - name: the README — backing, the first screen, and buried evidence
+        run: node tools/readme-audit.js
+
   # The whole product, in a real browser, in all three engines it will
   # actually be opened in. Separate job because it is the only thing here
   # that needs an install step — everything above runs on the standard
