@@ -48,7 +48,7 @@ jobs:
       - name: the payment gate
         run: node assets/gate.test.js
       - name: user action labels match their outcomes
-        run: node assets/action-contract.test.js
+        run: node tools/action-contract.test.js
       - name: backup and restore
         run: node assets/backup.test.js
       - name: who the proposal is from
