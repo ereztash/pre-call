@@ -117,8 +117,29 @@ const BUDGETS = {
      The line to hold: if this page needs a third raise without a matching
      capability, the growth has stopped being features and the trim is overdue.
      index.html and pre-call.html keep their tight ceilings either way — they are
-     what a first visit pays for. */
-  'post-call.html':     148 * 1024
+     what a first visit pays for.
+
+     A fifth raise, 148 → 149KB, and it is the awkward one: this page does not
+     do anything new for it. pc-contact.js holds the address a buyer opens, and
+     it exists because that address was written in two places — here and in the
+     landing page — with a test asserting they matched. A test like that reports
+     a divergence after somebody has already shipped a page pointing at the
+     wrong chat, so it is not one source of truth, it is two with an alarm on
+     them.
+
+     By the rule above this raise should have been a trim, and it was: the
+     module went from 53 lines to 37, and the opening sentence each page sends
+     moved out to the page that sends it — the wall asks for a key, the landing
+     page asks for a transcript, and shipping either sentence to everyone who
+     loads the tool was the wrong default. That took 148.4 down to 148.1 and no
+     further without deleting the fork warning, which is load-bearing: a copy of
+     this repository that forgets to change the address sends its buyers here.
+
+     So: 0.1KB over, and the smallest raise in this file's history, bought for a
+     configuration that can no longer disagree with itself. If the next raise is
+     also correctness rather than capability, that is the signal the trim is
+     overdue — not this one. */
+  'post-call.html':     149 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

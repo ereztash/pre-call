@@ -204,19 +204,43 @@ test('no outcome number appears before it is measured', () => {
     'the pending-results card states a result: ' + numbers.join(', '));
 });
 
-/* The contact route. Two numbers in two files is the drift that reaches a
-   buyer: the page opens one chat, the paywall opens another, and the person
-   who paid is talking to nobody. */
-test('the landing page and the paywall open the same conversation', () => {
-  const onLanding = landing.match(/whatsapp:\s*"(\d+)"/);
-  /* Anchored on the contact: key, not on any wa.me in the file — the comment
-     four lines above it holds a placeholder, and matching that instead
-     compares the landing number against the string "9725...". */
-  const inGate = read('assets/pc-gate.js').match(/contact:\s*'https:\/\/wa\.me\/(\d+)'/);
-  assert.ok(onLanding, 'the landing page no longer declares a contact number');
-  assert.ok(inGate, 'assets/pc-gate.js no longer declares a WhatsApp contact');
-  assert.strictEqual(onLanding[1], inGate[1],
-    'the landing page sends buyers to ' + onLanding[1] + ' and the paywall to ' + inGate[1]);
+/* The contact route. The first version of this test asserted that the landing
+   page and the paywall held the same number — which is not one source of
+   truth, it is two with an alarm on them, and the alarm rings after somebody
+   has already shipped a page pointing at the wrong chat. So the assertion is
+   not "they agree" but "there is only one of them to disagree with." */
+test('the buyer\'s route is declared exactly once in the repository', () => {
+  /* The rule is not "no phone numbers anywhere" — accessibility.html carries a
+     statutory contact for accessibility complaints, which is a different route
+     to a different inbox for a different reason, and the suites use fixture
+     numbers to exercise the rendering. The rule is that whatever the sales
+     route currently is, it is written down once. So the value is read out of
+     the module and every other product file is checked for a copy of it. */
+  const route = read('assets/pc-contact.js').match(/const ROUTE = '([^']*)'/)[1];
+  assert.ok(route, 'pc-contact.js no longer declares a route');
+
+  const walk = d => fs.readdirSync(path.join(root, d), { withFileTypes: true })
+    .flatMap(e => e.name === '.git' || e.name === 'node_modules' ? []
+      : e.isDirectory() ? walk(path.join(d, e.name))
+      : [path.join(d, e.name)]);
+
+  const copies = walk('.').map(f => f.replace(/^\.\//, ''))
+    .filter(f => /\.(js|html)$/.test(f) && !f.endsWith('.test.js'))
+    .filter(f => f !== 'assets/pc-contact.js')
+    .filter(f => read(f).includes(route));
+
+  assert.deepStrictEqual(copies, [],
+    'the sales route is copied outside pc-contact.js, so there are now two ' +
+    'places for it to be wrong: ' + copies.join(', '));
+});
+
+test('the paywall and the landing page both read that one declaration', () => {
+  assert.ok(/PC\.contact/.test(read('assets/pc-gate.js')),
+    'pc-gate.js has stopped reading the shared route');
+  assert.ok(/PC\.contact/.test(landing),
+    'the landing page has stopped reading the shared route');
+  assert.ok(/pc-contact\.js/.test(landing),
+    'the landing page does not load the module it reads from');
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

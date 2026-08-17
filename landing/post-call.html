@@ -144,10 +144,15 @@ footer{padding:27px 0;color:#8490a2;font-size:10px}.footerrow{padding-top:14px;b
 
 <footer class="wrap"><div class="footerrow"><span>POST-CALL · V13.5 target contract rewrite</span><span>No commitment beyond evidence · Extraction proposes, human approves · Existing pricing engine remains authoritative</span></div></footer>
 
+<!-- The first thing on this page that is the product rather than a drawing of
+     it. The contact route used to be retyped here and the number kept in step
+     with pc-gate.js by a test, which is two sources of truth wearing one. It
+     is loaded now, and every WhatsApp link below is built from it. -->
+<script src="../assets/pc-contact.js"></script>
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const PUBLIC_CONTACT={whatsapp:"972524545963",message:"היי ארז, יש לי שיחת אפיון אמיתית שאני רוצה לבדוק עם POST-CALL"};
-$$("[data-contact-route]").forEach(a=>a.href="https://wa.me/"+PUBLIC_CONTACT.whatsapp+"?text="+encodeURIComponent(PUBLIC_CONTACT.message));
+const OPENER="היי ארז, יש לי שיחת אפיון אמיתית שאני רוצה לבדוק עם POST-CALL";
+$$("[data-contact-route]").forEach(a=>a.href=PC.contact.href(OPENER));
 
 const sample=`לקוח: היום ההזמנות נכנסות בוואטסאפ. בערך 40 הזמנות ביום.
 אני: ומה קורה אחר כך?
