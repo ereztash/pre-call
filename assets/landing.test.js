@@ -47,7 +47,7 @@ const manifest = JSON.parse(
    from null to the suite that proves them, and the gate opens on its own once
    the last null is gone. */
 const PROOF = {
-  'core-promise':        null,  // per-commitment readiness does not exist yet
+  'core-promise':        'scenario.test.js · the call is read locally and the open boundary is the only thing asked',
   'transcript-input':    'transcript.test.js · reading a transcript needs no network at all',
   'commitment-gate':     'commitments.test.js · one deal carries different verdicts at the same time',
   'decision-episodes':   'commitments.test.js · a call that answered everything is asked nothing',
@@ -120,25 +120,50 @@ console.log('\nthe release gate');
    and the meta tag is asserted with it. */
 const unproven = manifest.claims.filter(c => c.required && !PROOF[c.id]).map(c => c.id);
 
-test('while a required claim is unproven, the page is not deployed', () => {
-  if (!unproven.length) return;  // all proven: serving it is now the intended state
-  const ignored = read('.vercelignore').split('\n').map(l => l.trim())
-    .some(l => l === 'landing/' || l === LANDING);
-  assert.ok(ignored,
+/* The first version of these returned early once every claim was proven,
+   which meant that on the day the work finished the gate stopped being
+   asserted at all — three tests going green by having nothing left to say.
+   That is the same shape as a health endpoint that reports what it was told
+   rather than what is true, and this repository already refuses that one.
+
+   So the assertion is not "it is shut" but "the three things that describe its
+   state agree with each other". Proving the last claim unlocks the gate; it
+   does not open it. Opening it is a person editing the manifest, and the two
+   lines that make the page reachable have to move in the same commit. */
+const declaredShut = manifest.releaseGate === 'blocked_until_required_claim_tests_pass';
+const ignored = read('.vercelignore').split('\n').map(l => l.trim())
+  .some(l => l === 'landing/' || l === LANDING);
+const noindex = /<meta name="robots" content="noindex,nofollow"/.test(landing);
+
+test('an unproven claim can only mean the page is gated', () => {
+  if (!unproven.length) return;
+  assert.ok(declaredShut && ignored && noindex,
     unproven.length + ' required claims are unproven (' + unproven.join(', ') +
-    ') and landing/ is not in .vercelignore — the page would answer 200 in production');
+    ') — gate declared shut: ' + declaredShut + ', ignored by the deploy: ' +
+    ignored + ', noindex: ' + noindex);
 });
 
-test('while a required claim is unproven, the page refuses indexing', () => {
-  if (!unproven.length) return;
-  assert.ok(/<meta name="robots" content="noindex,nofollow"/.test(landing),
-    'unproven claims and no noindex — the page is advertising a product that does not exist');
+test('the manifest, the deploy and the robots tag tell the same story', () => {
+  /* Any two of these disagreeing is a page that is half published, and the
+     half that decides whether a stranger can read it is the deploy. */
+  assert.strictEqual(declaredShut, ignored,
+    declaredShut
+      ? 'the manifest says the gate is shut and the page is not in .vercelignore'
+      : 'the manifest says the gate is open and the page is still ignored — ' +
+        'if publishing was the intent, move landing/ out of .vercelignore and ' +
+        'into SERVED in markup.test.js');
+  assert.strictEqual(declaredShut, noindex,
+    'the deployment state and the robots tag disagree about whether this page ' +
+    'is meant to be found');
 });
 
-test('the manifest says the gate is shut while it is shut', () => {
-  if (!unproven.length) return;
-  assert.strictEqual(manifest.releaseGate, 'blocked_until_required_claim_tests_pass',
-    'the page is gated but the manifest does not say so');
+test('a page that keeps every promise is still not published by accident', () => {
+  if (unproven.length) return;
+  /* Nothing is unproven, so nothing here forces the page to stay hidden. It
+     stays hidden anyway until somebody says otherwise, and this test exists to
+     be the thing they have to walk past. */
+  assert.ok(declaredShut === ignored,
+    'the last claim passing did not publish the page, and it should not have');
 });
 
 console.log('\nclaims the product keeps today');

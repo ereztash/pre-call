@@ -138,8 +138,22 @@ const BUDGETS = {
      So: 0.1KB over, and the smallest raise in this file's history, bought for a
      configuration that can no longer disagree with itself. If the next raise is
      also correctness rather than capability, that is the signal the trim is
-     overdue — not this one. */
-  'post-call.html':     149 * 1024
+     overdue — not this one.
+
+     A sixth raise, 149 → 151KB, and this one is the ordinary kind: the page
+     does more. Reading a transcript used to mean finding figures, which is
+     what pricing needs and a fraction of what a proposal promises. observe()
+     reads what is not a number — which systems the call named, what the client
+     said the connection should produce, and whether a subject was raised and
+     left open — and carries each one back with the sentence it came from.
+     Without it a locally-read call could be priced and still could not be
+     assessed, which left the readiness engine with nothing to read.
+
+     It was 1.1KB of dead weight for about ten minutes first: the module shipped
+     before anything called it, and this budget is what said so. Wiring it into
+     the local extraction path is what made the raise honest rather than a
+     rounding-up. */
+  'post-call.html':     151 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');
