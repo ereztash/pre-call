@@ -1,0 +1,9 @@
+.skip{
+  position:fixed;z-index:100;top:8px;right:8px;
+  transform:translateY(-160%);background:var(--ink);color:var(--charcoal-2);
+  min-height:44px;padding:8px 14px;border-radius:var(--r-md);
+  display:flex;align-items:center;font-weight:700;text-decoration:none;
+}
+.skip:focus{transform:none}
+main:focus{outline:none}
+.sub strong{color:var(--ink)}
