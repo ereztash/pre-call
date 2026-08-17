@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>POST-CALL — מהשיחה להצעת מחיר שאתה יודע להסביר</title>
+<meta name="description" content="POST-CALL לוקח שיחת לקוח והופך אותה להצעת מחיר מסודרת: מה להציע, כמה לקחת, מה נכנס ומה עוד צריך לסגור לפני ששולחים.">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://pre-call-swart.vercel.app/post-call-landing">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="POST-CALL">
+<meta property="og:locale" content="he_IL">
+<meta property="og:url" content="https://pre-call-swart.vercel.app/post-call-landing">
+<meta property="og:title" content="POST-CALL — מהשיחה להצעת מחיר שאתה יודע להסביר">
+<meta property="og:description" content="מה בדיוק להציע, כמה לקחת, ומה עוד צריך לסגור — מתוך שיחת הלקוח, בלי לתת ל-AI להשלים בשקט דברים שלא נאמרו.">
+<meta property="og:image" content="https://pre-call-swart.vercel.app/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="POST-CALL — מהשיחה להצעת מחיר מתומחרת">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#e2e5e9">
+<link rel="stylesheet" href="assets/entry.css">
+</head>
+<body>
+<a class="skip sr-only" href="#main">דלגו לתוכן</a>
+<div class="wrap">
+<header>
+  <div class="q">אחרי שיחת לקוח</div>
+  <h1>מה בדיוק להציע.<br>וכמה לקחת על זה.</h1>
+  <p class="sub" data-claim-id="core-promise"><strong>POST-CALL לוקח את מה שנאמר בשיחה והופך אותו להצעת מחיר מסודרת שאתה יודע להסביר:</strong> מה נכנס, מה עדיין צריך לסגור, ואיזה מחיר אפשר להצדיק. כל מספר נשאר מחובר למה שהלקוח באמת אמר.</p>
+</header>
+
+<main id="main">
+  <div class="cards">
+    <a class="card card-hot" href="post-call.html">
+      <span class="card-when">יש לי שיחה אמיתית</span>
+      <span class="card-t">פתחו את POST-CALL</span>
+      <span class="card-d">הדביקו תמלול, אשרו מה באמת נאמר, והתקדמו למחיר ולהצעה.</span>
+      <span class="card-go">להתחיל עכשיו ←</span>
+    </a>
+    <a class="card" data-contact-route data-contact-message="היי ארז, יש לי שיחת לקוח אמיתית שאני רוצה להפוך להצעת מחיר עם POST-CALL" href="#contact">
+      <span class="card-when">רוצה לבדוק עסקה יחד</span>
+      <span class="card-t">שלחו לי תמלול ב־WhatsApp</span>
+      <span class="card-d">נבדוק מה בדיוק להציע, על מה המחיר נשען ומה עוד חסר לפני שליחה.</span>
+      <span class="card-go">לפתוח שיחה ←</span>
+    </a>
+  </div>
+
+  <section class="strip" data-claim-id="transcript-input">
+    <div class="strip-h">לא מתחילים מדף ריק</div>
+    <p class="strip-n">במסלול המקומי אפשר להדביק את שיחת הלקוח ישירות. החילוץ הראשי עובד בדפדפן ואינו דורש לשלוח את התמלול לשרת של POST-CALL או לשירות AI חיצוני.</p>
+  </section>
+
+  <div class="cards">
+    <article class="card" data-claim-id="candidate-evidence">
+      <span class="card-when">1 · השיחה נשארת המקור</span>
+      <span class="card-t">כל מועמד נשאר מחובר למשפט שממנו הגיע.</span>
+      <span class="card-d">החילוץ שומר גם מי אמר אותו ורמת ביטחון שאינה מוצגת כוודאות.</span>
+    </article>
+    <article class="card" data-claim-id="evidence-approval">
+      <span class="card-when">2 · אתם מאשרים</span>
+      <span class="card-t">Extraction proposes. Human approves.</span>
+      <span class="card-d">דחיתם שורה? היא לא אמורה להגיע לטופס, למחיר או למסמך.</span>
+    </article>
+    <article class="card" data-claim-id="mechanism-proof">
+      <span class="card-when">3 · מקור נשאר מקור</span>
+      <span class="card-t">לקוח ≠ אתם ≠ המערכת.</span>
+      <span class="card-d">ציטוט מהשיחה, תוספת אחרי השיחה והסקת מערכת נשמרים כמקורות שונים.</span>
+    </article>
+    <article class="card" data-claim-id="pricing-authority">
+      <span class="card-when">4 · רק אז מתמחרים</span>
+      <span class="card-t">המחיר מגיע ממנוע המוצר — לא מהדף הזה.</span>
+      <span class="card-d">ארבע שיטות תמחור, cost floor, guardrails והיסטוריית עסקאות נשארים הסמכות.</span>
+    </article>
+  </div>
+
+  <section class="strip">
+    <div class="strip-h">למה לא פשוט “תכתוב לי הצעת מחיר” ב־ChatGPT?</div>
+    <ol class="strip-steps">
+      <li><b>מה הלקוח אמר</b></li>
+      <li><b>מה אתם אישרתם</b></li>
+      <li><b>מה המנוע חישב</b></li>
+      <li><b>מה יוצא להצעה</b></li>
+    </ol>
+    <p class="strip-n">המטרה אינה עוד טקסט יפה. המטרה היא שתוכלו לחזור מהמחיר ומהטענה אל המקור שלהם, ושחוסר יישאר חוסר במקום להפוך בשקט לעובדה.</p>
+  </section>
+
+  <div class="cards">
+    <article class="card" data-claim-id="product-vs-demo">
+      <span class="card-when">מה הדף הזה לא עושה</span>
+      <span class="card-t">הוא לא ממציא נוסחת תמחור שנייה.</span>
+      <span class="card-d" data-demo-pricing="illustrative">ה־landing מסביר את הזרימה בלבד. המחיר המסחרי מגיע ממנוע התמחור של POST-CALL.</span>
+    </article>
+    <article class="card" data-claim-id="field-proof-pending">
+      <span class="card-when">מה עדיין לא נטען</span>
+      <span class="card-t">אין עדיין הבטחה לשיעור סגירה גבוה יותר.</span>
+      <span class="card-d">גם חיסכון בזמן או יכולת לגבות יותר הם שאלות FIELD שעדיין צריכות להימדד. כרגע אפשר לבדוק את המנגנון עצמו על עסקה אמיתית.</span>
+    </article>
+  </div>
+
+  <section class="strip" data-claim-id="pilot-price">
+    <div class="strip-h">הפיילוט</div>
+    <p class="strip-n"><strong>₪0 עד שיש הצעה. ₪49 כדי לייצא אותה.</strong> המסמך והמספרים נשארים גלויים; התשלום הוא כשמוציאים את ההצעה מהמוצר.</p>
+  </section>
+
+  <div class="cards" id="contact">
+    <a class="card card-hot" href="post-call.html">
+      <span class="card-when">יש לכם שיחת לקוח מהימים האחרונים?</span>
+      <span class="card-t">הפכו אותה להצעה מתומחרת.</span>
+      <span class="card-d">מה להציע, כמה לקחת, ומה עוד צריך לסגור לפני ששולחים.</span>
+      <span class="card-go">פתחו את POST-CALL ←</span>
+    </a>
+    <a class="card" data-contact-route data-contact-message="היי ארז, יש לי שיחת לקוח אמיתית שאני רוצה להפוך להצעת מחיר עם POST-CALL" href="#contact">
+      <span class="card-when">מעדיפים להתחיל יחד?</span>
+      <span class="card-t">שלחו לי את התמלול.</span>
+      <span class="card-d">נריץ עסקה אמיתית במקום לדבר על דמו.</span>
+      <span class="card-go">WhatsApp ←</span>
+    </a>
+  </div>
+</main>
+
+<footer>
+  <a href="privacy.html">פרטיות</a> · <a href="accessibility.html">נגישות</a> · <a href="index.html">דף הפתיחה</a><br>
+  <span class="copy">© 2026 ארז טל-שיר · כל הזכויות שמורות</span>
+</footer>
+</div>
+
+<script src="assets/pc-contact.js"></script>
+<script type="application/json" id="publicLandingContract">
+{
+  "version":"13.6",
+  "mode":"public-transcript-grounded-landing",
+  "claims":[
+    {"id":"core-promise","required":true,"capability":"Transcript -> candidate evidence -> human confirmation -> existing pricing and proposal engines -> exportable proposal."},
+    {"id":"transcript-input","required":true,"capability":"Paste transcript directly; core local extraction requires no external AI network request."},
+    {"id":"candidate-evidence","required":true,"capability":"Local extraction creates candidate evidence carrying the source sentence, speaker and confidence short of certainty."},
+    {"id":"evidence-approval","required":true,"capability":"Candidate evidence cannot become authoritative input until the operator approves it; rejected rows reach neither form, price nor document."},
+    {"id":"mechanism-proof","required":true,"capability":"Transcript quote, operator addition and system inference remain distinct provenance values rather than being collapsed into one source."},
+    {"id":"pricing-authority","required":true,"capability":"Existing four-method pricing engine, cost floor, guardrails and deal history remain authoritative."},
+    {"id":"product-vs-demo","required":true,"capability":"The public landing explains orchestration but never implements a second commercial pricing model."},
+    {"id":"pilot-price","required":true,"capability":"Proposal construction is free and export is gated at NIS 49 in the current pilot."},
+    {"id":"field-proof-pending","required":true,"capability":"No fabricated outcome metrics; conversion, time and price effects remain field questions until measured."}
+  ]
+}
+</script>
+</body>
+</html>
