@@ -1,0 +1,419 @@
+<title>כלל העצירה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@300;400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+  :root{
+    --ground:#f6f3ee;
+    --surface:#fffdfa;
+    --ink:#14171a;
+    --ink-2:#3b444e;
+    --muted:#5a6777;
+    --line:#ddd6cb;
+    --line-soft:#eae3d9;
+    --copper:#7f592f;
+    --deep:#7d313b;      /* keep decomposing */
+    --hold:#2d5c53;      /* stop here */
+    --unknown:#5a6777;   /* not measured */
+    --deep-wash:#f5e7e6;
+    --hold-wash:#e3efeb;
+    --unknown-wash:#e8eaee;
+    --rule:1px solid var(--line);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0b0d0f;
+      --surface:#14171a;
+      --ink:#f0f2f4;
+      --ink-2:#d0d5dc;
+      --muted:#8b97a6;
+      --line:#2e353d;
+      --line-soft:#252b31;
+      --copper:#c88437;
+      --deep:#c9707a;
+      --hold:#5fb5a4;
+      --unknown:#8b97a6;
+      --deep-wash:#2a1a1d;
+      --hold-wash:#152a27;
+      --unknown-wash:#1b2027;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0b0d0f;
+    --surface:#14171a;
+    --ink:#f0f2f4;
+    --ink-2:#d0d5dc;
+    --muted:#8b97a6;
+    --line:#2e353d;
+    --line-soft:#252b31;
+    --copper:#c88437;
+    --deep:#c9707a;
+    --hold:#5fb5a4;
+    --unknown:#8b97a6;
+    --deep-wash:#2a1a1d;
+    --hold-wash:#152a27;
+    --unknown-wash:#1b2027;
+  }
+
+  *{box-sizing:border-box}
+  html{direction:rtl}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Assistant","Helvetica Neue",Arial,sans-serif;
+    font-weight:400; font-size:17px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:960px; margin:0 auto; padding:clamp(28px,5vw,72px) clamp(18px,4vw,40px) 96px}
+
+  h1,h2,h3{font-family:"Frank Ruhl Libre",Georgia,serif; text-wrap:balance; margin:0}
+  h1{font-weight:700; font-size:clamp(38px,6vw,60px); line-height:1.08; letter-spacing:-.01em}
+  h2{font-weight:700; font-size:clamp(23px,3vw,29px); line-height:1.2}
+  h3{font-weight:500; font-size:20px; line-height:1.3}
+
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12px; font-weight:600;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--copper);
+    direction:ltr; text-align:right;
+  }
+  .lede{font-size:clamp(18px,2.2vw,21px); font-weight:300; color:var(--ink-2); max-width:62ch}
+  p{margin:0; max-width:66ch}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace; direction:ltr; unicode-bidi:isolate;
+        font-size:.88em; font-variant-numeric:tabular-nums}
+
+  header.top{display:flex; flex-direction:column; gap:18px; padding-bottom:34px; border-bottom:2px solid var(--ink)}
+  .byline{display:flex; flex-wrap:wrap; gap:8px 22px; font-size:14px; color:var(--muted)}
+  .byline span{white-space:nowrap}
+
+  section{margin-top:56px; display:flex; flex-direction:column; gap:20px}
+  .section-head{display:flex; flex-direction:column; gap:8px}
+
+  /* ---- the rule, stated once, as its own object ---- */
+  .rule-card{
+    background:var(--surface); border:var(--rule); border-inline-start:4px solid var(--copper);
+    padding:24px 26px; display:flex; flex-direction:column; gap:12px;
+  }
+  .rule-card .formula{
+    font-family:"IBM Plex Mono",ui-monospace,monospace; direction:ltr; text-align:center;
+    font-size:clamp(20px,3.4vw,28px); font-weight:600; color:var(--copper);
+    padding:8px 0; letter-spacing:.02em;
+  }
+
+  /* ---- evidence table ---- */
+  .scroll{overflow-x:auto; border:var(--rule); background:var(--surface)}
+  table{border-collapse:collapse; width:100%; min-width:520px; font-size:15px}
+  th,td{text-align:right; padding:11px 16px; border-bottom:1px solid var(--line-soft); vertical-align:top}
+  thead th{
+    font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11.5px; font-weight:600;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+    border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  tbody tr:last-child td{border-bottom:0}
+  td.num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+         direction:ltr; text-align:right; white-space:nowrap}
+
+  /* ---- the tree ---- */
+  .tree{display:flex; flex-direction:column; gap:2px}
+  .node{
+    display:grid; grid-template-columns:1fr minmax(210px,240px);
+    gap:6px 20px; background:var(--surface); border:var(--rule);
+    padding:16px 20px; align-items:start;
+  }
+  .node + .node{border-top:0}
+  .node.lv1{margin-inline-start:0}
+  .node.lv2{margin-inline-start:clamp(14px,3vw,38px)}
+  .node.lv3{margin-inline-start:clamp(28px,6vw,76px)}
+  .node.goal{border-inline-start:4px solid var(--copper); background:var(--surface)}
+
+  .n-id{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px; font-weight:600;
+        color:var(--copper); direction:ltr; text-align:right; letter-spacing:.06em}
+  .n-title{font-family:"Frank Ruhl Libre",Georgia,serif; font-size:19px; font-weight:500; line-height:1.3;
+           margin-top:2px}
+  .node.goal .n-title{font-size:23px; font-weight:700}
+  .n-note{font-size:14.5px; color:var(--muted); line-height:1.55; margin-top:6px; max-width:56ch}
+  .n-note b{color:var(--ink-2); font-weight:600}
+  .n-left{grid-column:1}
+
+  /* right rail: P, C, verdict */
+  .rail{grid-column:2; display:flex; flex-direction:column; gap:7px; padding-top:2px}
+  .metric{display:flex; justify-content:space-between; gap:10px; font-size:13.5px; align-items:baseline;
+          border-bottom:1px dotted var(--line); padding-bottom:3px}
+  .metric dt{color:var(--muted); font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px;
+             letter-spacing:.08em; text-transform:uppercase}
+  .metric dd{margin:0; font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+             direction:ltr; font-weight:600}
+  .verdict{
+    display:inline-flex; align-items:center; gap:7px; align-self:flex-start;
+    font-size:12.5px; font-weight:600; padding:4px 11px 5px; border:1px solid; border-radius:2px;
+    margin-top:2px;
+  }
+  .verdict::before{content:""; width:3px; height:13px; background:currentColor; flex:none}
+  .v-deep{color:var(--deep); border-color:var(--deep); background:var(--deep-wash)}
+  .v-hold{color:var(--hold); border-color:var(--hold); background:var(--hold-wash)}
+  .v-unknown{color:var(--unknown); border-color:var(--unknown); background:var(--unknown-wash)}
+
+  .plan{
+    font-size:14px; color:var(--ink-2); background:transparent;
+    border-inline-start:2px solid var(--line); padding:2px 14px; margin:10px 0 0;
+    max-width:60ch;
+  }
+  .plan b{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; letter-spacing:.1em;
+          text-transform:uppercase; color:var(--muted); font-weight:600; display:block; margin-bottom:2px}
+
+  .callout{background:var(--surface); border:var(--rule); border-inline-start:4px solid var(--deep);
+           padding:22px 24px; display:flex; flex-direction:column; gap:10px}
+  .callout.quiet{border-inline-start-color:var(--hold)}
+  .callout h3{font-size:19px}
+
+  ul.plain{margin:0; padding-inline-start:20px; display:flex; flex-direction:column; gap:8px;
+           font-size:15.5px; color:var(--ink-2); max-width:64ch}
+  ul.plain b{color:var(--ink)}
+
+  footer{margin-top:72px; padding-top:22px; border-top:var(--rule); font-size:13.5px; color:var(--muted)}
+
+  @media (max-width:680px){
+    .node{grid-template-columns:1fr}
+    .rail{grid-column:1; border-top:1px dotted var(--line); padding-top:10px; margin-top:4px}
+    .metric{border-bottom:0; padding-bottom:0}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Hierarchical Task Analysis &middot; Annett &amp; Duncan 1967</div>
+  <h1>כלל העצירה</h1>
+  <p class="lede">איפה להמשיך לפרק את המוצר לתתי-תהליכים, ואיפה לעצור — לפי הסתברות כשל כפול עלות כשל, כששני הגורמים נמדדו ולא הוערכו.</p>
+  <div class="byline">
+    <span>PRE-CALL &middot; POST-CALL</span>
+    <span class="mono">400 runs</span>
+    <span class="mono">131 commits</span>
+    <span class="mono">633 functions &times; 5 routes</span>
+  </div>
+</header>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">The rule</div>
+    <h2>מתי מפסיקים לפרק</h2>
+  </div>
+  <div class="rule-card">
+    <p>HTA מפרק מטרה לתתי-מטרות עד שכלל עצירה מפסיק אותו. הכלל של Annett הוא מכפלה, לא סף על אחד מהגורמים:</p>
+    <div class="formula">P &times; C &nbsp;&gt;&nbsp; acceptable</div>
+    <p><b>P</b> — ההסתברות שהשלב יבוצע לא נכון. <b>C</b> — מה עולה כשזה קורה. ממשיכים לפרק רק כל עוד המכפלה גבוהה מדי. שלב שנכשל הרבה אבל לא עולה כלום — עוצרים. שלב יקר שלא נכשל — עוצרים.</p>
+    <p>מה שהופך את זה למכשיר ולא לדעה: כאן <b>P נמדד</b> ב-400 ריצות, ו-<b>C כבר כתוב בקוד</b> — <span class="mono">consequenceIfWrong</span> על חמש ההתחייבויות ב-<span class="mono">pc-commitments.js</span>, עם הערה בקובץ שאומרת שזה לא קישוט.</p>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">Where P comes from</div>
+    <h2>המדידות</h2>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>מה נמדד</th><th>תוצאה</th><th>P</th><th>מקור</th></tr></thead>
+      <tbody>
+        <tr><td>חילוץ מספרים כשהם נאמרים במילים</td><td class="num">0 / 96</td><td class="num">1.00</td><td class="mono">engine sweep</td></tr>
+        <tr><td>תמלול אמיתי נושא סימוני דובר</td><td class="num">0 / 2</td><td class="num">1.00</td><td>שתי שיחות אמיתיות</td></tr>
+        <tr><td>חילוץ מקומי מחזיר שורה כלשהי</td><td class="num">30 / 200</td><td class="num">0.85</td><td class="mono">engine sweep</td></tr>
+        <tr><td>צ&#39;יפ השיטה נוקב בשיטה שאין לה נתונים</td><td class="num">144 → 0</td><td class="num">0.72 → 0.00</td><td class="mono">engine sweep</td></tr>
+        <tr><td>מסלול הדמו מגיע למחיר</td><td class="num">0 → 22 / 22</td><td class="num">1.00 → 0.00</td><td class="mono">browser sweep</td></tr>
+        <tr><td>זיהוי שהקונה אמר שאין תקציב</td><td class="num">49 / 49</td><td class="num">0.00</td><td class="mono">engine sweep</td></tr>
+        <tr><td>בניית תסריט מקצה לקצה</td><td class="num">75 / 75</td><td class="num">0.00</td><td class="mono">browser sweep</td></tr>
+        <tr><td>מחיר מארבעה שדות</td><td class="num">40 / 40</td><td class="num">0.00</td><td class="mono">browser sweep</td></tr>
+        <tr><td>חריגה לא נתפסת תחת עשר בו-זמנית</td><td class="num">0 / 200</td><td class="num">0.00</td><td class="mono">browser sweep</td></tr>
+        <tr><td>פונקציות שאף מסלול כניסה לא מפעיל</td><td class="num">283 / 633</td><td class="num">—</td><td class="mono">v8 coverage</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:14.5px;color:var(--muted)">השורה האחרונה אינה P. היא אומרת ש-45% מהמוצר לא נכנסים אליו מהדלת הקדמית, ולכן יש ענף שלם שלא נמדד.</p>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">The analysis</div>
+    <h2>עץ המשימה</h2>
+    <p style="font-size:15.5px;color:var(--muted)">ההיררכיה נגזרה מ-Formal Concept Analysis על כיסוי ריצה ומ-DSM על 131 קומיטים — לא מחלוקה שהוצעה מראש. ההזחה היא הרמה.</p>
+  </div>
+
+  <div class="tree">
+
+    <div class="node lv1 goal">
+      <div class="n-left">
+        <div class="n-id">0</div>
+        <div class="n-title">להפוך שיחת אפיון למחיר שאפשר לעמוד מאחוריו</div>
+        <div class="plan"><b>Plan 0</b>1 → 2 → 3 → 4. ו-4 מזין את 1 לפני השיחה הבאה — זו הלולאה היחידה שהמוצר טוען לה.</div>
+      </div>
+      <div class="rail"></div>
+    </div>
+
+    <!-- 1 -->
+    <div class="node lv2">
+      <div class="n-left">
+        <div class="n-id">1</div>
+        <div class="n-title">להגיע לשיחה מוכן</div>
+        <div class="n-note">PRE-CALL. <b>38 פונקציות ייחודיות</b>, וחפיפה של 28 בלבד עם כל השאר — הליבה המשותפת. ברמת הביצוע זו מערכת נפרדת.</div>
+        <div class="plan"><b>Plan 1</b>1.1 פעם אחת אי פעם &middot; ואז 1.2 ו-1.3 בכל שיחה.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>0.00</dd></div>
+        <div class="metric"><dt>C</dt><dd>נמוך</dd></div>
+        <div class="verdict v-hold">עצור ברמה 2</div>
+      </div>
+    </div>
+
+    <div class="node lv3">
+      <div class="n-left">
+        <div class="n-id">1.2</div>
+        <div class="n-title">ללמוד על הצד השני</div>
+        <div class="n-note">הפרומפט יוצא ל-LLM חיצוני ו<b>אין לו נתיב חזרה</b>. ל-<span class="mono">promptBiz</span> יש שני קצוות — הדבקה, <span class="mono">parse</span>, שדות. ל-<span class="mono">promptDR</span> יש קצה אחד.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>לא נמדד</dd></div>
+        <div class="metric"><dt>C</dt><dd>בינוני</dd></div>
+        <div class="verdict v-unknown">תבנית, לא מסך</div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="node lv2">
+      <div class="n-left">
+        <div class="n-id">2</div>
+        <div class="n-title">להוציא מהשיחה מה שנאמר</div>
+        <div class="n-note">תת-התהליך היחיד ש<b>שתי המתודולוגיות הסכימו עליו</b>: FCA מצא <span class="mono">[after-transcript]</span> = pc-transcript&times;19 + pc-ladder&times;9, ו-DSM מצא את אותם שני קבצים עם שני המילונים שלהם.</div>
+        <div class="plan"><b>Plan 2</b>2.4 קודם — מה השיחה יכולה לשאת &middot; ואז 2.1 &middot; ואם 2.1 לא החזיר כלום, 2.2 &middot; 2.5 רץ תמיד.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>0.85</dd></div>
+        <div class="metric"><dt>C</dt><dd>גבוה</dd></div>
+        <div class="verdict v-deep">פרק לרמה 3</div>
+      </div>
+    </div>
+
+    <div class="node lv3">
+      <div class="n-left">
+        <div class="n-id">2.1</div>
+        <div class="n-title">לקרוא מספרים מהתמלול</div>
+        <div class="n-note">נכשל ב-85% מהריצות, ו<b>ב-100% כשהמספרים נאמרים במילים</b> — 0 מתוך 96. ה-C הוא הניסוח שכבר כתוב בקטלוג: <span class="mono">value-claim</span> — &laquo;מספר שהמצאתם, מצוטט ללקוח — שאלה אחת (&quot;מאיפה זה?&quot;) ואין תשובה&raquo;.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>0.85–1.00</dd></div>
+        <div class="metric"><dt>C</dt><dd>גבוה</dd></div>
+        <div class="verdict v-deep">מסך משלו</div>
+      </div>
+    </div>
+
+    <div class="node lv3">
+      <div class="n-left">
+        <div class="n-id">2.3</div>
+        <div class="n-title">לדעת מי אמר את המספר</div>
+        <div class="n-note">שני התמלולים האמיתיים היחידים <b>לא נושאים סימון דובר אחד</b>. בלעדיו הפרובננס קורס ל-<span class="mono">mine</span> על כל שיחה — נכון טכנית, מהסיבה הלא נכונה — ופסקת ה-ROI יוצאת מהמסמך בשקט.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>1.00</dd></div>
+        <div class="metric"><dt>C</dt><dd>גבוה</dd></div>
+        <div class="verdict v-deep">מסך משלו</div>
+      </div>
+    </div>
+
+    <div class="node lv3">
+      <div class="n-left">
+        <div class="n-id">2.4</div>
+        <div class="n-title">להחליט מה השיחה יכולה לשאת</div>
+        <div class="n-note">הסולם. חמש דרגות, וכל אחת מרשה בדיוק את הרמזים שהשיטה שלה צורכת. אחרי התיקון: <b>אפס דרגות נוקבות בשיטה שאין לה נתונים</b>.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>0.00</dd></div>
+        <div class="metric"><dt>C</dt><dd>גבוה</dd></div>
+        <div class="verdict v-hold">עצור</div>
+      </div>
+    </div>
+
+    <div class="node lv3">
+      <div class="n-left">
+        <div class="n-id">2.5</div>
+        <div class="n-title">לזהות שהקונה אמר לא</div>
+        <div class="n-note">49 מתוך 49, אפס תפיסות שווא. שתי השיחות האמיתיות הסתיימו כך, ולפני היום שתיהן תומחרו בלי מילה.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>0.00</dd></div>
+        <div class="metric"><dt>C</dt><dd>גבוה</dd></div>
+        <div class="verdict v-hold">עצור</div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="node lv2">
+      <div class="n-left">
+        <div class="n-id">3</div>
+        <div class="n-title">לקבוע סקופ ומחיר</div>
+        <div class="n-note">הליבה של POST-CALL, <b>173 פונקציות</b> משותפות לארבעת מסלוליו. ה-C לכל תת-שלב כאן כבר כתוב: חמש שורות <span class="mono">consequenceIfWrong</span> בקטלוג ההתחייבויות.</div>
+        <div class="plan"><b>Plan 3</b>הסקופ לפני המחיר. שיטת התמחור נגזרת מ-2.4 ולא נבחרת ידנית, אלא אם המפעיל נעל צ&#39;יפ.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>0.00</dd></div>
+        <div class="metric"><dt>C</dt><dd>גבוה</dd></div>
+        <div class="verdict v-hold">עצור ברמה 2</div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="node lv2">
+      <div class="n-left">
+        <div class="n-id">4</div>
+        <div class="n-title">לשלוח, לרשום, ולהזין חזרה</div>
+        <div class="n-note">הפנקס <b>אינו אח</b> — FCA הראה שהוא תת-קבוצה ממש של כל שאר מסלולי POST-CALL. הוא תצוגה, ובכרטיסי הכניסה הוא מוצג כשלב מקביל.<br><br>וזה גם הענף שלא נמדד: <span class="mono">pc-ledger</span> 83%, <span class="mono">deals</span> 80%, <span class="mono">pc-followup</span> 83%, <span class="mono">pc-history</span> 83% מהפונקציות לא רצות באף מסלול כניסה.</div>
+      </div>
+      <div class="rail">
+        <div class="metric"><dt>P</dt><dd>לא נמדד</dd></div>
+        <div class="metric"><dt>C</dt><dd>גבוה</dd></div>
+        <div class="verdict v-unknown">למדוד לפני שמחליטים</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">The verdict</div>
+    <h2>שני ענפים מרוויחים רמה שלישית</h2>
+  </div>
+
+  <div class="callout">
+    <h3>2.1 ו-2.3 — קריאת המספרים, ומי אמר אותם</h3>
+    <p>שניהם נכשלים כמעט תמיד, ושניהם עולים את הדבר היחיד שהמוצר קיים כדי למנוע: מחיר שנשען על מספר שהלקוח לא אמר. <b>אלה השניים שצריכים מסך משלהם</b>, ולא שורה בתוך מסך ארוך.</p>
+  </div>
+
+  <div class="callout quiet">
+    <h3>כל השאר עוצר ברמה 2</h3>
+    <p>הסולם, זיהוי הסירוב, בניית התסריט, המחיר מארבעה שדות — כולם ב-P=0.00 על מאות ריצות. <b>לפרק אותם הלאה יוסיף קליקים ולא יוריד כשל.</b> וזה הפוך מהאינסטינקט לשבור כל מסך ארוך לאשף.</p>
+  </div>
+
+  <div class="callout">
+    <h3>ענף 4 חוסם את עצמו</h3>
+    <p>C גבוה, P לא ידוע, ו-45% מהקוד שם לא נגיש מהדלת הקדמית. <b>כלל העצירה לא יכול לירות עליו</b> — לא כי הוא בטוח, אלא כי לא נמדד. זה חסם מדידה, לא מסקנה.</p>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">What the rule still needs</div>
+    <h2>מה נשאר לך</h2>
+  </div>
+  <ul class="plain">
+    <li><b>C על שני ענפים.</b> <span class="mono">consequenceIfWrong</span> מכסה סקופ, מסירה, בעלות על חריגים, סיכון ארגוני וטענת ערך. הוא לא מכסה את המחקר על הצד השני (1.2) ולא את הפנקס (4). שם C הוא הערכה שלך, ואני לא אמציא אותה.</li>
+    <li><b>P על ענף 4.</b> חמשת מסלולי הכניסה לא נוגעים בשמירת עסקה, ברישום תוצאה ובמעקב. לפני שמחליטים על ההיררכיה שם צריך להריץ אותם.</li>
+    <li><b>ו-P על אדם.</b> כל מה שכאן מודד את המוצר. אף מספר בדף הזה לא נמדד על משתמש — <span class="mono">docs/first-ten.md</span> כתוב ולא רץ, ושלושת המגיעים ב-10 באוגוסט נחסמו בקיר login.</li>
+  </ul>
+</section>
+
+<footer>
+  שיטה: Hierarchical Task Analysis (Annett &amp; Duncan, 1967) לעץ ולכלל העצירה &middot;
+  Formal Concept Analysis (Ganter &amp; Wille) על כיסוי v8 &middot;
+  Design Structure Matrix (Steward; Eppinger &amp; Browning) עם Q של Newman ו-MQ של Mancoridis על צימוד אבולוציוני (Gall et al.; Zimmermann et al.).
+</footer>
+
+</div>
