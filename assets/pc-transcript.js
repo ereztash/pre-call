@@ -277,8 +277,23 @@
          carries a currency word matches it — the hourly rate this same
          transcript states, most of all. */
       confidence: 0.55 },
-    { key: 'freq',    re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|\btimes?\b(?:\s*(?:a|per)\s*(?:day|week|month))?|\borders?\b|\bleads?\b|\brequests?\b)/i, label: tr('כמה פעמים'),
-      confidence: 0.85 }
+    /* A rate, not a count, and the noun in the middle is optional because in a
+       real call it is in the question rather than in the answer:
+
+         מוכר: כמה הזמנות כאלה נכנסות בערך ביום?
+         לקוח: אה... בערך ארבעים ביום.
+
+       The old cue required the number and the noun to touch, which is how
+       people write and not how they answer. On this repository's own demo
+       transcript it therefore skipped the forty entirely and matched
+       "שתי הזמנות שנפלו בין הכיסאות" — two orders that were lost, read as the
+       volume of the process. Requiring the period instead of the noun rejects
+       that one and accepts the answer, which is the right way round: a
+       frequency is a quantity per unit of time, and a quantity with no unit of
+       time is a backlog. */
+    { key: 'freq',
+      re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|חשבוניות|טפסים|\btimes?\b|\borders?\b|\bleads?\b|\brequests?\b|\binvoices?\b)?\s*(?:ביום|ליום|בשבוע|לשבוע|בחודש|לחודש|\b(?:a|per)\s+(?:day|week|month)\b)/i,
+      label: tr('כמה פעמים'), confidence: 0.85 }
   ];
 
   /* One vocabulary for who spoke, because there is one question downstream —
@@ -333,6 +348,15 @@
      number beside a currency word" and nothing more. The call had no recurring
      process in it at all, so under a licence the incident cue is never looked
      for, and the misreading cannot happen rather than being caught after. */
+  /* Spoken numbers as digits. Resolved at call time so this file keeps working
+     when pc-numerals.js is not present — an older page, a test that requires
+     this module alone — with the deaf reading it had before rather than a
+     crash. */
+  function numeric(s) {
+    const N = root.PC && root.PC.numerals;
+    return N ? N.digitize(s) : s;
+  }
+
   function heuristics(transcript, licence) {
     const src = String(transcript || '');
     if (!src.trim()) return [];
@@ -341,7 +365,13 @@
     const seen = new Set(), out = [];
     CUES.filter(c => allowed(c.key)).forEach(cue => {
       for (const { line, speaker } of lines) {
-        const m = line.match(cue.re);
+        /* Match on the line with spoken numbers rewritten as digits, quote the
+           line as it was actually said. Every cue here is built around \d+,
+           which is true of a form and false of a transcript — "ארבעים הזמנות
+           ביום" is what speech-to-text returns and no cue could see it. The
+           quote stays the original sentence, so `verified` still means what it
+           says: this text is in the transcript, word for word. */
+        const m = numeric(line).match(cue.re);
         if (!m || seen.has(cue.key)) continue;
         const n = parseFloat(m[1].replace(/,/g, ''));
         if (!isFinite(n) || n <= 0) continue;

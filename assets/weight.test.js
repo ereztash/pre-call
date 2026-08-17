@@ -215,8 +215,31 @@ const BUDGETS = {
      What the page carries now is the fix to all three — a cue that lands the
      client's reference price in the field the engine reads, a guard that
      refuses to select a method compute() cannot run, and a sentence saying so
-     when it happens. */
-  'post-call.html':     159 * 1024
+     when it happens.
+
+     A tenth raise, 159 -> 163KB, for the page learning to hear a number. Every
+     quantitative cue in this product was written around \d+, which is true of
+     a form and false of a transcript: speech-to-text writes what it hears, so
+     "forty orders a day" comes back as "ארבעים הזמנות ביום" and no cue could
+     see it. Measured across 200 generated calls, the value rung was reached 30
+     times out of 104 when the numbers arrived as digits and 0 times out of 96
+     when they arrived as words. Not rarely. Never — and this repository's own
+     demo transcript is written in words, which is why one field out of
+     thirteen looked like a thin transcript rather than a deaf reader.
+
+     pc-numerals.js is the whole raise and it is a parser, not copy: it rewrites
+     spoken numbers to digits once, before anything reads them, so freq,
+     minutes, errCost and the client's reference rate each keep the single
+     regular expression they already had. The quote stays the sentence that was
+     actually said.
+
+     Also in it, and small: the review rows now ask who said each number. That
+     field decides the pricing method and whether the ROI paragraph survives,
+     it is derived from speaker labels, and neither real transcript anybody has
+     run through this tool carries one. It could not be derived and the
+     operator was in the room, so it is asked — on the row, beside the
+     sentence. */
+  'post-call.html':     163 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

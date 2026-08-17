@@ -284,6 +284,41 @@ function loadDemo(){
 
 const SPEAKER = { client: tr('הלקוח אמר'), seller: tr('אתם אמרתם'), unknown: tr('לא ידוע מי אמר') };
 
+/* Who said it, and a way to say so.
+
+   provenance() decides between client-said and operator-guessed on this one
+   field, and everything downstream turns on it: the pricing method, whether
+   the ROI paragraph stays in the document, whether the cost-of-waiting line
+   survives. It is derived from speaker labels in the transcript — and neither
+   of the two real transcripts anybody has run through this tool carries a
+   single label. Speech-to-text does not write them. So on a real call every
+   figure came back 'unknown', provenance collapsed to 'mine', and the strongest
+   thing this product has quietly switched itself off.
+
+   The label cannot be derived, and the operator was in the room. So it is
+   asked — here, on the row, beside the sentence, which is the only place the
+   question can be answered without remembering anything. Derived when it can
+   be, asked when it cannot, never assumed. */
+function whoPicker(c){
+  const opt = (who, label) =>
+    '<button type="button" class="tr-who' + (c.speaker === who ? ' on' : '') +
+    '" data-act="trwho" data-key="' + esc(c.key) + '" data-who="' + who + '"' +
+    ' aria-pressed="' + (c.speaker === who) + '">' + esc(label) + '</button>';
+  return '<span class="tr-s">' +
+    (c.speaker === 'unknown' ? esc(tr('מי אמר את זה?')) : '') +
+    opt('client', SPEAKER.client) + opt('seller', SPEAKER.seller) + '</span>';
+}
+
+function setSpeaker(key, who){
+  const c = trCandidates.find(x => x.key === key);
+  if (!c) return;
+  /* Clicking the one already chosen puts it back to undecided rather than
+     doing nothing — a control that cannot be undone is a control that gets
+     answered carelessly the first time. */
+  c.speaker = (c.speaker === who) ? 'unknown' : who;
+  renderReview();
+}
+
 /* Every row shows the sentence it came from. That is the whole point: a
    number you cannot trace is the thing this tool exists to keep out of a
    price, and an extraction step is the easiest way to let one back in. */
@@ -343,8 +378,7 @@ const renderReview = guard('transcript', function (){
           (c.guessed ? '<span class="tr-tag t-guess">' + tr('ניחוש מקומי') + '</span>' : '') +
           (!c.verified ? '<span class="tr-tag t-unver">' + tr('הציטוט לא נמצא בתמלול — קרא בעצמך') + '</span>' : '') +
         '</div>' +
-        '<div class="tr-q">«' + esc(c.quote) + '»<span class="tr-s">' +
-          esc(SPEAKER[c.speaker]) + '</span></div>' +
+        '<div class="tr-q">«' + esc(c.quote) + '»' + whoPicker(c) + '</div>' +
         '<button type="button" class="ghost tr-x" data-act="trtoggle" data-key="' +
           esc(c.key) + '">' + (off ? tr('להחזיר') : tr('להסיר')) + '</button>' +
       '</div>';
@@ -1616,6 +1650,7 @@ document.addEventListener('click', e => {
   if (sv) { e.preventDefault(); sendVia(sv.dataset.route); return; }
   const tk = e.target.closest('[data-key]');
   if (tk && tk.dataset.act === 'trtoggle') { e.preventDefault(); toggleRow(tk.dataset.key); return; }
+  if (tk && tk.dataset.act === 'trwho') { e.preventDefault(); setSpeaker(tk.dataset.key, tk.dataset.who); return; }
 
   const d = e.target.closest('[data-deal]');
   if (d) {

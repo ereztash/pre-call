@@ -113,6 +113,14 @@
      are ordinary and reading them as refusal would make the warning noise. */
   const STALL = /אין לי\s+(?:אף\s+)?(?:כסף|תקציב|אינסנטיב|תמריץ|סיבה)|\bno\s+budget\b|can'?t\s+afford/i;
 
+  /* Spoken numbers as digits, for matching only — never for a quote. Resolved
+     at call time so this module still loads where pc-numerals.js is absent,
+     with the reading it had before rather than a crash. */
+  function numeric(s) {
+    const N = root.PC && root.PC.numerals;
+    return N ? N.digitize(s) : s;
+  }
+
   /* Who the ladder is allowed to listen to.
 
      Every cue here is about what the CLIENT's business looks like, and a
@@ -139,9 +147,21 @@
      for the same reason: a figure you cannot trace is what this tool exists to
      keep out of a price. */
   function firstMatch(text, re) {
+    /* The line is found on the digitized reading and returned as it was said.
+       A quote is what somebody said; rewriting "שלוש מאות" to 300 inside it
+       would be a normalisation the operator never authorised, on the one panel
+       whose whole job is to show the sentence a number came from. */
     const line = String(text || '').split(/\n|(?<=[.!?])\s+/)
-      .map(l => l.trim()).find(l => re.test(l));
+      .map(l => l.trim()).find(l => re.test(numeric(l)));
     if (!line) return null;
+    if (!re.test(line)) {
+      /* The digits are not in the original, so there is no match offset to
+         window around. Find where the quantity is spoken instead. */
+      if (line.length <= 200) return line;
+      const at = line.search(/\d|[֐-׿]{2,}\s*(?:שקל|מאות|אלפים|דקות|פעמים)/);
+      const from = Math.max(0, at - 70);
+      return (from > 0 ? '…' : '') + line.slice(from, from + 180).trim() + '…';
+    }
     if (line.length <= 200) return line;
     /* Speech-to-text returns paragraph-long "sentences" with no punctuation in
        them — the line this cue matched in the call it was written from is 570
@@ -165,7 +185,7 @@
       /* Both halves, because either alone is common and neither alone is a
          process. "40 orders" with no period is a backlog; "every week" with no
          count is a habit. */
-      holds: input => { const h = heard(input); return FREQ.test(h.text) && PER_TIME.test(h.text); },
+      holds: input => { const t = numeric(heard(input).text); return FREQ.test(t) && PER_TIME.test(t); },
       because: tr('הלקוח נקב בכמות עבודה שחוזרת על עצמה, ולכן אפשר לגזור מה התהליך עולה לו בשנה.'),
       missing: tr('לא נמצאה בשיחה כמות עבודה שחוזרת על עצמה — כמה פעמים ביום, בשבוע או בחודש. בלי זה אין ערך שנתי לגזור ממנו.')
     },
@@ -194,7 +214,7 @@
       method: 'comparable',
       label: tr('מחיר ייחוס של הלקוח'),
       vertical: false,
-      holds: input => RATE().test(heard(input).text),
+      holds: input => RATE().test(numeric(heard(input).text)),
       because: tr('הלקוח נקב במחיר ייחוס משלו לעבודה דומה בעיניו, והמחיר נגזר ממנו מותאם להיקף כאן.'),
       missing: tr('הלקוח לא נקב במחיר ייחוס — כמה עבודה דומה בעיניו עולה, לפגישה, לשעה או לחודש.')
     },

@@ -428,4 +428,5 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "המספרים הם הערכה שלכם, ועוד לא נבחרו מערכות שאפשר לקרוא מהן מורכבות — אז בינתיים המחיר נבנה מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם.": "The numbers are your estimate, and no systems have been picked to read a complexity from — so for now the price is built from the work you expect to put in and your rate.",
   "עוד אין מספרים מהלקוח ולא נבחרו מערכות, אז בינתיים המחיר נבנה מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם. ברגע שיהיו כמה פעמים זה קורה וכמה זמן זה לוקח, המחיר יתחיל להישען על העסק שלו.": "There are no numbers from the client yet and no systems picked, so for now the price is built from the work you expect to put in and your rate. Once there is how often it happens and how long it takes, the price will start resting on their business.",
   "אין מספיק נתונים לשיטה הזאת, אז המחיר נבנה בינתיים מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם.": "There is not enough data for that method, so for now the price is built from the work you expect to put in and your rate.",
+  "מי אמר את זה?": "Who said this?",
 });

@@ -900,7 +900,15 @@
   .tr-q{grid-column:1;grid-row:2;font-size:var(--fs-xs);color:var(--nt-17);line-height:1.6;
         border-inline-start:2px solid var(--turq);padding-inline-start:var(--sp-3);margin-top:var(--sp-1);
         min-width:0;overflow-wrap:anywhere}
-  .tr-s{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-1)}
+  .tr-s{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);
+        font-size:var(--fs-xs);color:var(--muted);margin-top:var(--sp-2)}
+  /* Who said it. Quiet until chosen, because an undecided row should read as a
+     question and not as an answer already given. */
+  .tr-who{margin:0;padding:var(--sp-1) var(--sp-3);font-size:var(--fs-xs);font-weight:600;
+          min-height:0;border:1px solid var(--line);border-radius:var(--r-sm);
+          background:transparent;color:var(--muted);cursor:pointer}
+  .tr-who:hover{border-color:var(--tq-50);color:var(--tq-21)}
+  .tr-who.on{border-color:var(--turq);color:var(--turq);background:var(--charcoal-2)}
   .tr-x{grid-column:2;grid-row:1 / span 2;align-self:start;justify-self:end;
         margin:0;font-size:var(--fs-xs);padding:var(--sp-3) var(--sp-4);min-height:38px;white-space:nowrap}
   @media(max-width:520px){

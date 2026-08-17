@@ -46,6 +46,19 @@ const EXEMPT = {
        keys in the same object, so both languages work at once. */
     (s) => s === 'יום' || s === 'שבוע' || s === 'חודש',
   ],
+  'assets/pc-numerals.js': [
+    /* The number words themselves. This whole file is a lookup from what a
+       transcript says to a digit, so its Hebrew is the input side of a parser
+       and never reaches a screen — there is nothing here to translate, and
+       translating it would mean the reader could only hear numbers in the
+       language the interface happens to be set to. Which is exactly backwards:
+       the operator's transcript is in whatever language the call was in.
+
+       Bounded to the vocabulary rather than exempting the file, so a Hebrew
+       sentence added here later — an error, a label, anything a person reads —
+       still fails this test. */
+    (s) => /^[֐-׿]+$/.test(s) && s.split(/\s+/).length === 1,
+  ],
 };
 
 console.log('\nevery Hebrew unit the product ships has an English entry');
