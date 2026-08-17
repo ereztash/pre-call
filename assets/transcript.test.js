@@ -12,6 +12,8 @@
    something the operator asserts into something the recording shows. */
 const T = require('./pc-transcript.js');
 const EX = require('./pc-example.js');
+const fs = require('fs');
+const path = require('path');
 const assert = require('assert');
 
 let pass = 0, fail = 0;
@@ -153,6 +155,98 @@ test('marks itself as a guess so it is never mistaken for an extraction', () => 
 test('an empty or wordless transcript yields nothing', () => {
   assert.deepStrictEqual(T.heuristics(''), []);
   assert.deepStrictEqual(T.heuristics('שיחה בלי שום מספר בכלל'), []);
+});
+
+/* The regression this section exists for. heuristics() used to stamp every
+   row speaker:'unknown', which reads like a small omission and is not one:
+   provenance() decides client-said versus operator-guessed on that exact
+   field, so nothing extracted locally could ever be attributed to the client.
+   Every such deal came back 'mine' — which routes pickMethod to market
+   pricing, takes the ROI paragraph out of the document, and says nothing
+   while doing it. The number was in the transcript, in the client's own line,
+   and the tool priced as if the client had never spoken. */
+test('a figure in the client\'s line is attributed to the client', () => {
+  const h = T.heuristics('לקוח: זה לוקח 8 דקות כל פעם.');
+  assert.strictEqual(h[0].speaker, 'client');
+});
+test('a figure the seller said is not attributed to the client', () => {
+  const h = T.heuristics('מוכר: נניח 8 דקות לכל פעם.');
+  assert.strictEqual(h[0].speaker, 'seller');
+});
+test('"אני" is the seller, the way discovery calls are actually written down', () => {
+  assert.strictEqual(T.heuristics('אני: אז זה 8 דקות?')[0].speaker, 'seller');
+});
+test('a line with no speaker label stays unknown rather than guessing', () => {
+  assert.strictEqual(T.heuristics('זה לוקח 8 דקות')[0].speaker, 'unknown');
+});
+test('the local path can reach a client-sourced provenance, not only mine', () => {
+  const t = 'מוכר: כמה זמן זה לוקח?\nלקוח: בערך 8 דקות כל פעם.';
+  const p = T.provenance(T.heuristics(t), t);
+  assert.notStrictEqual(p.value, 'mine',
+    'every locally extracted deal is priced as the operator\'s guess again');
+  assert.strictEqual(p.value, 'prompted', 'the seller asked first, so it is prompted');
+});
+test('a figure the client volunteered locally reads as unprompted', () => {
+  const t = 'לקוח: יש לנו בערך 40 הזמנות ביום ואנחנו טובעים.';
+  assert.strictEqual(T.provenance(T.heuristics(t), t).value, 'unprompted');
+});
+
+test('a local candidate carries its sentence, its speaker and its confidence', () => {
+  const t = 'לקוח: זה לוקח 8 דקות כל פעם.';
+  const [c] = T.heuristics(t);
+  assert.ok(c.quote && t.includes(c.quote), 'the quote is not the line it came from');
+  assert.ok(['client', 'seller', 'unknown'].includes(c.speaker), 'speaker: ' + c.speaker);
+  assert.ok(c.confidence > 0 && c.confidence < 1, 'confidence: ' + c.confidence);
+  assert.strictEqual(c.guessed, true, 'a local match must stay marked as a guess');
+});
+
+console.log('\npaste, and the tool reads it here');
+/* Both halves of one promise. The landing page says to paste the call and the
+   tool reads it — which is untrue in two different ways if the module reaches
+   the network, and untrue in a quieter way if reading it locally is the
+   secondary button while the primary one sends you to another service and asks
+   you to come back with its answer. The first is a privacy claim, the second is
+   what the operator actually meets. */
+test('reading a transcript needs no network at all', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'pc-transcript.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  [/\bfetch\s*\(/, /XMLHttpRequest/, /navigator\.sendBeacon/, /\bimport\s*\(/,
+   /new\s+WebSocket/, /EventSource/].forEach(re =>
+    assert.ok(!re.test(src),
+      'the transcript module reaches the network: ' + (src.match(re) || [])[0]));
+});
+test('the button that reads it here is the primary one', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'post-call.html'), 'utf8');
+  const acts = page.match(/<div class="tr-acts">[\s\S]*?<\/div>/)[0];
+  const primary = acts.match(/class="act"\s+data-act="([a-z]+)"/);
+  assert.ok(primary, 'the transcript box has no primary action any more');
+  assert.strictEqual(primary[1], 'trlocal',
+    'the main path through the transcript box leaves for another service first');
+});
+
+console.log('\nhow much a match can carry');
+test('every local cue states a confidence, and none of them claims certainty', () => {
+  T.heuristics('לקוח: 8 דקות, 40 הזמנות ביום, 1,800 ₪ לתקלה.').forEach(h => {
+    assert.ok(typeof h.confidence === 'number', h.key + ' has no confidence');
+    assert.ok(h.confidence > 0 && h.confidence < 1,
+      h.key + ' claims ' + h.confidence + ' — a regex does not get to be certain');
+  });
+});
+test('the cue that fires on any currency figure is the least trusted', () => {
+  const h = T.heuristics('לקוח: 8 דקות כל פעם, ו-1,800 ₪ לכל טעות.');
+  const cost = h.find(x => x.key === 'errCost');
+  const mins = h.find(x => x.key === 'minutes');
+  assert.ok(cost.confidence < mins.confidence,
+    'a shekel figure matches the hourly rate in the same call just as well');
+});
+test('a quote the model invented ranks below every quote that checks out', () => {
+  const src = 'לקוח: זה לוקח 8 דקות.';
+  const real = T.candidates({ minutes: { value: 8, quote: 'זה לוקח 8 דקות', speaker: 'לקוח' } }, src);
+  const made = T.candidates({ minutes: { value: 8, quote: 'זה לוקח שמונה דקות בערך', speaker: 'לקוח' } }, src);
+  assert.strictEqual(real[0].verified, true);
+  assert.strictEqual(made[0].verified, false);
+  assert.ok(made[0].confidence < real[0].confidence,
+    'the row the operator has to read for themselves must not sort above the one that checked out');
 });
 
 console.log('\nwhat confirmation produces');

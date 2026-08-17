@@ -232,10 +232,16 @@ function parseExtraction(){
 function localExtraction(){
   const t = trText().trim();
   if (!t) { flashDoc(tr('קודם הדבק את התמלול')); goTo('trIn'); return; }
+  /* Numbers and everything that is not a number. observe() reads the systems
+     the call named; without it a locally-read transcript could be priced and
+     still could not say what the project connects. It comes back as an
+     ordinary candidate row, so it goes through the same review the figures do. */
+  const seen = PC.transcript.observe(t);
   trCandidates = PC.transcript.heuristics(t);
+  if (seen.systemsRow) trCandidates.push(seen.systemsRow);
   trRejected.clear();
   if (!trCandidates.length) {
-    flashDoc(tr('לא נמצאו מספרים ברורים. עדיף דרך הפרומפט.')); showPrompt(); return;
+    flashDoc(tr('לא נמצאו מספרים ברורים. פתחתי את החילוץ עם הבינה המלאכותית.')); showPrompt(); return;
   }
   renderReview();
 }
@@ -520,7 +526,7 @@ function setMethod(key){
 /* Decided from what is on the form, unless the operator has taken over. */
 function autoMethod(){
   if (methodPinned) return;
-  const p = PC.guide.pickMethod(guideState());
+  const p = PC.model.pickMethod(guideState());
   if (mc.dataset.sel !== p.method) setMethod(p.method);
   const w = el('methodWhy');
   if (w) w.textContent = p.because;

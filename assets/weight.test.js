@@ -117,8 +117,43 @@ const BUDGETS = {
      The line to hold: if this page needs a third raise without a matching
      capability, the growth has stopped being features and the trim is overdue.
      index.html and pre-call.html keep their tight ceilings either way — they are
-     what a first visit pays for. */
-  'post-call.html':     148 * 1024
+     what a first visit pays for.
+
+     A fifth raise, 148 → 149KB, and it is the awkward one: this page does not
+     do anything new for it. pc-contact.js holds the address a buyer opens, and
+     it exists because that address was written in two places — here and in the
+     landing page — with a test asserting they matched. A test like that reports
+     a divergence after somebody has already shipped a page pointing at the
+     wrong chat, so it is not one source of truth, it is two with an alarm on
+     them.
+
+     By the rule above this raise should have been a trim, and it was: the
+     module went from 53 lines to 37, and the opening sentence each page sends
+     moved out to the page that sends it — the wall asks for a key, the landing
+     page asks for a transcript, and shipping either sentence to everyone who
+     loads the tool was the wrong default. That took 148.4 down to 148.1 and no
+     further without deleting the fork warning, which is load-bearing: a copy of
+     this repository that forgets to change the address sends its buyers here.
+
+     So: 0.1KB over, and the smallest raise in this file's history, bought for a
+     configuration that can no longer disagree with itself. If the next raise is
+     also correctness rather than capability, that is the signal the trim is
+     overdue — not this one.
+
+     A sixth raise, 149 → 151KB, and this one is the ordinary kind: the page
+     does more. Reading a transcript used to mean finding figures, which is
+     what pricing needs and a fraction of what a proposal promises. observe()
+     reads what is not a number — which systems the call named, what the client
+     said the connection should produce, and whether a subject was raised and
+     left open — and carries each one back with the sentence it came from.
+     Without it a locally-read call could be priced and still could not be
+     assessed, which left the readiness engine with nothing to read.
+
+     It was 1.1KB of dead weight for about ten minutes first: the module shipped
+     before anything called it, and this budget is what said so. Wiring it into
+     the local extraction path is what made the raise honest rather than a
+     rounding-up. */
+  'post-call.html':     151 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

@@ -37,6 +37,32 @@
     floor: tr('רצפת עלות')
   };
 
+  /* Which pricing method to use, decided for the operator instead of by
+     them. Four chips asking someone to pick between value, market rate,
+     cost-plus and comparable is a question only a person who already prices
+     work can answer — and getting it wrong costs them money. The tool picks
+     and says why in one plain sentence; changing it stays available but off
+     the main path.
+
+     This lived in pc-guide.js until the readiness work started. It reads like
+     guidance and it is worded like guidance, which is exactly why it was in
+     danger: pc-guide is the layer being replaced, and a function that decides
+     which of the four methods sets the price is not guidance — it is the
+     pricing engine choosing which of its own paths runs. It sits next to
+     METHOD_LABEL now because those are the four names it returns, and because
+     whatever replaces the guide has to call it rather than inherit it. */
+  function pickMethod(s) {
+    const hasClientNumbers = (+s.freq > 0 && +s.minutes > 0) && !s.numbersAreMine;
+    if (hasClientNumbers) return { method: 'value',
+      because: tr('המחיר נבנה ממה שהתהליך עולה ללקוח בשנה, כי הוא נתן לך את המספרים. זו הדרך שמחזיקה הכי טוב בשיחה — הדיבור הוא על הכסף שלו, לא על השעות שלכם.') };
+    if (+s.comparableLast > 0) return { method: 'comparable',
+      because: tr('המחיר נבנה מעבודה דומה שכבר עשית, מותאם להיקף כאן. זה מספר שקל להגן עליו, כי הוא באמת קרה.') };
+    if (s.numbersAreMine) return { method: 'market',
+      because: tr('המספרים הם הערכה שלכם ולא של הלקוח, אז המחיר נבנה מהטווח המקובל בשוק לעבודה כזאת. ברגע שיתקבל ממנו מספר אמיתי, החישוב יעבור לערך אצלו — וזה בדרך כלל מעלה את המחיר.') };
+    return { method: 'market',
+      because: tr('עוד אין מספיק מספרים מהלקוח, אז בינתיים המחיר לפי הטווח המקובל בשוק. ברגע שיהיו כמה פעמים זה קורה וכמה זמן זה לוקח, המחיר יתחיל להישען על העסק שלו.') };
+  }
+
   const PRICE = {
     valueCoeff: 0.25,      // mid of the defensible band
     bandLow: 0.17,         // published first-year ROI 200%–500% puts a
@@ -192,7 +218,7 @@
   }
 
   root.PC = root.PC || {};
-  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier, METHOD_LABEL };
+  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier, METHOD_LABEL, pickMethod };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.model;
 })(typeof window !== 'undefined' ? window : globalThis);

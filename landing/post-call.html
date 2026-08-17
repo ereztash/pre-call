@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>POST-CALL — משיחת אפיון להצעה שאפשר לעמוד מאחוריה</title>
+<meta name="description" content="הדביקו שיחת אפיון. POST-CALL מפריד בין מה שנאמר, מה שנוסף ומה שעדיין פתוח — ורק אז מעביר את העסקה למנוע התמחור ולהצעה.">
+<meta name="robots" content="noindex,nofollow" data-release-gate="landing-product-contract">
+<style>
+:root{--bg:#07090d;--panel:#0d1219;--panel2:#111822;--text:#f7f8fb;--muted:#a6b0bf;--line:rgba(255,255,255,.11);--blue:#5f7dff;--blue2:#b8c4ff;--green:#4fd59a;--amber:#ffc96f;--red:#ff8477;--paper:#f5f1e8;--ink:#10151d;--max:980px}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:78px}body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Arial Hebrew",Arial,sans-serif;font-size:17px;line-height:1.58;padding-bottom:90px}
+button,input,textarea{font:inherit}button{color:inherit}.wrap{width:min(var(--max),calc(100% - 32px));margin:auto}.hidden{display:none!important}.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #dbe1ff;outline-offset:3px;box-shadow:0 0 0 6px rgba(95,125,255,.2)}.eyebrow{color:var(--blue2);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.skip-link{position:fixed;z-index:200;top:10px;right:10px;transform:translateY(-170%);min-height:44px;display:flex;align-items:center;padding:0 14px;border-radius:11px;background:#fff;color:#0b1119;text-decoration:none;font-size:14px;font-weight:900}.skip-link:focus{transform:none}
+.topbar{position:sticky;top:0;z-index:50;height:62px;display:flex;align-items:center;background:rgba(7,9,13,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.07)}.toprow{display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:10px;font-weight:950}.mark{width:21px;height:21px;border:1px solid rgba(255,255,255,.32);position:relative}.mark:before,.mark:after{content:"";position:absolute;background:var(--blue)}.mark:before{width:8px;height:8px;right:3px;top:3px}.mark:after{width:5px;height:5px;left:4px;bottom:4px}.top-note{font-size:12px;color:var(--muted);font-weight:750}
+.hero{padding:62px 0 30px}h1{margin:12px 0 18px;max-width:900px;font-size:clamp(42px,7.7vw,76px);line-height:.99;letter-spacing:-.055em;font-weight:950}h1 span{color:#7f8998}.lead{margin:0;max-width:820px;font-size:clamp(19px,2.5vw,24px);line-height:1.5;color:#cbd3df}.lead strong{color:#fff}.proofline{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px}.proofline span{padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.025);font-size:12px;color:#c1c9d5;font-weight:800}
+.hero-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}.btn{min-height:48px;border:0;border-radius:12px;padding:0 16px;font-size:13px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.btn.primary{background:#fff;color:#111821}.btn.secondary{background:transparent;border:1px solid var(--line);color:#d7dde6}.btn.blue{background:var(--blue);color:#fff}.btn.ghost{background:#111722;border:1px solid var(--line);color:#e9edf3}.btn:disabled{opacity:.42;cursor:not-allowed}
+.contract-strip{margin:4px 0 30px;padding:16px 17px;border-radius:17px;border:1px solid rgba(95,125,255,.18);background:rgba(95,125,255,.055);display:grid;grid-template-columns:.85fr 1.15fr;gap:24px;align-items:center}.contract-strip b{display:block;font-size:17px}.contract-strip p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.product-map{margin-bottom:36px;padding:22px;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.02)}.product-map h2,.section-head h2{margin:7px 0 9px;font-size:clamp(30px,4.5vw,46px);line-height:1.05;letter-spacing:-.04em}.product-map>p,.section-head>p{margin:0;color:var(--muted);font-size:14px;max-width:780px}
+.pipeline{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:18px}.pipe{padding:13px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:#0a0f16;min-height:105px}.pipe small{display:block;color:#8f9cad;font-size:10px;font-weight:900}.pipe b{display:block;margin-top:5px;font-size:14px;line-height:1.25}.pipe p{margin:5px 0 0;color:#7f8b9d;font-size:11px;line-height:1.45}.pipe.system{border-color:rgba(95,125,255,.20)}.pipe.human{border-color:rgba(255,201,111,.22)}.pipe.authority{border-color:rgba(79,213,154,.22)}
+.app{border:1px solid rgba(255,255,255,.13);border-radius:24px;overflow:hidden;background:rgba(13,18,25,.98);box-shadow:0 34px 100px rgba(0,0,0,.42)}.appbar{min-height:56px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid rgba(255,255,255,.08)}.appbar-left{display:flex;align-items:center;gap:9px;color:#94a0b2;font-size:11px;font-weight:900}.dots{display:flex;gap:5px}.dots i{width:7px;height:7px;border-radius:50%;background:#3a4351}.stage-label{font-size:11px;font-weight:900;color:#e1e5eb}.progress{height:3px;background:rgba(255,255,255,.05)}.progress span{display:block;height:100%;width:16.6%;background:linear-gradient(90deg,var(--blue),var(--blue2));transition:width .25s ease}
+.screen{display:none;padding:28px}.screen.show{display:block}.screen-head{margin-bottom:17px}.screen-head small{color:#7f8b9d;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}.screen-head h2{font-size:30px;line-height:1.1;letter-spacing:-.035em;margin:5px 0 7px}.screen-head p{margin:0;color:var(--muted);font-size:14px;max-width:760px}
+textarea{width:100%;min-height:240px;resize:vertical;background:#080b10;color:#f8f9fb;border:1px solid rgba(255,255,255,.13);border-radius:16px;padding:16px 17px;font-size:16px;line-height:1.68}.input-tools{display:flex;gap:8px;margin-bottom:9px}.input-meta{display:flex;justify-content:space-between;gap:12px;margin-top:8px;color:#8490a2;font-size:11px}.wide{width:100%;margin-top:14px;min-height:55px}
+.notice{padding:13px 14px;border-radius:13px;background:rgba(95,125,255,.055);border:1px solid rgba(95,125,255,.17);color:#b7c0cf;font-size:12px;line-height:1.55}.notice strong{color:#fff}.notice.amber{background:rgba(255,201,111,.055);border-color:rgba(255,201,111,.18)}
+.evidence-list{display:grid;gap:9px;margin-top:15px}.evidence-item{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.09);background:#0a0f16}.evidence-main small{display:flex;gap:7px;flex-wrap:wrap;color:#8a96a8;font-size:10px;font-weight:850}.evidence-main b{display:block;margin:6px 0 4px;font-size:15px}.evidence-main blockquote{margin:0;color:#abb5c3;font-size:12px;line-height:1.5}.evidence-actions{display:grid;gap:6px}.evidence-actions button{min-height:38px;border-radius:9px;padding:0 10px;font-size:11px;font-weight:900;cursor:pointer}.approve{border:0;background:rgba(79,213,154,.14);color:#9cf0c5}.reject{border:1px solid rgba(255,255,255,.1);background:transparent;color:#a9b3c2}.evidence-item.approved{border-color:rgba(79,213,154,.28)}.evidence-item.rejected{opacity:.52}.evidence-item.approved .approve:before{content:"✓ "}.evidence-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}.evidence-footer p{margin:0;color:#8692a4;font-size:11px}
+.readiness-grid{display:grid;gap:8px;margin-top:16px}.commitment{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:14px 15px;border-radius:14px;border:1px solid rgba(255,255,255,.09);background:#0a0f16}.commitment b{display:block;font-size:14px}.commitment p{margin:4px 0 0;color:#8692a4;font-size:11px;line-height:1.45}.status{min-width:96px;text-align:center;padding:7px 9px;border-radius:999px;font-size:10px;font-weight:950;border:1px solid currentColor}.status.ready{color:#8ee9b8;background:rgba(79,213,154,.07)}.status.conditional{color:#ffd38b;background:rgba(255,201,111,.07)}.status.blocked{color:#ffaaa1;background:rgba(255,132,119,.07)}.readiness-summary{margin-top:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.readiness-summary p{margin:0;color:#8c98aa;font-size:12px}
+.episode-box{margin-top:10px;padding:18px;border:1px solid rgba(255,255,255,.09);border-radius:17px;background:#090e15}.quote{padding:14px;border-radius:13px;background:#0d141d;border:1px solid rgba(255,255,255,.075);color:#dfe4eb;font-size:15px}.consequence{margin-top:10px;padding:13px 14px;border-radius:13px;background:rgba(95,125,255,.055);border:1px solid rgba(95,125,255,.15)}.consequence small{display:block;color:#aebaff;font-size:10px;font-weight:900}.consequence b{display:block;margin-top:4px;font-size:15px}.question{margin:18px 0 11px;font-size:29px;line-height:1.13;letter-spacing:-.035em}.question-note{margin:-5px 0 12px;color:#8a96a8;font-size:12px}.choices{display:grid;gap:8px}.choice{min-height:62px;padding:12px 14px;text-align:right;border-radius:13px;border:1px solid rgba(255,255,255,.1);background:#0d141d;font-weight:900;cursor:pointer}.choice small{display:block;margin-top:3px;color:#7f8b9d;font-weight:650}.answer-row{display:grid;grid-template-columns:1fr auto;gap:8px}.answer-row input{min-width:0;height:52px;border-radius:11px;border:1px solid rgba(255,255,255,.12);background:#080b10;color:#fff;padding:0 12px}.field-error{margin-top:9px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,132,119,.4);background:rgba(255,132,119,.07);color:#ffd1cc;font-size:12px;font-weight:800}.episode-meta{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px;color:#8190a4;font-size:10px}.episode-meta button{border:0;background:transparent;color:#aebaff;min-height:44px;cursor:pointer;font-weight:850}.why-panel{display:none;margin-top:8px;padding:11px 12px;border:1px solid rgba(255,255,255,.07);border-radius:11px;color:#8490a2;font-size:11px}.why-panel.show{display:block}
+.outcome-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:16px}.card{border:1px solid rgba(255,255,255,.09);border-radius:16px;background:#090e15;padding:16px}.card h3{margin:0 0 8px;font-size:18px}.card p{margin:0;color:#8793a5;font-size:12px}.card ul{margin:12px 0 0;padding:0 18px 0 0;display:grid;gap:6px;color:#dbe0e7;font-size:12px}.handoff-card{background:var(--paper);color:var(--ink)}.handoff-card p{color:#4e5866}.handoff-card .copy-question{margin-top:13px;padding:13px;border-radius:12px;background:#fff;border:1px solid rgba(16,21,29,.12);font-weight:800;font-size:14px}.handoff-card button{margin-top:9px;background:#111821;color:#fff}
+.proposal{margin-top:16px;display:grid;grid-template-columns:1.05fr .95fr;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.10)}.proposal-doc{padding:21px;background:var(--paper);color:var(--ink)}.proposal-doc small{color:#515b68;font-size:10px;font-weight:900}.proposal-doc h3{font-size:27px;line-height:1.08;margin:6px 0 10px}.proposal-doc ul{margin:0;padding:0 18px 0 0;display:grid;gap:7px;font-size:13px}.proposal-price{margin-top:15px;padding-top:13px;border-top:1px solid rgba(16,21,29,.13)}.proposal-price b{display:block;font-size:20px}.proposal-price p{margin:4px 0 0;font-size:11px;color:#56606d}.proposal-side{padding:20px;background:#0a0f16}.proposal-side h3{margin:0 0 7px;font-size:19px}.proposal-side p{margin:0;color:#8793a5;font-size:12px}.authority-note{margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(79,213,154,.17);background:rgba(79,213,154,.045);color:#aeb9c7;font-size:11px}.authority-note strong{color:#fff}.provenance{margin-top:12px;display:grid;gap:6px}.prov{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:11px}.prov span{color:#8190a4}.prov b{text-align:left}
+.contact{margin-top:18px;padding:16px;border:1px solid rgba(95,125,255,.17);border-radius:15px;background:rgba(95,125,255,.055)}.contact b{display:block;font-size:16px}.contact p{margin:4px 0 11px;color:#8f9bad;font-size:12px}.contact a{min-height:46px;padding:0 13px;border-radius:11px;background:#fff;color:#111821;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
+.section{padding:60px 0;border-top:1px solid rgba(255,255,255,.07)}.claim-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:20px}.claim-card{padding:16px;border-radius:15px;border:1px solid rgba(255,255,255,.085);background:#0a0f16}.claim-card small{color:#8f9cad;font-size:10px;font-weight:900}.claim-card h3{margin:6px 0 6px;font-size:17px}.claim-card p{margin:0;color:#8490a2;font-size:11px}.claim-card.pending{border-color:rgba(255,201,111,.18)}
+.pricing{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;margin-top:20px;padding:18px;border-radius:17px;border:1px solid rgba(255,255,255,.1);background:#0a0f16}.pricing h3{margin:0;font-size:25px}.pricing p{margin:5px 0 0;color:#8995a7;font-size:12px}.price-stack{display:flex;gap:8px}.price-box{min-width:130px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);text-align:center}.price-box small{display:block;color:#8190a4;font-size:10px}.price-box b{display:block;font-size:24px}.fit{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.fit>div{padding:16px;border-radius:15px;border:1px solid rgba(255,255,255,.085);background:#0a0f16}.fit small{font-size:10px;color:#8390a3;font-weight:900}.fit b{display:block;margin:5px 0}.fit p{margin:0;color:#8490a2;font-size:11px}
+footer{padding:27px 0;color:#8490a2;font-size:10px}.footerrow{padding-top:14px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;gap:14px}
+@media(max-width:800px){.pipeline{grid-template-columns:repeat(2,1fr)}.claim-grid{grid-template-columns:1fr}.contract-strip,.outcome-grid,.proposal,.pricing{grid-template-columns:1fr}}
+@media(max-width:620px){body{font-size:16px}.wrap{width:100%;padding-inline:16px}.topbar{height:56px}.top-note{display:none}.hero{padding:34px 0 24px}h1{font-size:clamp(39px,12vw,55px)}.lead{font-size:18px}.contract-strip,.product-map{margin-inline:-16px;border-left:0;border-right:0;border-radius:0}.app{margin-inline:-16px;border-left:0;border-right:0;border-radius:21px 21px 0 0}.screen{padding:22px 16px 25px}.pipeline{grid-template-columns:1fr}.input-tools{display:grid;grid-template-columns:1fr 1fr}textarea{min-height:215px;max-height:44dvh;resize:none}.evidence-item{grid-template-columns:1fr}.evidence-actions{grid-template-columns:1fr 1fr}.answer-row{grid-template-columns:1fr}.question{font-size:27px}.price-stack{display:grid;grid-template-columns:1fr 1fr}.price-box{min-width:0}.fit{grid-template-columns:1fr}.footerrow{display:block}.footerrow span:last-child{display:block;margin-top:6px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#app">דלגו ישר לכלי</a>
+<header class="topbar"><div class="wrap toprow"><div class="brand"><span class="mark"></span><span>POST-CALL</span></div><div class="top-note">משיחת אפיון להצעה שאפשר לעמוד מאחוריה</div></div></header>
+
+<main class="wrap">
+<section class="hero">
+  <div class="eyebrow">אחרי שיחת האפיון</div>
+  <h1>לפני שאתם שולחים מחיר,<br><span>תבדקו על מה אתם בעצם מתחייבים.</span></h1>
+  <p class="lead" data-claim-id="core-promise"><strong>הדביקו את שיחת האפיון.</strong> POST-CALL מפריד בין מה שהלקוח באמת אמר, מה שאתם מוסיפים אחרי השיחה ומה שהמערכת רק מסיקה. הוא בודק אילו חלקים בעסקה כבר מספיק מבוססים להצעה — ועוצר רק במקום שבו תשובה אחת יכולה לשנות סקופ, אחריות או מחיר.</p>
+  <div class="proofline"><span>Extraction proposes. Human approves.</span><span>Readiness לכל התחייבות בנפרד</span><span>מחיר מהמנוע הקיים — לא מהדמו</span></div>
+  <div class="hero-actions"><button class="btn primary" id="heroSample" type="button">הריצו שיחת דוגמה ←</button><button class="btn secondary" id="heroToInput" type="button">יש לי תמלול אמיתי</button></div>
+</section>
+
+<section class="contract-strip" data-claim-id="product-vs-demo">
+  <div><div class="eyebrow">חוזה המוצר</div><b>הדמו מדגים orchestration. הוא לא מחליף מנוע קיים.</b></div>
+  <p>המסלול הראשי נשאר מקומי: תמלול → מועמדי ראיה → אישור אנושי → readiness. רק אחר כך העסקה עוברת למנועי הסקופ, התמחור, ההצעה, הייצוא וה־ledger הקיימים. <code>noindex,nofollow</code> נשאר עד שכל claim required מקבל test מוצר עובר.</p>
+</section>
+
+<section class="product-map" aria-labelledby="mapTitle">
+  <div class="eyebrow">מה קורה מאחורי המסך</div><h2 id="mapTitle">לא “AI שמייצר הצעה”. שרשרת סמכות.</h2><p>כל שלב מקבל רק את הסמכות שהשלב הקודם יכול להצדיק. אם חסר בסיס — לא משלימים אותו בשקט.</p>
+  <div class="pipeline">
+    <article class="pipe system" data-claim-id="transcript-input"><small>01 · INPUT</small><b>Transcript</b><p>הטקסט נשאר מקומי במסלול הבסיסי.</p></article>
+    <article class="pipe system" data-claim-id="candidate-evidence"><small>02 · PROPOSE</small><b>Candidate evidence</b><p>מחלץ מועמדים עם quote, source ו־confidence.</p></article>
+    <article class="pipe human" data-claim-id="evidence-approval"><small>03 · APPROVE</small><b>Human confirmation</b><p>מועמד לא הופך לעובדה עד שאישרתם.</p></article>
+    <article class="pipe human" data-claim-id="commitment-gate"><small>04 · GATE</small><b>Commitment readiness</b><p>READY / CONDITIONAL / BLOCKED לכל התחייבות.</p></article>
+    <article class="pipe system" data-claim-id="decision-episodes"><small>05 · DECIDE</small><b>Smallest decision</b><p>שאלה אחת רק אם היא יכולה לשנות את העסקה.</p></article>
+    <article class="pipe authority" data-claim-id="pricing-authority"><small>06 · AUTHORITATIVE</small><b>Existing engines</b><p>Pricing → Proposal → Export → Ledger.</p></article>
+  </div>
+</section>
+
+<section class="app" id="app" tabindex="-1" aria-label="דמו POST-CALL V13.5">
+  <div class="appbar"><div class="appbar-left"><span class="dots"><i></i><i></i><i></i></span><span>POST-CALL / V13.5</span></div><div class="stage-label" id="stageLabel" role="status" aria-live="polite">1 · השיחה</div></div>
+  <div class="progress"><span id="progressFill"></span></div>
+
+  <section class="screen show" id="inputScreen">
+    <div class="screen-head"><small>שלב 1 · השיחה</small><h2>הדביקו את התמלול.</h2><p>לא צריך להכין בריף. המחלץ המקומי מחפש מועמדים — והוא לא מקבל סמכות לאשר אותם במקומכם.</p></div>
+    <div class="input-tools"><button class="btn ghost" id="pasteBtn" type="button">הדביקו מהלוח</button><button class="btn ghost" id="sampleBtn" type="button">נסו דוגמה</button></div>
+    <label class="sr-only" for="transcript">תמלול שיחת האפיון</label><textarea id="transcript" aria-describedby="inputHelp" placeholder="הדביקו כאן את שיחת האפיון..."></textarea>
+    <div class="input-meta" id="inputHelp"><span id="inputState" role="status" aria-live="polite">הדביקו שיחה כדי להתחיל</span><span id="charCount">0 תווים</span></div>
+    <button class="btn blue wide" id="analyzeBtn" type="button" disabled>חלצו מועמדי ראיה ←</button>
+  </section>
+
+  <section class="screen" id="evidenceScreen">
+    <div class="screen-head"><small>שלב 2 · מה המערכת מציעה</small><h2>אלה מועמדים. עדיין לא עובדות.</h2><p>אשרו רק דברים שהמשפט המצוטט באמת תומך בהם. מה שתדחו לא יוכל להזין readiness, מחיר או הצעה.</p></div>
+    <div class="notice"><strong>כלל:</strong> regex / dictionary hit ≠ truth. אישור שלכם משנה את ה־provenance מ־candidate ל־verified-by-user.</div>
+    <div class="evidence-list" id="evidenceList"></div>
+    <div class="evidence-footer"><p id="evidenceCount">0 מועמדים</p><button class="btn blue" id="toReadinessBtn" type="button">בדקו מה כבר בטוח להצעה ←</button></div>
+  </section>
+
+  <section class="screen" id="readinessScreen">
+    <div class="screen-head"><small>שלב 3 · Commitment readiness</small><h2>לא “העסקה מוכנה”. כל התחייבות נבדקת בנפרד.</h2><p>מה שמבוסס מתקדם. מה שאפשר להכניס רק כהחרגה נשאר conditional. מה שאין לו בסיס נשאר blocked.</p></div>
+    <div class="readiness-grid" id="readinessGrid"></div>
+    <div class="readiness-summary"><p id="readinessSummary"></p><button class="btn blue" id="readinessNext" type="button">המשיכו ←</button></div>
+  </section>
+
+  <section class="screen" id="episodeScreen">
+    <div class="screen-head"><small>שלב 4 · החלטה אחת</small><h2>צריך אתכם רק כאן.</h2><p>POST-CALL בוחר את השאלה הקטנה ביותר שיכולה לשנות התחייבות מסחרית.</p></div>
+    <div class="episode-box">
+      <div class="quote" id="episodeQuote">—</div>
+      <div class="consequence"><small>למה זה משנה</small><b id="episodeConsequence">—</b></div>
+      <h3 class="question" id="episodeQuestion" tabindex="-1">—</h3><p class="question-note" id="episodeNote"></p>
+      <div class="choices" id="choiceArea"></div>
+      <div class="answer-row hidden" id="textArea"><label class="sr-only" for="textAnswer">התשובה שלכם</label><input id="textAnswer"><button class="btn primary" id="submitText" type="button">המשיכו</button></div>
+      <div class="field-error hidden" id="fieldError" role="alert"></div>
+      <div class="episode-meta"><button id="whyBtn" type="button" aria-expanded="false">למה שואלים את זה?</button><span id="sourceChip">מקור: —</span></div>
+      <div class="why-panel" id="whyPanel"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="handoffScreen">
+    <div class="screen-head"><small>Outcome תקף · HANDOFF</small><h2>לא צריך לנחש. צריך לחזור ללקוח עם דבר אחד.</h2><p>שאר העסקה נשמרת. רק ההתחייבות שאין לה בסיס נעצרת.</p></div>
+    <div class="outcome-grid">
+      <div class="card"><h3>מה כבר נשאר תקף</h3><ul id="handoffReadyList"></ul></div>
+      <div class="card handoff-card"><h3 id="handoffTitle">מה חסר</h3><p id="handoffReason"></p><div class="copy-question" id="handoffQuestion">—</div><button class="btn" id="copyQuestion" type="button">העתיקו את השאלה</button></div>
+    </div>
+    <div class="contact"><b>יש לכם תמלול אמיתי שהגיע לנקודה הזאת?</b><p>בפיילוט המטרה היא לראות אם ה־handoff באמת חוסך התחייבות שגויה — ולא להעמיד פנים שהמערכת “השלימה” את העסקה.</p><a data-contact-route href="#" target="_blank" rel="noopener">שלחו לי את התמלול ב־WhatsApp ←</a></div>
+    <button class="btn secondary wide" id="restartHandoff" type="button">בדקו שיחה אחרת</button>
+  </section>
+
+  <section class="screen" id="proposalScreen">
+    <div class="screen-head"><small>שלב 5 · אפשר להעביר למנועים הקיימים</small><h2>יש מספיק בסיס להצעה ראשונית.</h2><p>הדמו לא מתמחר את העסקה. הוא מראה אילו commitments רשאים לעבור למנוע התמחור וההצעה.</p></div>
+    <div class="proposal">
+      <div class="proposal-doc"><small>PROPOSAL SKELETON</small><h3 id="proposalTitle">—</h3><ul id="proposalScope"></ul><div class="proposal-price" data-demo-pricing="illustrative"><b>מחיר: עובר למנוע התמחור המלא</b><p>ארבע שיטות · cost floor · guardrails · history/calibration. אין כאן נוסחת תמחור חלופית.</p></div></div>
+      <div class="proposal-side"><h3>מה רשאי להיכנס לעסקה</h3><p>רק READY, או CONDITIONAL בניסוח תנאי/החרגה מפורש.</p><div class="provenance" id="provenanceList"></div><div class="authority-note"><strong>Pricing authority:</strong> V13.5 לא מחשב מחיר מסחרי. ה־readiness layer רק קובע אילו claims והנחות רשאים להזין את מנוע התמחור הקיים.</div><button class="btn primary wide" id="exportBtn" type="button">המשיכו להצעה / ייצוא ←</button></div>
+    </div>
+    <div class="contact"><b>רוצים לבדוק את זה על עסקה אמיתית?</b><p>שלחו תמלול. נבדוק אם POST-CALL שואל רק את מה שמשנה — ואם ההצעה שיוצאת באמת דורשת פחות תיקון.</p><a data-contact-route href="#" target="_blank" rel="noopener">בדקו עסקה אמיתית איתי ←</a></div>
+    <button class="btn secondary wide" id="restartProposal" type="button">בדקו שיחה אחרת</button>
+  </section>
+</section>
+
+<section class="section" aria-labelledby="proofTitle">
+  <div class="section-head"><div class="eyebrow">מה אפשר להוכיח עכשיו — ומה לא</div><h2 id="proofTitle">הפיילוט מפריד בין mechanism proof לבין field proof.</h2><p>אפשר לבדוק את המנגנון בדף. תוצאות מסחריות נשארות pending עד שיש נתונים אמיתיים.</p></div>
+  <div class="claim-grid">
+    <article class="claim-card" data-claim-id="mechanism-proof"><small>MECHANISM</small><h3>אפשר לראות provenance.</h3><p>Candidate, transcript quote, user approval, post-call answer ו־system inference אינם מוצגים כאותו מקור.</p></article>
+    <article class="claim-card" data-claim-id="handoff-valid"><small>MECHANISM</small><h3>אפשר לראות מתי המערכת מסרבת “להשלים”.</h3><p>אם ownership / SLA / security פתוחים, BLOCKED נשאר BLOCKED והמערכת מחזירה שאלה ללקוח.</p></article>
+    <article class="claim-card pending" data-claim-id="field-proof-pending"><small>FIELD · PENDING</small><h3>לא ממציאים תוצאה לפיילוט.</h3><p>נמדוד זמן עריכה, היקף שכתוב, שיעור הצעות שנשלחו ללא עזרה, והפער בין מחיר שנשלח/נסגר/שעות בפועל — לפני שמציגים claim.</p></article>
+  </div>
+  <div class="pricing" data-claim-id="pilot-price"><div><div class="eyebrow">מחיר הפיילוט</div><h3>חינם עד שיש הצעה ששווה להוציא.</h3><p>בדיקת השיחה, readiness ובניית הצעה ראשונית — ללא תשלום. תשלום רק על ייצוא הצעה מוכנה לשליחה.</p></div><div class="price-stack"><div class="price-box"><small>בדיקה + בנייה</small><b>₪0</b></div><div class="price-box"><small>ייצוא</small><b>₪49</b></div></div></div>
+</section>
+
+<section class="section" aria-labelledby="fitTitle">
+  <div class="section-head"><div class="eyebrow">למי זה נועד</div><h2 id="fitTitle">למי שהמחיר והסקופ באמת מתגלים בשיחה.</h2><p>במיוחד לפרויקטים מותאמים של אוטומציה, אינטגרציות ו־AI שבהם חריג קטן יכול לשנות עבודה, אחריות או מחיר.</p></div>
+  <div class="fit"><div><small>כנראה מתאים</small><b>כל לקוח משנה את ההצעה</b><p>מערכות, חריגים, security, ownership, data volume ותלויות משתנים משיחה לשיחה.</p></div><div><small>כנראה פחות מתאים</small><b>חבילה קבועה מראש</b><p>אם המחיר, המסירה והגבולות כמעט תמיד זהים, חלק גדול מה־readiness layer מיותר.</p></div></div>
+</section>
+</main>
+
+<footer class="wrap"><div class="footerrow"><span>POST-CALL · V13.5 target contract rewrite</span><span>No commitment beyond evidence · Extraction proposes, human approves · Existing pricing engine remains authoritative</span></div></footer>
+
+<!-- The first thing on this page that is the product rather than a drawing of
+     it. The contact route used to be retyped here and the number kept in step
+     with pc-gate.js by a test, which is two sources of truth wearing one. It
+     is loaded now, and every WhatsApp link below is built from it. -->
+<script src="../assets/pc-contact.js"></script>
+<script src="../assets/pc-commitments.js"></script>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const OPENER="היי ארז, יש לי שיחת אפיון אמיתית שאני רוצה לבדוק עם POST-CALL";
+$$("[data-contact-route]").forEach(a=>a.href=PC.contact.href(OPENER));
+
+const sample=`לקוח: היום ההזמנות נכנסות בוואטסאפ. בערך 40 הזמנות ביום.
+אני: ומה קורה אחר כך?
+לקוח: מישהו מעתיק כל הזמנה ל-Priority. זה בערך 8 דקות להזמנה.
+אני: יש פורמט קבוע?
+לקוח: ברוב המקרים כן, אבל לפעמים שולחים טקסט חופשי או צילום מסך.
+אני: ומי מטפל כשאי אפשר להבין את ההזמנה?
+לקוח: את זה עוד לא סגרנו.
+לקוח: מבחינתי המטרה היא שההזמנות הרגילות ייכנסו ל-Priority בלי שמישהו יעתיק אותן ידנית.`;
+
+const systemMap=[["WhatsApp",/וואטסאפ|whatsapp/i],["Priority",/priority|פריוריטי/i],["HubSpot",/hubspot/i],["Salesforce",/salesforce/i],["SAP",/\bsap\b/i],["Make",/\bmake\b|make\.com/i],["n8n",/\bn8n\b/i],["Zapier",/zapier/i],["Airtable",/airtable/i],["Notion",/notion/i],["Slack",/slack/i],["Google Sheets",/google sheets|גוגל שיט/i],["Jira",/jira/i],["Stripe",/stripe/i],["Shopify",/shopify/i],["Pipedrive",/pipedrive/i],["CRM",/\bcrm\b/i],["Website",/website|אתר/i],["Email",/email|אימייל|מייל/i]];
+
+const state={text:"",candidates:[],verified:[],added:[],freeText:false,enterpriseOpen:false,noRoi:false,systems:[],flow:null,edgeOwner:null,riskDisposition:null,riskDetails:null,commitments:[],episode:null};
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function sentences(){return state.text.split(/\n|(?<=[.!?])\s+/).map(x=>x.trim()).filter(Boolean)}
+function sentenceBy(re){return sentences().find(x=>re.test(x))||""}
+function speakerOf(q){const m=q.match(/^(לקוח|אני|מוכר|יועץ)\s*:/i);return m?m[1]:"לא זוהה"}
+function candidate(type,value,quote,confidence){if(!value||!quote||state.candidates.some(x=>x.type===type&&x.value===value))return;state.candidates.push({id:"c"+(state.candidates.length+1),type,value,quote,speaker:speakerOf(quote),source:"transcript-local",confidence,verified:false,rejected:false})}
+function clearDerived(){Object.assign(state,{candidates:[],verified:[],added:[],freeText:false,enterpriseOpen:false,noRoi:false,systems:[],flow:null,edgeOwner:null,riskDisposition:null,riskDetails:null,commitments:[],episode:null})}
+function show(id,label,pct){$$(".screen").forEach(s=>s.classList.toggle("show",s.id===id));$("#stageLabel").textContent=label;$("#progressFill").style.width=pct+"%";setTimeout(()=>$("#"+id).scrollIntoView({behavior:"smooth",block:"start"}),40)}
+function updateInput(){const t=$("#transcript").value.trim();$("#charCount").textContent=t.length.toLocaleString("he-IL")+" תווים";$("#inputState").textContent=t.length>=20?"מוכן לחילוץ מקומי":"הדביקו שיחה כדי להתחיל";$("#analyzeBtn").disabled=t.length<20}
+function extractCandidates(){
+  state.candidates=[];const ss=sentences();
+  systemMap.forEach(([name,re])=>{const q=ss.find(s=>re.test(s));if(q)candidate("system",name,q,.82)});
+  const goal=ss.find(s=>/(?:המטרה היא|מבחינתי המטרה היא|צריך לקרות|רוצים שיקרה)/i.test(s));if(goal)candidate("flow",goal.replace(/^.*?(?:המטרה היא|מבחינתי המטרה היא|צריך לקרות\??|רוצים שיקרה\??)\s*/i,"").trim()||goal,goal,.78);
+  const volume=ss.find(s=>/\d+(?:[.,]\d+)?\s*(?:הזמנות|לידים|פניות|פעולות)\s*(?:ביום|ליום)/i.test(s));if(volume)candidate("volume",volume.replace(/^.*?:\s*/,""),volume,.86);
+  const duration=ss.find(s=>/\d+(?:[.,]\d+)?\s*דקות/i.test(s));if(duration)candidate("duration",duration.replace(/^.*?:\s*/,""),duration,.86);
+  const edge=ss.find(s=>/טקסט חופשי|צילום מסך|תמונה|free.?text/i.test(s));if(edge)candidate("exception",edge.replace(/^.*?:\s*/,""),edge,.84);
+  const risk=ss.find(s=>/אבטחה|security|sso|sla|טיפול בכשל|אחריות.*כשל/i.test(s));if(risk)candidate("risk",risk.replace(/^.*?:\s*/,""),risk,.76);
+  const value=ss.find(s=>/חוסך|חיסכון|עלות|roi|ערך|שווי/i.test(s));if(value)candidate("value",value.replace(/^.*?:\s*/,""),value,.68);
+}
+function renderCandidates(){
+  $("#evidenceList").innerHTML=state.candidates.length?state.candidates.map(c=>`<article class="evidence-item" data-id="${esc(c.id)}"><div class="evidence-main"><small><span>${esc(c.type)}</span><span>source: transcript-local</span><span>confidence: ${Math.round(c.confidence*100)}%</span></small><b>${esc(c.value)}</b><blockquote>“${esc(c.quote)}”</blockquote></div><div class="evidence-actions"><button class="approve" type="button" data-action="approve">אשרו</button><button class="reject" type="button" data-action="reject">דחו</button></div></article>`).join(""):`<div class="notice amber"><strong>לא נמצאו מספיק מועמדים.</strong> התמלול נשאר דליל; POST-CALL לא ישלים אותו בשקט.</div>`;
+  updateEvidenceCount();
+}
+function updateEvidenceCount(){const a=state.candidates.filter(c=>c.verified).length,r=state.candidates.filter(c=>c.rejected).length;$("#evidenceCount").textContent=`${a} אושרו · ${r} נדחו · ${state.candidates.length-a-r} עדיין מועמדים`}
+function syncVerified(){
+  state.verified=state.candidates.filter(c=>c.verified).map(c=>({...c,source:"transcript-verified"}));
+  const all=[...state.verified,...state.added];
+  state.systems=[...new Set(all.filter(x=>x.type==="system").map(x=>x.value))];
+  const f=all.find(x=>x.type==="flow");state.flow=f?f.value:null;
+  state.freeText=state.verified.some(x=>x.type==="exception");
+  const risk=state.verified.find(x=>x.type==="risk");state.enterpriseOpen=!!risk&&/לא סגרנו|עוד לא|לא ברור|לא דיברנו|יכול להיות/i.test(risk.quote);
+  const val=state.verified.find(x=>x.type==="value");state.noRoi=!val||/אין לי מושג|לא מדדנו|לא יודע/i.test(val.quote);
+}
+/* The demo used to keep its own copy of this: seven commitments, hand-written
+   statuses, a second opinion about what BLOCKED means. Two implementations of
+   one rule is how a page ends up promising something the product does not do —
+   which is the failure this whole contract exists to catch, reproduced inside
+   the page that states the contract. It maps its own state onto the deal shape
+   and asks the engine now. */
+function toDeal(){
+  syncVerified();
+  return {
+    systems: state.systems,
+    systemsSource: state.systems.length ? PC.commitments.SOURCES.clientSaid : undefined,
+    delivery: state.flow,
+    deliverySource: state.sources && state.sources.flow === 'conversation'
+      ? PC.commitments.SOURCES.clientSaid : PC.commitments.SOURCES.operatorSaid,
+    provenance: state.noRoi ? 'mine' : 'prompted',
+    signals: { freeText: state.freeText, enterpriseOpen: state.enterpriseOpen },
+    decisions: { exceptionOwner: state.edgeOwner, risk: state.riskDisposition,
+                 riskDetail: state.riskDetails }
+  };
+}
+function buildReadiness(){ state.commitments = PC.commitments.assess(toDeal()); }
+function renderReadiness(){
+  buildReadiness();
+  $("#readinessGrid").innerHTML=state.commitments.map(c=>`<article class="commitment"><div><b>${esc(c.label)}</b><p>${esc(c.reason)} · source: ${esc(c.source)}</p></div><span class="status ${c.status.toLowerCase()}">${c.status}</span></article>`).join("");
+  const consequential=PC.commitments.blocking(state.commitments);
+  $("#readinessSummary").textContent=consequential.length?`${consequential.length} התחייבויות מהותיות עדיין דורשות החלטה. נבחר רק את הראשונה שמשנה את העסקה.`:"החוסרים שנשארו אינם חייבים לחסום את ההצעה הנוכחית.";
+  $("#readinessNext").textContent=consequential.length?"פתחו את ההחלטה הקטנה ביותר ←":"המשיכו להצעה הראשונית ←";
+}
+/* The last of the demo's private copies. It held five hand-written episodes,
+   its own order for them and its own idea of when to stop — a page showing a
+   decision path the product did not have. It asks the engine now and maps the
+   field names its markup already uses. */
+function nextEpisode(){
+  const deal = toDeal();
+  deal.quotes = {
+    'exception-owner': sentenceBy(/טקסט חופשי|צילום מסך|תמונה/i) || null,
+    'enterprise-risk': sentenceBy(/אבטחה|security|sso|sla|כשל/i) || null
+  };
+  const ep = PC.commitments.nextEpisode(PC.commitments.assess(deal), deal);
+  if (!ep) return null;
+  const source = ep.quote ? 'נאמר בשיחה, וההחלטה עליו עוד לא' : 'חסר בשיחה';
+  return Object.assign({}, ep, {
+    key: ep.id,
+    quote: ep.quote || 'לא נמצא בתמלול משפט שסוגר את זה.',
+    source,
+    why: ep.consequence
+  });
+}
+function renderEpisode(ep){
+  state.episode=ep;$("#episodeQuote").textContent=ep.quote;$("#episodeConsequence").textContent=ep.consequence;$("#episodeQuestion").textContent=ep.question;$("#episodeNote").textContent=ep.note||"";$("#sourceChip").textContent="מקור: "+ep.source;$("#whyPanel").textContent=ep.why||"";$("#whyPanel").classList.remove("show");$("#fieldError").classList.add("hidden");$("#choiceArea").innerHTML="";$("#choiceArea").classList.toggle("hidden",ep.type!=="choice");$("#textArea").classList.toggle("hidden",ep.type!=="text");
+  if(ep.type==="choice")$("#choiceArea").innerHTML=ep.options.map(o=>`<button class="choice" data-value="${esc(o.value)}" type="button">${esc(o.label)}<small>${esc(o.small)}</small></button>`).join("");else{$("#textAnswer").value="";$("#textAnswer").placeholder=ep.placeholder||"כתבו כאן"}
+  show("episodeScreen","4 · החלטה אחת",72);setTimeout(()=>$("#episodeQuestion").focus({preventScroll:true}),80);
+}
+function addPostCall(type,value){state.added.push({type,value,source:"post-call-user",verified:true})}
+function syncAdded(){syncVerified()}
+function error(msg){$("#fieldError").textContent=msg;$("#fieldError").classList.remove("hidden")}
+function applyAnswer(value){
+  const ep=state.episode;if(!ep)return;
+  if(ep.key==="systems"){const parts=value.split(/\s*(?:,|،|\+|\s+ו\s+)\s*/).map(x=>x.trim()).filter(x=>x.length>1);if(parts.length<2)return error("כתבו לפחות שני צדדים או מערכות.");parts.slice(0,4).forEach(v=>addPostCall("system",v))}
+  if(ep.key==="delivery")addPostCall("flow",value);
+  if(ep.key==="exception-owner"){if(value==="ask")return handoffFor("exception-owner");state.edgeOwner=value}
+  /* Two questions share this id and they must not both fire on one answer.
+     The choice sets the disposition; the follow-up text sets what "include"
+     actually commits to. Keyed on disposition instead of type, picking
+     "include" wrote the word "include" in as the commitment and the follow-up
+     was never asked. */
+  if(ep.key==="enterprise-risk"){
+    if(ep.type==="text"){state.riskDetails=value}
+    else if(value==="ask"){return handoffFor("enterprise-risk")}
+    else{state.riskDisposition=value}
+  }
+  syncAdded();renderReadiness();const next=nextEpisode();if(next)renderEpisode(next);else finishProposal();
+}
+function validReady(){return PC.commitments.admissible(state.commitments)}
+function handoffFor(id){
+  const h=PC.commitments.handoff(PC.commitments.assess(toDeal()),id);
+  return finishHandoff(h.blockedLabel,h.question);
+}
+function finishHandoff(title,question){
+  buildReadiness();$("#handoffTitle").textContent=title;$("#handoffReason").textContent="ההתחייבות הזאת נשארת BLOCKED. שאר ה־READY/CONDITIONAL לא נמחק.";$("#handoffQuestion").textContent=question;
+  const keep=validReady().filter(c=>c.id!=="value-pricing");$("#handoffReadyList").innerHTML=(keep.length?keep:[{label:"המידע שכבר אושר",reason:"נשמר לעסקה"}]).map(c=>`<li>${esc(c.label)} — ${esc(c.reason)}</li>`).join("");show("handoffScreen","5 · handoff תקף",100);
+}
+function finishProposal(){
+  syncAdded();buildReadiness();const title=state.flow||("חיבור בין "+state.systems.join(" · "));$("#proposalTitle").textContent=title;const scope=[];
+  if(state.systems.length>=2)scope.push("חיבור בין "+state.systems.join(", "));if(state.flow)scope.push(state.flow);if(state.freeText&&state.edgeOwner==="client")scope.push("חריגי קלט שלא ניתנים לפענוח נשארים באחריות הלקוח");if(state.freeText&&state.edgeOwner==="system")scope.push("טיפול בחריגי קלט נכנס לסקופ");if(state.enterpriseOpen&&state.riskDisposition==="exclude")scope.push("Security / SLA / failure handling מוחרגים מההצעה הנוכחית");if(state.enterpriseOpen&&state.riskDisposition==="include"&&state.riskDetails)scope.push(state.riskDetails);scope.push("כל התחייבות BLOCKED נשארת מחוץ להצעה");
+  $("#proposalScope").innerHTML=scope.map(x=>`<li>${esc(x)}</li>`).join("");const prov=[];state.verified.forEach(x=>prov.push([x.type,"transcript-verified"]));state.added.forEach(x=>prov.push([x.type,"post-call-user"]));if(state.edgeOwner)prov.push(["exception ownership","post-call-user decision"]);if(state.riskDisposition)prov.push(["enterprise risk","post-call-user decision"]);$("#provenanceList").innerHTML=prov.slice(0,8).map(([a,b])=>`<div class="prov"><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join("");show("proposalScreen","5 · מוכן למנועים הקיימים",100);
+}
+function runReadinessNext(){syncAdded();renderReadiness();const ep=nextEpisode();if(ep)renderEpisode(ep);else finishProposal()}
+function analyze(){const t=$("#transcript").value.trim();if(t.length<20)return;clearDerived();state.text=t;extractCandidates();renderCandidates();show("evidenceScreen","2 · מועמדי ראיה",34)}
+function runSample(){ $("#transcript").value=sample;updateInput();$("#app").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(analyze,220)}
+function restart(){clearDerived();state.text="";$("#transcript").value="";updateInput();show("inputScreen","1 · השיחה",16.6)}
+async function copyQuestion(){try{await navigator.clipboard.writeText($("#handoffQuestion").textContent);$("#copyQuestion").textContent="הועתק ✓"}catch(e){$("#copyQuestion").textContent="סמנו והעתיקו"}}
+
+$("#transcript").addEventListener("input",updateInput);$("#analyzeBtn").onclick=analyze;$("#sampleBtn").onclick=runSample;$("#heroSample").onclick=runSample;$("#heroToInput").onclick=()=>{$("#app").scrollIntoView({behavior:"smooth"});setTimeout(()=>$("#transcript").focus(),200)};
+$("#pasteBtn").onclick=async()=>{try{const t=await navigator.clipboard.readText();if(t){$("#transcript").value=t;updateInput()}else $("#transcript").focus()}catch(e){$("#transcript").focus();$("#inputState").textContent="הדביקו ידנית בשדה"}};
+$("#evidenceList").addEventListener("click",e=>{const btn=e.target.closest("[data-action]");if(!btn)return;const item=btn.closest("[data-id]"),c=state.candidates.find(x=>x.id===item.dataset.id);if(!c)return;if(btn.dataset.action==="approve"){c.verified=true;c.rejected=false}else{c.verified=false;c.rejected=true}item.classList.toggle("approved",c.verified);item.classList.toggle("rejected",c.rejected);updateEvidenceCount()});
+$("#toReadinessBtn").onclick=()=>{syncVerified();renderReadiness();show("readinessScreen","3 · readiness",52)};$("#readinessNext").onclick=runReadinessNext;$("#choiceArea").addEventListener("click",e=>{const b=e.target.closest("[data-value]");if(b)applyAnswer(b.dataset.value)});
+$("#submitText").onclick=()=>{const v=$("#textAnswer").value.trim();if(v.length<3)return error("כתבו תשובה קצרה כדי להמשיך.");$("#fieldError").classList.add("hidden");applyAnswer(v)};$("#textAnswer").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#submitText").click()}});
+$("#whyBtn").onclick=()=>{const p=$("#whyPanel"),open=p.classList.toggle("show");$("#whyBtn").setAttribute("aria-expanded",open?"true":"false")};$("#copyQuestion").onclick=copyQuestion;$("#restartHandoff").onclick=restart;$("#restartProposal").onclick=restart;$("#exportBtn").onclick=()=>alert("במוצר: כאן עוברים ל-proposal/export הקיימים. מודל הפיילוט נשאר ₪0 לבנייה ו-₪49 לייצוא.");
+updateInput();
+</script>
+
+<script type="application/json" id="landingProductContract">
+{
+  "version":"13.5",
+  "mode":"target-contract-rewrite",
+  "releaseGate":"blocked_until_required_claim_tests_pass",
+  "pricingAuthority":"The existing product pricing engine remains authoritative. This landing demo does not define commercial pricing logic.",
+  "privacyConstraint":"Core transcript path must work locally without mandatory POST-CALL backend or third-party AI transmission.",
+  "governingRules":[
+    "Claim -> Capability -> Test",
+    "Extraction proposes. Human approves.",
+    "No commitment beyond evidence.",
+    "Default != client evidence.",
+    "Post-call answer != client quote.",
+    "Readiness is per commitment, not a global score.",
+    "Decision Episode exists only when a consequential unresolved decision remains.",
+    "Handoff is a valid outcome.",
+    "Missing ROI must not block pricing methods that do not depend on ROI."
+  ],
+  "claims":[
+    {"id":"core-promise","required":true,"capability":"Transcript -> evidence candidates -> human confirmation -> per-commitment readiness -> valid commercial progress."},
+    {"id":"transcript-input","required":true,"capability":"Paste transcript directly; core local path requires no external AI network request."},
+    {"id":"candidate-evidence","required":true,"capability":"Local extraction creates candidate evidence carrying the sentence it came from, who spoke it, and a confidence short of certainty. An earlier wording asked for verified=false; the product already spends `verified` on a different and sharper question - whether the cited sentence is really in the transcript, which is how a paraphrasing model gets caught - so approval is named separately below instead of sharing that flag."},
+    {"id":"evidence-approval","required":true,"capability":"Candidate evidence cannot become authoritative input until the operator approves it in review; a rejected row reaches neither the form, nor the price, nor the document. Holds for the model path and the local path alike."},
+    {"id":"commitment-gate","required":true,"capability":"Material commitments are evaluated individually as READY, CONDITIONAL or BLOCKED."},
+    {"id":"decision-episodes","required":true,"capability":"Only consequential unresolved commitments generate the smallest decision-changing question."},
+    {"id":"handoff-valid","required":true,"capability":"Need-to-ask-client produces a valid handoff preserving already valid deal state."},
+    {"id":"mechanism-proof","required":true,"capability":"Transcript quote, user approval, post-call answer and system inference each carry a distinct provenance value and are never collapsed into one source."},
+    {"id":"pricing-authority","required":true,"capability":"Existing four-method pricing engine, cost floor, guardrails and deal history remain authoritative."},
+    {"id":"product-vs-demo","required":true,"capability":"Landing demo is orchestration evidence, not a substitute implementation for scope/pricing/proposal/export/ledger."},
+    {"id":"pilot-price","required":true,"capability":"Pilot model remains NIS 0 through proposal construction and NIS 49 for export."},
+    {"id":"field-proof-pending","required":true,"capability":"No fabricated pilot outcome metric; results remain pending until measured in FIELD."}
+  ]
+}
+</script>
+</body>
+</html>

@@ -64,7 +64,12 @@ function withConfig(src, { paymentUrl, contact }) {
        stopped substituting anything the moment it was filled in — every test
        below would then have gone on passing while measuring the shipped
        configuration instead of the one it asked for. */
-    src = src.replace(/contact:\s*'[^']*'/, 'contact: ' + JSON.stringify(contact));
+    /* Matched to end of line rather than to a quoted literal. The route moved
+       into pc-contact.js so that the landing page and the wall could not hold
+       two copies of it, which left this key holding an expression instead of a
+       string — and a pattern that only knew about quotes silently stopped
+       substituting, which is the failure this assert exists to make loud. */
+    src = src.replace(/contact:[^\n]*,/, 'contact: ' + JSON.stringify(contact) + ',');
     assert.notStrictEqual(src, before, 'SALES.contact moved — this test now proves nothing');
   }
   return src;
@@ -515,8 +520,12 @@ test('the address this repository actually ships is one a buyer can open', () =>
      in local form, which wa.me resolves to a dead page rather than an error, and
      a bare number with no scheme, which the wall would open as a relative path
      on its own origin. */
-  const shipped = (SRC.match(/contact:\s*'([^']*)'/) || [])[1];
-  assert.notStrictEqual(shipped, undefined, 'SALES.contact is gone from the file');
+  /* Read from pc-contact.js, which is where the route moved so that the wall
+     and the landing page could not each keep a copy. The wall still decides
+     what to do with it; it no longer owns it. */
+  const shipped = (fs.readFileSync(path.join(__dirname, 'pc-contact.js'), 'utf8')
+    .match(/const ROUTE = '([^']*)'/) || [])[1];
+  assert.notStrictEqual(shipped, undefined, 'the route is gone from pc-contact.js');
   if (!shipped) return;                       // not selling yet is a valid state
   assert.ok(/^mailto:[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(shipped) ||
             /^https:\/\/wa\.me\/[1-9]\d{8,14}$/.test(shipped),

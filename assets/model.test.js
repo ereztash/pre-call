@@ -129,5 +129,35 @@ test('the defensible band sits below the ceiling and above zero', () => {
   assert.ok(m.low < m.high, 'a band whose bottom is not below its top is not a band');
 });
 
+console.log('\nthe engine chooses its own path');
+/* pickMethod moved here out of pc-guide.js. What it returns is not advice —
+   it is the key compute() looks up to decide which of the four methods sets
+   the price, so a fifth name, a typo, or an undefined would not produce worse
+   guidance, it would produce no price at all. The guide layer is being
+   replaced; this guard is what makes that safe to do. */
+test('every method it can return is one the engine can actually price', () => {
+  const known = ['cost', 'market', 'value', 'comparable'];
+  [{}, { freq: 20, minutes: 7 }, { freq: 20, minutes: 7, numbersAreMine: true },
+   { numbersAreMine: true }, { comparableLast: 8000 }, { comparableLast: 0 },
+   { freq: 0, minutes: 0 }, { freq: 20, minutes: 7, comparableLast: 8000 }]
+    .forEach(s => {
+      const p = M.pickMethod(s);
+      assert.ok(known.includes(p.method),
+        'pickMethod returned ' + JSON.stringify(p.method) + ' and compute() has no such method');
+      assert.ok(M.METHOD_LABEL[p.method], 'no label for ' + p.method);
+    });
+});
+
+test('a chosen method that has no data still yields a price, never NaN', () => {
+  /* value and comparable return null inside compute() when their inputs are
+     missing. pickMethod can name value on the strength of freq and minutes
+     alone, while compute() needs a rate and a capture rate as well — so the
+     pair has to survive the gap between them. */
+  const m = M.compute({ freq: 20, freqUnit: 52, minutes: 7, systemCount: 2,
+                        method: M.pickMethod({ freq: 20, minutes: 7 }).method });
+  assert.ok(Number.isFinite(m.price), 'the price is not a number: ' + m.price);
+  assert.ok(m.price > 0, 'a method with no data priced the work at ' + m.price);
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

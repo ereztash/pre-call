@@ -178,16 +178,25 @@
       const quote = clean(got.quote);
       if (!quote) return;   // no citation, no candidate
 
+      const found = src.length
+        ? src.replace(/\s+/g, ' ').includes(quote.replace(/\s+/g, ' ')) : false;
+      const spoken = speakerOf(got.speaker);
+
       out.push({
         key: f.key, target: f.target, kind: f.kind, label: f.label,
         value, quote,
-        speaker: /לקוח|client/i.test(clean(got.speaker)) ? 'client'
-               : /מוכר|seller/i.test(clean(got.speaker)) ? 'seller' : 'unknown',
+        speaker: spoken,
         /* Whether the quote is actually in the transcript. A model that
            paraphrases has invented the evidence, and evidence that cannot be
            checked is worse than none — the row is kept but marked, so the
            operator sees which ones to read for themselves. */
-        verified: src.length ? src.replace(/\s+/g, ' ').includes(quote.replace(/\s+/g, ' ')) : false
+        verified: found,
+        /* Same scale as the local cues, from the two things that can be
+           checked without trusting the model: whether the sentence it cited is
+           really in the transcript, and whether it could say who spoke it. A
+           row whose quote is not in the source is the one the operator has to
+           read, so it must not sort above a row that checked out. */
+        confidence: found ? (spoken === 'unknown' ? 0.75 : 0.9) : 0.3
       });
     });
     return out;
@@ -233,31 +242,201 @@
      side by side (case-insensitive, so "Minutes" and "minutes" both
      land), so a transcript pasted in either language still yields
      candidates. */
+  /* confidence is not a probability and is not measured. It is how much the
+     match can carry on its own, and the only thing it is allowed to do is
+     order the review and warn: a cue that fires on any shekel figure is worth
+     less than one that fires on the word "minutes", because an hourly rate,
+     a salary and a price all look identical to it. Nothing downstream may
+     price on it, and nothing may skip approval because of it. */
   const CUES = [
-    { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?|\bminutes?\b|\bmins?\b)/i, label: tr('דקות לכל פעם') },
-    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה') },
-    { key: 'freq',    re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|\btimes?\b(?:\s*(?:a|per)\s*(?:day|week|month))?|\borders?\b|\bleads?\b|\brequests?\b)/i, label: tr('כמה פעמים') }
+    { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?|\bminutes?\b|\bmins?\b)/i, label: tr('דקות לכל פעם'),
+      confidence: 0.85 },
+    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה'),
+      /* Weakest cue here by a distance. Every figure in a discovery call that
+         carries a currency word matches it — the hourly rate this same
+         transcript states, most of all. */
+      confidence: 0.55 },
+    { key: 'freq',    re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|\btimes?\b(?:\s*(?:a|per)\s*(?:day|week|month))?|\borders?\b|\bleads?\b|\brequests?\b)/i, label: tr('כמה פעמים'),
+      confidence: 0.85 }
   ];
+
+  /* One vocabulary for who spoke, because there is one question downstream —
+     provenance() asks whether a figure came from the client — and two ways in.
+     The model path reads a field it was asked to fill; the local path reads
+     the label the transcript already puts at the head of the line. Different
+     inputs, and they have to produce the same three words or provenance
+     silently answers "mine" for half of them. */
+  /* Lines with the speaker each one belongs to.
+
+     A turn is not a sentence. "לקוח: היום ההזמנות נכנסות בוואטסאפ. בערך 40
+     הזמנות ביום." is one person speaking, and splitting it on the full stop —
+     which is what the number scan needs, to keep quotes short — leaves the
+     second half with no label in front of it. Reading the label off each
+     fragment therefore lost the attribution for every figure that was not in
+     the first sentence of its turn, which is most of them, and provenance came
+     back 'mine' for a number the client had just said out loud.
+
+     Same failure as the one heuristics() had before it read labels at all,
+     arriving by a different road: a figure the client stated, priced as the
+     operator's guess. So the label carries forward until another one replaces
+     it, which is how the transcript reads to a person. */
+  function withSpeakers(src) {
+    let current = 'unknown';
+    return String(src || '').split(/\n|(?<=[.!?])\s+/)
+      .map(l => l.trim()).filter(Boolean)
+      .map(line => {
+        const label = (line.match(/^\s*([^:]{1,20}?)\s*:/) || [])[1];
+        if (label !== undefined) current = speakerOf(label);
+        return { line, speaker: current };
+      });
+  }
+
+  function speakerOf(text) {
+    const s = clean(text);
+    if (/לקוח|client|customer/i.test(s)) return 'client';
+    /* No \b around אני. In JavaScript a word boundary is defined on ASCII word
+       characters, so it never fires between a Hebrew letter and the end of the
+       string — /^אני\b/ matched nothing at all. Explicit edges instead, which
+       still keeps it from matching inside a longer word. */
+    if (/מוכר|יועץ|(^|\s)אני($|\s)|seller|\bme\b/i.test(s)) return 'seller';
+    return 'unknown';
+  }
 
   function heuristics(transcript) {
     const src = String(transcript || '');
     if (!src.trim()) return [];
-    const lines = src.split(/\n|(?<=[.!?])\s+/).map(l => l.trim()).filter(Boolean);
+    const lines = withSpeakers(src);
     const seen = new Set(), out = [];
     CUES.forEach(cue => {
-      for (const line of lines) {
+      for (const { line, speaker } of lines) {
         const m = line.match(cue.re);
         if (!m || seen.has(cue.key)) continue;
         const n = parseFloat(m[1].replace(/,/g, ''));
         if (!isFinite(n) || n <= 0) continue;
         seen.add(cue.key);
         const f = FIELDS.find(x => x.key === cue.key);
+        /* The speaker label, when the transcript has one. Every figure used to
+           come back 'unknown' here, which reads like a small gap and is not
+           one: provenance() decides between client-said and operator-guessed
+           by this exact field, so an unknown speaker made every locally
+           extracted number the operator's own. That routes pickMethod to
+           market pricing, drops the ROI paragraph out of the document, and
+           does all of it without a message — the local path quietly priced
+           every deal as though the client had said nothing. */
         out.push({ key: cue.key, target: f.target, kind: 'number', label: cue.label,
-                   value: n, quote: line, speaker: 'unknown', verified: true,
+                   value: n, quote: line, speaker,
+                   /* True because the quote is the line, taken whole. This
+                      field asks whether the citation exists in the source, not
+                      whether a human accepted the row — approval is the review
+                      step, and it runs for this path exactly as it does for
+                      the model's. There is no paraphrase here to check. */
+                   verified: true,
+                   confidence: cue.confidence,
                    guessed: true });
       }
     });
     return out;
+  }
+
+  /* Everything in a call that is not a number.
+
+     heuristics() finds figures, which is what pricing needs and only part of
+     what a proposal promises. Which systems connect, what the connection is
+     supposed to produce, and whether the call raised something it never closed
+     — those decide what the document commits to, and none of them look like a
+     number. Without them a locally-read call can be priced and still cannot be
+     assessed, which leaves the readiness engine with nothing to read.
+
+     Same rule as everywhere else in this file: it proposes. A system name
+     found in a sentence is a candidate with the sentence attached, not a fact,
+     and the two signals are reasons to ask rather than answers. */
+  const PLATFORMS = ['Priority', 'SAP', 'Salesforce', 'HubSpot', 'Pipedrive', 'Zapier',
+                     'Make', 'n8n', 'Airtable', 'Notion', 'Slack', 'Jira', 'Stripe',
+                     'Shopify', 'WooCommerce', 'Monday', 'Zoho', 'Dynamics', 'Odoo'];
+
+  function observe(transcript) {
+    const src = String(transcript || '');
+    const walked = withSpeakers(src);
+    const lines = walked.map(x => x.line);
+    const sentenceWith = re => (walked.find(x => re.test(x.line)) || {}).line || null;
+    const spokenBy = re => (walked.find(x => re.test(x.line)) || {}).speaker || 'unknown';
+
+    /* The catalogue is a picker, so a couple of its entries are UI options
+       rather than products. "אחר" means "other", and as a substring it matches
+       inside "אחר כך" — a system nobody mentioned, which then holds up a
+       commitment nobody owes. Those are excluded by name.
+
+       Length is not the test, though: the first attempt dropped everything
+       under four characters, which also threw away "אתר" — a real entry, and
+       the one the second scenario turns on. So entries are split on the slash
+       the picker uses for alternatives, and the match has to end at something
+       that is not a letter. A Hebrew preposition binds to the front of a word
+       ("באתר"), so only the tail can be checked; that still rules out matching
+       one word inside a longer one. */
+    const GENERIC = /^(אחר|other|אחרת)$/i;
+    const known = ((typeof PC !== 'undefined' && PC.catalog && PC.catalog.SYSTEMS) || [])
+      .flatMap(n => n.split(/\s*\/\s*/).map(part => ({ name: n, look: part.trim() })))
+      .filter(x => x.look.length >= 2 && !GENERIC.test(x.look));
+    const names = known.concat(PLATFORMS.map(p => ({ name: p, look: p })));
+    const systems = [];
+    names.forEach(({ name, look }) => {
+      const re = new RegExp(look.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                            '(?![\\u0590-\\u05FFa-zA-Z])', 'i');
+      const quote = sentenceWith(re);
+      if (quote && !systems.some(s => s.value === name))
+        systems.push({ value: name, quote, speaker: spokenBy(re),
+                       source: 'transcript-local', confidence: 0.8, verified: true });
+    });
+
+    /* A goal only counts when somebody said it was the goal. Inferring one
+       from two system names is the tool deciding what the work is, which is a
+       commitment it has no evidence for. */
+    /* A question is not a statement of the goal. "What needs to happen?" is
+       the seller asking, and matching it took the seller's question as the
+       client's answer — which then travelled as the thing the project
+       delivers. Interrogatives are excluded before anything else is
+       considered. */
+    const goalLine = lines.filter(l => !/\?\s*$/.test(l))
+      .find(l => /המטרה היא|מבחינתי המטרה|רוצים ש|\bthe goal is\b/i.test(l)) || null;
+    const goal = goalLine ? {
+      value: goalLine.replace(/^\s*[^:]{1,20}?\s*:\s*/, '')
+                     .replace(/^.*?(?:המטרה היא|מבחינתי המטרה היא|רוצים ש)\s*/i, '').trim() || goalLine,
+      quote: goalLine, speaker: (walked.find(x => x.line === goalLine) || {}).speaker || 'unknown',
+      source: 'transcript-local', confidence: 0.75, verified: true
+    } : null;
+
+    /* Both signals are the same shape: the call raised a subject and left it
+       open. Either half alone means nothing — an exception that was settled
+       needs no question, and "security" in a sentence that closed it is not a
+       gap. */
+    const OPEN = /לא סגרנו|עוד לא|לא ברור|לא דיברנו|טרם|לא הוגדר|יכול להיות|צריך לבדוק/i;
+    const edge = sentenceWith(/טקסט חופשי|צילום מסך|תמונה|free.?text|screenshot/i);
+    const risk = sentenceWith(/אבטחה|security|sso|sla|רמת שירות|טיפול בכשל|אחריות.*כשל/i);
+
+    /* The systems arrive as one candidate row of the same shape everything
+       else uses, so the review step, the reject toggle and toState() need to
+       know nothing new about where they came from. A caller that had to
+       assemble this itself would be the second place in the codebase that
+       knows what a systems row looks like. */
+    const systemsRow = systems.length ? {
+      key: 'systems', target: null, kind: 'list',
+      label: (FIELDS.find(f => f.key === 'systems') || {}).label,
+      value: systems.map(s => s.value),
+      quote: systems[0].quote, speaker: systems[0].speaker,
+      verified: true, confidence: 0.8, guessed: true
+    } : null;
+
+    return {
+      systems, systemsRow, goal,
+      signals: {
+        freeText: !!edge,
+        enterpriseOpen: !!risk && OPEN.test(src)
+      },
+      quotes: {
+        'exception-owner': edge,
+        'enterprise-risk': risk
+      }
+    };
   }
 
   /* What the confirmed rows become. Returns plain field-id → value plus the
@@ -275,7 +454,7 @@
 
   root.PC = root.PC || {};
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
-                         candidates, provenance, heuristics, toState };
+                         candidates, provenance, heuristics, observe, toState };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -802,8 +802,17 @@ console.log('\nmodule loading');
    a module that is written but never linked is dead code that still passes
    every other test in this file. */
 test('every module the assets directory defines is actually loaded', () => {
+  /* landing/post-call.html counts as a page here. It is not deployed — it is
+     the target contract, gated in .vercelignore until every required claim has
+     a passing test — but it loads real modules on purpose, and that is the
+     point of it: the version before it kept its own copy of the readiness
+     engine, which made the page demonstrate something the product did not do.
+     A module it loads is therefore linked, not dead. Its paths are ../assets/
+     because it sits one directory down. */
   const linked = PAGES.flatMap(p =>
-    [...html[p].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1]));
+    [...html[p].matchAll(/<script src="(assets\/[^"]+)"/g)].map(m => m[1]))
+    .concat([...read('landing/post-call.html')
+      .matchAll(/<script src="\.\.\/(assets\/[^"]+)"/g)].map(m => m[1]));
   /* The English dictionaries are loaded by assets/pc-boot.js via
      document.write, and only when the visitor chose English — that is
      what keeps a Hebrew visit paying zero bytes for the second

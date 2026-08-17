@@ -42,18 +42,12 @@ var tr = (typeof PC !== 'undefined' && PC.i18n) ? PC.i18n.tr
 
 const PAYMENT_URL = 'https://example.com/replace-with-your-payment-link';
 
-/* Fill in ONE of these to start selling. `contact` is where a buyer asks for a
-   key: 'mailto:you@example.com' or 'https://wa.me/9725...'.
-
-   Whatever goes here is published on a page anyone can read and a crawler can
-   scrape, which is why it is never a default somebody inherits — a fork that
-   forgets to change it sends its buyers to this operator. Anyone cloning this
-   repository to sell their own copy has to replace the line below.
-
-   International format, no leading zero: wa.me silently opens nothing for a
-   local number. gate.test.js pins the shape. */
+/* Where a buyer asks for a key. The route itself lives in pc-contact.js and is
+   written once — the landing page sends people here, and when the number was
+   declared in both places the only thing keeping them together was a test that
+   noticed after they had already diverged. */
 const SALES = {
-  contact: 'https://wa.me/972524545963',
+  contact: (typeof PC !== 'undefined' && PC.contact) ? PC.contact.ROUTE : '',
   turnaround: tr('בדרך כלל תוך כמה שעות, ולא יותר מיום עסקים אחד')
 };
 const KEY_SHAPE = /^PC-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
