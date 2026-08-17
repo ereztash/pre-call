@@ -228,14 +228,25 @@ function renderReadiness(){
   $("#readinessSummary").textContent=consequential.length?`${consequential.length} התחייבויות מהותיות עדיין דורשות החלטה. נבחר רק את הראשונה שמשנה את העסקה.`:"החוסרים שנשארו אינם חייבים לחסום את ההצעה הנוכחית.";
   $("#readinessNext").textContent=consequential.length?"פתחו את ההחלטה הקטנה ביותר ←":"המשיכו להצעה הראשונית ←";
 }
+/* The last of the demo's private copies. It held five hand-written episodes,
+   its own order for them and its own idea of when to stop — a page showing a
+   decision path the product did not have. It asks the engine now and maps the
+   field names its markup already uses. */
 function nextEpisode(){
-  syncVerified();
-  if(state.systems.length<2)return{key:"systems",type:"text",quote:"לא נמצאו שני צדדים מאושרים בתמלול.",consequence:"בלי לדעת מה מתחבר, אין אובייקט עבודה שאפשר לתמחר.",question:"אילו שתי מערכות או שני צדדים צריכים להתחבר?",note:"לדוגמה: Salesforce ו־SAP",placeholder:"Salesforce ו-SAP",why:"זו תוספת אחרי השיחה, ולכן היא לא תוצג כציטוט לקוח.",source:"missing → post-call user input"};
-  if(!state.flow)return{key:"flow",type:"text",quote:"המערכות ברורות, אבל לא אושרה תוצאה שהחיבור צריך לייצר.",consequence:"אותן מערכות יכולות לייצג עבודות שונות לחלוטין.",question:"מה צריך לקרות ביניהן?",note:"משפט אחד של תוצאה.",placeholder:"כשעסקה מאושרת, לפתוח הזמנה במערכת השנייה",why:"לא מסיקים את מטרת העבודה רק משמות המערכות.",source:"missing → post-call user input"};
-  if(state.freeText&&!state.edgeOwner)return{key:"edgeOwner",type:"choice",quote:sentenceBy(/טקסט חופשי|צילום מסך|תמונה/i)||"בתמלול הופיע חריג קלט.",consequence:"אם האוטומציה מטפלת בחריג, יש עוד עבודה ואחריות; אם הלקוח מטפל בו, צריך להחריג.",question:"מי מטפל כשהמערכת לא מצליחה להבין את הקלט?",note:"זו החלטת גבול, לא שאלה טכנית.",options:[{value:"client",label:"הלקוח מטפל בזה",small:"החריג נשאר מחוץ לאוטומציה"},{value:"system",label:"האוטומציה מטפלת בזה",small:"החריג נכנס לסקופ"},{value:"ask",label:"צריך לשאול את הלקוח",small:"נחזיר שאלה מוכנה ונעצור רק את ההתחייבות הזאת"}],why:"זיהוי חריג לא נותן סמכות לבחור מי נושא באחריות.",source:"transcript-verified + unresolved decision"};
-  if(state.enterpriseOpen&&!state.riskDisposition)return{key:"riskDisposition",type:"choice",quote:sentenceBy(/אבטחה|security|sso|sla|כשל/i)||"התמלול מסמן נושאי enterprise פתוחים.",consequence:"Security, SLA ו־failure ownership יכולים לשנות משמעותית עבודה, אחריות וסיכון.",question:"מה נכון לעשות איתם בהצעה הנוכחית?",note:"בחרו רק גבול שאתם מוכנים לעמוד מאחוריו.",options:[{value:"exclude",label:"להחריג כרגע",small:"ייכנסו כהחרגה מפורשת"},{value:"include",label:"לכלול",small:"נבקש להגדיר מה בדיוק מתחייבים"},{value:"ask",label:"צריך לשאול את הלקוח",small:"נחזיר שאלה מוכנה"}],why:"אלה יכולים לשנות את העסקה ולכן לא נכנסים כברירת מחדל.",source:"transcript-verified + unresolved decision"};
-  if(state.enterpriseOpen&&state.riskDisposition==="include"&&!state.riskDetails)return{key:"riskDetails",type:"text",quote:"בחרתם לכלול security / SLA / failure handling.",consequence:"“כלול” בלי הגדרה הוא התחייבות עמומה.",question:"מה בדיוק אתם מוכנים להתחייב אליו?",note:"משפט אחד מספיק.",placeholder:"ניטור כשלים והתראה לצוות",why:"התשובה נשמרת כהחלטת מוכר אחרי השיחה.",source:"post-call user decision"};
-  return null;
+  const deal = toDeal();
+  deal.quotes = {
+    'exception-owner': sentenceBy(/טקסט חופשי|צילום מסך|תמונה/i) || null,
+    'enterprise-risk': sentenceBy(/אבטחה|security|sso|sla|כשל/i) || null
+  };
+  const ep = PC.commitments.nextEpisode(PC.commitments.assess(deal), deal);
+  if (!ep) return null;
+  const source = ep.quote ? 'נאמר בשיחה, וההחלטה עליו עוד לא' : 'חסר בשיחה';
+  return Object.assign({}, ep, {
+    key: ep.id,
+    quote: ep.quote || 'לא נמצא בתמלול משפט שסוגר את זה.',
+    source,
+    why: ep.consequence
+  });
 }
 function renderEpisode(ep){
   state.episode=ep;$("#episodeQuote").textContent=ep.quote;$("#episodeConsequence").textContent=ep.consequence;$("#episodeQuestion").textContent=ep.question;$("#episodeNote").textContent=ep.note||"";$("#sourceChip").textContent="מקור: "+ep.source;$("#whyPanel").textContent=ep.why||"";$("#whyPanel").classList.remove("show");$("#fieldError").classList.add("hidden");$("#choiceArea").innerHTML="";$("#choiceArea").classList.toggle("hidden",ep.type!=="choice");$("#textArea").classList.toggle("hidden",ep.type!=="text");
@@ -248,13 +259,25 @@ function error(msg){$("#fieldError").textContent=msg;$("#fieldError").classList.
 function applyAnswer(value){
   const ep=state.episode;if(!ep)return;
   if(ep.key==="systems"){const parts=value.split(/\s*(?:,|،|\+|\s+ו\s+)\s*/).map(x=>x.trim()).filter(x=>x.length>1);if(parts.length<2)return error("כתבו לפחות שני צדדים או מערכות.");parts.slice(0,4).forEach(v=>addPostCall("system",v))}
-  if(ep.key==="flow")addPostCall("flow",value);
-  if(ep.key==="edgeOwner"){if(value==="ask")return finishHandoff("מי מטפל בחריג עדיין לא נסגר","כשמגיע קלט שהאוטומציה לא מצליחה להבין — למשל טקסט חופשי או צילום מסך — אתם רוצים שהאוטומציה תטפל בו, או שמישהו אצלכם יטפל בו ידנית?");state.edgeOwner=value}
-  if(ep.key==="riskDisposition"){if(value==="ask")return finishHandoff("גבול האחריות עדיין פתוח","בהצעה הזאת, האם אתם רוצים לכלול גם דרישות אבטחה, SLA וטיפול בכשלים? אם כן — מה בדיוק נדרש מאיתנו בכל אחד מהם?");state.riskDisposition=value}
-  if(ep.key==="riskDetails")state.riskDetails=value;
+  if(ep.key==="delivery")addPostCall("flow",value);
+  if(ep.key==="exception-owner"){if(value==="ask")return handoffFor("exception-owner");state.edgeOwner=value}
+  /* Two questions share this id and they must not both fire on one answer.
+     The choice sets the disposition; the follow-up text sets what "include"
+     actually commits to. Keyed on disposition instead of type, picking
+     "include" wrote the word "include" in as the commitment and the follow-up
+     was never asked. */
+  if(ep.key==="enterprise-risk"){
+    if(ep.type==="text"){state.riskDetails=value}
+    else if(value==="ask"){return handoffFor("enterprise-risk")}
+    else{state.riskDisposition=value}
+  }
   syncAdded();renderReadiness();const next=nextEpisode();if(next)renderEpisode(next);else finishProposal();
 }
 function validReady(){return PC.commitments.admissible(state.commitments)}
+function handoffFor(id){
+  const h=PC.commitments.handoff(PC.commitments.assess(toDeal()),id);
+  return finishHandoff(h.blockedLabel,h.question);
+}
 function finishHandoff(title,question){
   buildReadiness();$("#handoffTitle").textContent=title;$("#handoffReason").textContent="ההתחייבות הזאת נשארת BLOCKED. שאר ה־READY/CONDITIONAL לא נמחק.";$("#handoffQuestion").textContent=question;
   const keep=validReady().filter(c=>c.id!=="value-pricing");$("#handoffReadyList").innerHTML=(keep.length?keep:[{label:"המידע שכבר אושר",reason:"נשמר לעסקה"}]).map(c=>`<li>${esc(c.label)} — ${esc(c.reason)}</li>`).join("");show("handoffScreen","5 · handoff תקף",100);

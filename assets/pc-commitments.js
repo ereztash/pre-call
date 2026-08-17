@@ -68,6 +68,11 @@
       claim: tr('הפרויקט מחבר בין המערכות האלה'),
       material: true,
       consequenceIfWrong: tr('הצעה שמתארת חיבור אחר ממה שנבנה — הפער מתגלה אחרי החתימה'),
+      ask: {
+        question: tr('אילו שתי מערכות או שני צדדים צריכים להתחבר?'),
+        note: tr('לדוגמה: Salesforce ו-SAP'),
+        placeholder: tr('Salesforce ו-SAP')
+      },
       assess: d => d.systems && d.systems.length >= 2
         ? ok(d.systems.join(' · '), d.systemsSource || SOURCES.heard)
         : no(tr('עוד לא אושרו שני צדדים שמתחברים'))
@@ -78,6 +83,11 @@
       claim: tr('זו התוצאה שהפרויקט מייצר'),
       material: true,
       consequenceIfWrong: tr('אותן מערכות בדיוק יכולות להיות סנכרון, ניטור או אישור — שלוש עבודות שונות'),
+      ask: {
+        question: tr('מה צריך לקרות ביניהן?'),
+        note: tr('משפט אחד של תוצאה, לא מפרט טכני.'),
+        placeholder: tr('כשנכנס טופס באתר, לפתוח ליד ב-CRM')
+      },
       assess: d => d.delivery
         ? ok(d.delivery, d.deliverySource || SOURCES.operatorSaid)
         : no(tr('שמות המערכות ידועים, התוצאה שהחיבור מייצר עוד לא'))
@@ -87,6 +97,21 @@
       label: tr('מי מטפל במה שלא ניתן לפענוח'),
       claim: tr('זה מי שנושא באחריות לקלט חריג'),
       material: true,
+      ask: {
+        question: tr('מי מטפל כשהמערכת לא מצליחה להבין את הקלט?'),
+        note: tr('זו החלטת גבול, לא שאלה טכנית.'),
+        options: [
+          { value: 'client', label: tr('הלקוח מטפל בזה'),
+            small: tr('החריג נשאר מחוץ לאוטומציה ומוחרג במפורש') },
+          { value: 'system', label: tr('האוטומציה מטפלת בזה'),
+            small: tr('העבודה הזאת נכנסת להיקף ולמחיר') },
+          { value: 'ask',    label: tr('צריך לשאול את הלקוח'),
+            small: tr('נכין את השאלה, ורק ההתחייבות הזאת נעצרת') }
+        ],
+        /* What to send the client when the answer is "ask". It is the question
+           the operator could not answer, rewritten for the person who can. */
+        handoff: tr('כשמגיע קלט שהאוטומציה לא מצליחה להבין — טקסט חופשי או צילום מסך — אתם רוצים שהיא תטפל בו, או שמישהו אצלכם יטפל בו ידנית?')
+      },
       /* Only exists once the transcript says edge cases exist. A commitment
          nobody has a reason to make is not blocked, it is absent — and a list
          that shows every possible promise as BLOCKED teaches the operator to
@@ -107,6 +132,31 @@
       material: true,
       when: d => d.signals && d.signals.enterpriseOpen,
       consequenceIfWrong: tr('התחייבות עמומה לזמינות או לאבטחה היא התחייבות פתוחה'),
+      ask: {
+        question: tr('מה נכון לעשות איתם בהצעה הנוכחית?'),
+        note: tr('בחרו רק גבול שאתם מוכנים לעמוד מאחוריו.'),
+        options: [
+          { value: 'exclude', label: tr('להחריג כרגע'),
+            small: tr('ייכתבו במפורש כמחוץ להצעה') },
+          { value: 'include', label: tr('לכלול'),
+            small: tr('נבקש מכם משפט אחד שמגדיר למה בדיוק') },
+          { value: 'ask',     label: tr('צריך לשאול את הלקוח'),
+            small: tr('נכין את השאלה, ורק ההתחייבות הזאת נעצרת') }
+        ],
+        handoff: tr('בהצעה הזאת, האם צריך לכלול גם דרישות אבטחה, רמת שירות וטיפול בכשלים? ואם כן — מה בדיוק נדרש בכל אחד מהם?')
+      },
+      /* The second question, and the reason ask can be a function of the deal.
+         Choosing to include leaves the commitment blocked — "SLA included" with
+         no sentence behind it is an open-ended liability — so the follow-up is
+         a different question of a different kind, not the same three options
+         asked again. A catalogue with one fixed question per promise would have
+         put the operator in a loop here. */
+      answered: d => (d.decisions || {}).risk === 'include',
+      askAgain: {
+        question: tr('מה בדיוק אתם מוכנים להתחייב אליו?'),
+        note: tr('משפט אחד מספיק. בלעדיו זו התחייבות בלי גבול.'),
+        placeholder: tr('ניטור כשלים והתראה לצוות')
+      },
       assess: d => {
         const c = (d.decisions || {}).risk;
         if (!c) return no(tr('השיחה אומרת שהנושא פתוח, ואין החלטה עליו'));
@@ -178,9 +228,67 @@
     return (list || []).filter(c => c.status === READY || c.status === CONDITIONAL);
   }
 
+  /* The smallest question that can still change the deal, or nothing.
+
+     Nothing is the important half. A tool that always has one more question is
+     a form with better manners, and the operator learns to click through it
+     the same way. So an episode exists only where a material commitment is
+     blocked — never to confirm something already established, never to collect
+     a field because the field exists.
+
+     Catalogue order is dependency order and that is why the first blocked one
+     is the right one: you cannot say what should happen between two systems
+     before anybody has said which two. Asking in a different order produces
+     questions the operator cannot answer yet. */
+  function nextEpisode(list, deal) {
+    const blocked = blocking(list);
+    if (!blocked.length) return null;
+    const c = blocked[0];
+    const def = CATALOG.find(x => x.id === c.id);
+    if (!def || !def.ask) return null;
+    /* A promise can be blocked twice over for different reasons, and asking
+       the same question again is how a tool traps somebody in a loop. When the
+       catalogue carries a follow-up and the first answer is already in, the
+       second question is the one owed. */
+    const ask = (def.askAgain && def.answered && def.answered(deal || {}))
+      ? def.askAgain : def.ask;
+    const quotes = (deal || {}).quotes || {};
+    return {
+      id: c.id,
+      /* The sentence that raised it, when the transcript had one. Without it
+         the question arrives with no reason attached, which is how a tool
+         teaches somebody to answer without thinking. */
+      quote: quotes[c.id] || null,
+      consequence: c.consequenceIfWrong,
+      question: ask.question,
+      note: ask.note || null,
+      type: ask.options ? 'choice' : 'text',
+      options: ask.options || null,
+      placeholder: ask.placeholder || null,
+      remaining: blocked.length - 1
+    };
+  }
+
+  /* "Ask the client" is an outcome, not a failure. The deal keeps everything
+     already established, one commitment stays blocked, and what comes back is
+     the question rewritten for the person who can answer it. A tool that
+     treated this as a dead end would be pushing the operator to invent an
+     answer instead — which is the one thing this whole module exists to stop. */
+  function handoff(list, id) {
+    const def = CATALOG.find(x => x.id === id);
+    if (!def || !def.ask || !def.ask.handoff) return null;
+    return {
+      id,
+      blockedLabel: def.label,
+      question: def.ask.handoff,
+      stillValid: admissible(list)
+    };
+  }
+
   root.PC = root.PC || {};
   root.PC.commitments = { SOURCES, READY, CONDITIONAL, BLOCKED, CATALOG,
-                          assess, blocking, admissible, weakest };
+                          assess, blocking, admissible, weakest,
+                          nextEpisode, handoff };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.commitments;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -176,5 +176,105 @@ test('an empty deal is assessed rather than crashed', () => {
   });
 });
 
+console.log('\none question, and only where one is owed');
+
+test('a call that answered everything is asked nothing', () => {
+  assert.strictEqual(C.nextEpisode(C.assess(COMPLETE), COMPLETE), null,
+    'the tool invented a question to look like it was working');
+});
+
+test('a missing value claim alone raises no question', () => {
+  /* There is nothing to ask. The client did not put a number on the problem,
+     the operator cannot answer that on his behalf, and the proposal does not
+     need it. Asking here would be asking somebody to make one up. */
+  const deal = { ...COMPLETE, provenance: 'mine' };
+  assert.strictEqual(C.nextEpisode(C.assess(deal), deal), null);
+});
+
+test('the question asked first is the one the others depend on', () => {
+  const ep = C.nextEpisode(C.assess(SPARSE), SPARSE);
+  assert.strictEqual(ep.id, 'systems',
+    'it asked what should happen between systems nobody has named yet');
+  assert.ok(ep.remaining >= 1, 'it did not say more was coming');
+});
+
+test('answering one question moves to the next, and then stops', () => {
+  let deal = { ...SPARSE };
+  const seen = [];
+  for (let i = 0; i < 6; i++) {
+    const ep = C.nextEpisode(C.assess(deal), deal);
+    if (!ep) break;
+    seen.push(ep.id);
+    if (ep.id === 'systems') deal = { ...deal, systems: ['A', 'B'] };
+    if (ep.id === 'delivery') deal = { ...deal, delivery: 'לפתוח רשומה' };
+  }
+  assert.deepStrictEqual(seen, ['systems', 'delivery']);
+  assert.strictEqual(C.nextEpisode(C.assess(deal), deal), null, 'it kept going');
+});
+
+test('a question carries the sentence that raised it and what it costs to guess', () => {
+  const deal = { ...COMPLETE, signals: { freeText: true },
+                 quotes: { 'exception-owner': 'לפעמים שולחים צילום מסך' } };
+  const ep = C.nextEpisode(C.assess(deal), deal);
+  assert.strictEqual(ep.quote, 'לפעמים שולחים צילום מסך');
+  assert.ok(ep.consequence.length > 20, 'no reason attached to the question');
+  assert.strictEqual(ep.type, 'choice');
+  assert.ok(ep.options.some(o => o.value === 'ask'),
+    '"ask the client" is missing, so the only ways out are to answer or to guess');
+});
+
+test('a question with no transcript behind it still arrives, without a quote', () => {
+  const ep = C.nextEpisode(C.assess(SPARSE), SPARSE);
+  assert.strictEqual(ep.quote, null, 'it invented a sentence nobody said');
+  assert.strictEqual(ep.type, 'text');
+  assert.ok(ep.placeholder, 'a free-text question with no example to follow');
+});
+
+test('choosing to include asks what, instead of asking the same thing again', () => {
+  /* The loop this prevents: "include" leaves the commitment blocked, so the
+     next question is owed — and if it were the same three options, the only
+     way out would be to pick a different answer than the one you meant. */
+  const chosen = { ...COMPLETE, signals: { enterpriseOpen: true },
+                   decisions: { risk: 'include' } };
+  const ep = C.nextEpisode(C.assess(chosen), chosen);
+  assert.strictEqual(ep.id, 'enterprise-risk');
+  assert.strictEqual(ep.type, 'text', 'it offered the same choice it just took');
+  assert.ok(ep.placeholder, 'a free-text question with no example to follow');
+
+  const said = { ...chosen, decisions: { risk: 'include', riskDetail: 'ניטור כשלים והתראה' } };
+  assert.strictEqual(C.nextEpisode(C.assess(said), said), null, 'it asked a third time');
+});
+
+console.log('\nasking the client is an outcome');
+
+test('a handoff keeps everything already established', () => {
+  const deal = { ...COMPLETE, signals: { freeText: true } };
+  const list = C.assess(deal);
+  const h = C.handoff(list, 'exception-owner');
+  assert.ok(h.question.length > 30, 'nothing to send the client');
+  assert.ok(h.stillValid.some(c => c.id === 'systems'),
+    'the rest of the deal was thrown away because one promise was open');
+  assert.ok(!h.stillValid.some(c => c.id === 'exception-owner'),
+    'the commitment being asked about travelled anyway');
+});
+
+test('the client is asked the question the operator could not answer', () => {
+  const deal = { ...COMPLETE, signals: { enterpriseOpen: true } };
+  const h = C.handoff(C.assess(deal), 'enterprise-risk');
+  assert.ok(/אבטחה|רמת שירות|כשל/.test(h.question),
+    'the handoff asks about something else entirely');
+});
+
+test('a commitment with no way to ask produces no handoff rather than a blank one', () => {
+  assert.strictEqual(C.handoff(C.assess(COMPLETE), 'value-claim'), null);
+  assert.strictEqual(C.handoff(C.assess(COMPLETE), 'no-such-thing'), null);
+});
+
+test('every material commitment can be asked about', () => {
+  C.CATALOG.filter(c => c.material).forEach(c =>
+    assert.ok(c.ask && c.ask.question,
+      c.id + ' can block a proposal and there is no question that unblocks it'));
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

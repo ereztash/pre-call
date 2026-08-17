@@ -50,8 +50,8 @@ const PROOF = {
   'core-promise':        null,  // per-commitment readiness does not exist yet
   'transcript-input':    'transcript.test.js · reading a transcript needs no network at all',
   'commitment-gate':     'commitments.test.js · one deal carries different verdicts at the same time',
-  'decision-episodes':   null,  // STEPS is a fixed sequence
-  'handoff-valid':       null,  // no handoff outcome exists
+  'decision-episodes':   'commitments.test.js · a call that answered everything is asked nothing',
+  'handoff-valid':       'commitments.test.js · a handoff keeps everything already established',
   'candidate-evidence':  'transcript.test.js · a local candidate carries its sentence, ' +
                          'its speaker and its confidence',
   'evidence-approval':   'transcript.test.js · rejecting a row keeps it out of the state',
