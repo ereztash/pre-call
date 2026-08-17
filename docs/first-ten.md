@@ -115,6 +115,16 @@ Record, per participant: whether they arrived, whether they reached a price,
 whether they sent anything, where they stopped, and what they said out loud
 without being asked.
 
+For every hesitation, wrong turn or failed click, add one paired observation:
+
+- **expected:** what the participant thought would happen before the action
+- **actual:** what happened after the action
+
+Ask for the expectation only after the mismatch is visible, not before the
+click. The pair is the unit of diagnosis. "This was unclear" is useful feedback;
+"I clicked Save as PDF and expected a file, then WhatsApp opened" identifies the
+broken action contract precisely enough to fix and retest.
+
 ---
 
 ## What not to do
