@@ -302,12 +302,23 @@
     return 'unknown';
   }
 
-  function heuristics(transcript) {
+  /* licence is the list of cue keys pc-ladder.js says this call can carry, and
+     omitting it reads everything — the ladder narrows an existing behaviour
+     rather than adding a gate every caller now has to satisfy.
+
+     What it buys is not tidiness. On the first real transcript anybody ran
+     through this tool, "300 שקל לפגישה" — the fee being agreed in the room —
+     came back as errCost, the cost of an incident, because that cue is "a
+     number beside a currency word" and nothing more. The call had no recurring
+     process in it at all, so under a licence the incident cue is never looked
+     for, and the misreading cannot happen rather than being caught after. */
+  function heuristics(transcript, licence) {
     const src = String(transcript || '');
     if (!src.trim()) return [];
+    const allowed = k => !licence || licence.indexOf(k) !== -1;
     const lines = withSpeakers(src);
     const seen = new Set(), out = [];
-    CUES.forEach(cue => {
+    CUES.filter(c => allowed(c.key)).forEach(cue => {
       for (const { line, speaker } of lines) {
         const m = line.match(cue.re);
         if (!m || seen.has(cue.key)) continue;

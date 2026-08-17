@@ -317,4 +317,21 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "לפי מאיפה הגיע המספר שעליו נבנה המחיר": "By where the number the price was built on came from",
   "המספר": "The number",
   "מה עוד אי אפשר לומר": "What still can't be said",
+
+  /* pc-ladder.js — the four rungs, each with the sentence it gives the
+     operator when it holds and the sentence it gives when it is passed
+     over. The "missing" lines are read more often than the "because"
+     ones: three of them appear on every call that lands on the bottom
+     rung, and together they are the list of what to go back and ask. */
+  "ערך אצל הלקוח": "Value to the client",
+  "הלקוח נקב בכמות עבודה שחוזרת על עצמה, ולכן אפשר לגזור מה התהליך עולה לו בשנה.": "The client named a quantity of work that repeats, so what the process costs them over a year can be derived.",
+  "לא נמצאה בשיחה כמות עבודה שחוזרת על עצמה — כמה פעמים ביום, בשבוע או בחודש. בלי זה אין ערך שנתי לגזור ממנו.": "The call named no recurring quantity of work — how many times a day, a week or a month. Without that there is no annual value to derive from.",
+  "עסקה דומה שלכם": "A similar deal of yours",
+  "יש בפנקס שלכם עבודה דומה שנסגרה, והמחיר נגזר ממנה מותאם להיקף כאן.": "Your ledger holds a similar job that closed, and the price is derived from it, adjusted to the scope here.",
+  "אין בפנקס עסקה דומה שנסגרה, ולכן אין ממה לגזור.": "The ledger holds no similar deal that closed, so there is nothing to derive from.",
+  "טווח מקובל": "The going range",
+  "אפשר לקרוא את המורכבות מהשיחה, והמחיר נגזר מהטווח המקובל לעבודה כזאת.": "The complexity can be read from the call, and the price is derived from the going range for work like this.",
+  "לא נקראה מהשיחה מורכבות שאפשר למקם בטווח מקובל.": "No complexity was read from the call that could be placed in a going range.",
+  "העבודה הצפויה": "The work you expect",
+  "המחיר נגזר מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם, בלי להישען על מספר של הלקוח.": "The price is derived from the work you expect to put in and your rate, without leaning on a number from the client.",
 });

@@ -615,9 +615,18 @@ console.log('\nreachable from outside');
    of a page that disowns it. So the sitemap is not checked for existence, it is
    checked for agreement — against the canonical tags, which are what the pages
    themselves claim. */
+/* Every page that names itself canonical belongs here, which is the only thing
+   making the two tests below mean anything: they iterate this map, so a page
+   left out of it is a page neither of them can fail on. post-call-landing.html
+   shipped with og tags and a canonical tag and was not in this list, so
+   "every page that can be shared is in the sitemap" passed while it was
+   missing from the sitemap entirely — the check was green because it was not
+   looking. */
 const SITE_PAGES = { 'index.html': '/', 'post-call.html': '/post-call',
                      'pre-call.html': '/pre-call', 'privacy.html': '/privacy',
-                     'accessibility.html': '/accessibility' };
+                     'accessibility.html': '/accessibility',
+                     'product-landing.html': '/product-landing',
+                     'post-call-landing.html': '/post-call-landing' };
 /* Read defensively, and not out of politeness. The first version of this block
    called read() at the top level, and with the files absent the suite died on
    require with a stack trace instead of reporting a failure — taking every

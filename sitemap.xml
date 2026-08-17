@@ -5,6 +5,13 @@
      one address while the page names another. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://pre-call-swart.vercel.app/</loc><priority>1.0</priority></url>
+  <!-- The two marketing pages. Both shipped naming themselves canonical while
+       this file did not mention them, which is a page asking to be indexed at
+       an address the sitemap says nothing about. product-landing is the one to
+       send a stranger to; post-call-landing goes deeper on the half of the
+       device that is most finished. -->
+  <url><loc>https://pre-call-swart.vercel.app/product-landing</loc><priority>0.9</priority></url>
+  <url><loc>https://pre-call-swart.vercel.app/post-call-landing</loc><priority>0.8</priority></url>
   <url><loc>https://pre-call-swart.vercel.app/post-call</loc><priority>0.9</priority></url>
   <url><loc>https://pre-call-swart.vercel.app/pre-call</loc><priority>0.7</priority></url>
   <url><loc>https://pre-call-swart.vercel.app/privacy</loc><priority>0.3</priority></url>
