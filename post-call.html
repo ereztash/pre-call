@@ -87,9 +87,15 @@
     <p class="hint-p">הדבק — כל מספר יחולץ עם המשפט שממנו נלקח, ולא ייכנס לפני שאישרת.</p>
     <label for="trIn">תמלול השיחה</label>
     <textarea id="trIn" placeholder="הדבק כאן את התמלול המלא..."></textarea>
+    <!-- The primary action reads the transcript here, on this machine. It used
+         to be "get an extraction prompt" — which is a request to leave, go run
+         something somewhere else, and come back with its answer pasted in. That
+         is a fine upgrade and a poor front door: it made the thing the product
+         promises ("paste the call") a second-class path, and it made the first
+         step of the main flow a trip through somebody else's service. -->
     <div class="tr-acts">
-      <button class="act" data-act="trprompt">קבל פרומפט לחילוץ</button>
-      <button class="ghost" data-act="trlocal">נסה בלי בינה מלאכותית</button>
+      <button class="act" data-act="trlocal">חלץ מספרים מהתמלול</button>
+      <button class="ghost" data-act="trprompt">חילוץ מדויק יותר עם בינה מלאכותית</button>
       <button class="ghost" data-act="trdemo">טען שיחת דוגמה</button>
     </div>
     <div class="tr-step hidden" id="trPrompt"></div>

@@ -12,6 +12,8 @@
    something the operator asserts into something the recording shows. */
 const T = require('./pc-transcript.js');
 const EX = require('./pc-example.js');
+const fs = require('fs');
+const path = require('path');
 const assert = require('assert');
 
 let pass = 0, fail = 0;
@@ -196,6 +198,30 @@ test('a local candidate carries its sentence, its speaker and its confidence', (
   assert.ok(['client', 'seller', 'unknown'].includes(c.speaker), 'speaker: ' + c.speaker);
   assert.ok(c.confidence > 0 && c.confidence < 1, 'confidence: ' + c.confidence);
   assert.strictEqual(c.guessed, true, 'a local match must stay marked as a guess');
+});
+
+console.log('\npaste, and the tool reads it here');
+/* Both halves of one promise. The landing page says to paste the call and the
+   tool reads it — which is untrue in two different ways if the module reaches
+   the network, and untrue in a quieter way if reading it locally is the
+   secondary button while the primary one sends you to another service and asks
+   you to come back with its answer. The first is a privacy claim, the second is
+   what the operator actually meets. */
+test('reading a transcript needs no network at all', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'pc-transcript.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  [/\bfetch\s*\(/, /XMLHttpRequest/, /navigator\.sendBeacon/, /\bimport\s*\(/,
+   /new\s+WebSocket/, /EventSource/].forEach(re =>
+    assert.ok(!re.test(src),
+      'the transcript module reaches the network: ' + (src.match(re) || [])[0]));
+});
+test('the button that reads it here is the primary one', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'post-call.html'), 'utf8');
+  const acts = page.match(/<div class="tr-acts">[\s\S]*?<\/div>/)[0];
+  const primary = acts.match(/class="act"\s+data-act="([a-z]+)"/);
+  assert.ok(primary, 'the transcript box has no primary action any more');
+  assert.strictEqual(primary[1], 'trlocal',
+    'the main path through the transcript box leaves for another service first');
 });
 
 console.log('\nhow much a match can carry');

@@ -235,7 +235,7 @@ function localExtraction(){
   trCandidates = PC.transcript.heuristics(t);
   trRejected.clear();
   if (!trCandidates.length) {
-    flashDoc(tr('לא נמצאו מספרים ברורים. עדיף דרך הפרומפט.')); showPrompt(); return;
+    flashDoc(tr('לא נמצאו מספרים ברורים. פתחתי את החילוץ עם הבינה המלאכותית.')); showPrompt(); return;
   }
   renderReview();
 }

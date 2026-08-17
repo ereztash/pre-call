@@ -48,7 +48,7 @@ const manifest = JSON.parse(
    the last null is gone. */
 const PROOF = {
   'core-promise':        null,  // per-commitment readiness does not exist yet
-  'transcript-input':    null,  // heuristics() runs on a second button, not on paste
+  'transcript-input':    'transcript.test.js · reading a transcript needs no network at all',
   'commitment-gate':     null,  // guide.next computes one boolean for the whole deal
   'decision-episodes':   null,  // STEPS is a fixed sequence
   'handoff-valid':       null,  // no handoff outcome exists
