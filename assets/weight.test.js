@@ -101,6 +101,15 @@ const BUDGETS = {
   'index.html':          21 * 1024,
   'privacy.html':        21 * 1024,
   'accessibility.html':  21 * 1024,
+  /* The two marketing pages, which shipped without a ceiling. They are the most
+     literal case this file argues about — a link pasted into WhatsApp, opened
+     on a phone, by somebody who has not decided to want this yet — and they
+     were the only served HTML with nothing holding them. A landing page is
+     also the easiest thing in any repository to grow by one more section, so
+     the ceiling is the same tight one the other first-visit pages carry rather
+     than a comfortable one set from whatever they happen to weigh today. */
+  'post-call-landing.html': 21 * 1024,
+  'product-landing.html':   21 * 1024,
   'pre-call.html':       58 * 1024,
   /* 120 → 128 → 136KB, and the second raise happened the same day as the first,
      which is worth saying plainly rather than burying: a budget moved twice in a
