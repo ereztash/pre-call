@@ -38,6 +38,15 @@
       return '<script src="assets/en-' + d + '.js"><\/script>';
     }).join(''));
   }
+
+  /* FIELD exposed a class of UX failures that does not belong to one screen:
+     a control can be technically correct and still break trust if its label
+     describes an internal mechanism, or if it silently changes channels.
+     Load one small contract layer on every product page so the same rule is
+     enforced in PRE-CALL, POST-CALL and the entry flow. It waits for the DOM;
+     loading it here only guarantees every page gets it. */
+  document.write('<script src="assets/action-contract-ui.js"><\/script>');
+
   /* The tab-bar colour. Two values, not one: the browser paints this
      before any stylesheet resolves, and a dark page under a light tab
      bar reads as a glitch in exactly the first 100ms a visitor sees. */
