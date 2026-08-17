@@ -5,6 +5,11 @@
    and it must never use a word the reader has to already own. A test suite
    that only checked the happy path would let all three rot. */
 const G = require('./pc-guide.js');
+/* pickMethod moved to model.js — it decides which of the four pricing methods
+   sets the price, which is engine authority, not guidance. Its tests stayed
+   here because what they check is the wording it puts in front of an operator,
+   and JARGON lives in this file. */
+const M = require('./model.js');
 const assert = require('assert');
 
 let pass = 0, fail = 0;
@@ -143,7 +148,7 @@ test('the guide never addresses one gender', () => {
     .concat(G.sanity({ freq: 100, freqUnit: 365, minutes: 45, errCost: 50000,
                        numbersAreMine: true }).map(p => p.text))
     .concat([{}, { freq: 1, minutes: 1 }, { numbersAreMine: true }, { comparableLast: 1 }]
-            .map(s2 => G.pickMethod(s2).because))
+            .map(s2 => M.pickMethod(s2).because))
     .filter(Boolean).join(' ');
   [/\bאתה\b/, /שאתה/, /אותך/, /\bתמלא\b/, /\bתבחר\b/, /\bתשלח\b/].forEach(re =>
     assert.ok(!re.test(all), 'gendered address: ' + (all.match(re) || [])[0]));
@@ -205,27 +210,27 @@ test('warnings never replace the instruction', () => {
 
 console.log('\nchoosing the pricing method for them');
 test('the client gave numbers — price on what it costs him', () => {
-  const p = G.pickMethod({ freq: 20, minutes: 7 });
+  const p = M.pickMethod({ freq: 20, minutes: 7 });
   assert.strictEqual(p.method, 'value');
   assert.ok(/הכסף שלו|עולה ללקוח/.test(p.because));
 });
 test('the numbers are the operator\'s own — do not price on them', () => {
-  const p = G.pickMethod({ freq: 20, minutes: 7, numbersAreMine: true });
+  const p = M.pickMethod({ freq: 20, minutes: 7, numbersAreMine: true });
   assert.strictEqual(p.method, 'market');
   assert.ok(/הערכה שלכם/.test(p.because));
 });
 test('nothing entered yet still yields a usable method and a reason', () => {
-  const p = G.pickMethod({});
+  const p = M.pickMethod({});
   assert.strictEqual(p.method, 'market');
   assert.ok(p.because.length > 40);
 });
 test('a past comparable deal is used when there are no client numbers', () => {
-  assert.strictEqual(G.pickMethod({ comparableLast: 8000 }).method, 'comparable');
+  assert.strictEqual(M.pickMethod({ comparableLast: 8000 }).method, 'comparable');
 });
 test('every reason is a sentence, never a label', () => {
   [{}, { freq: 1, minutes: 1 }, { numbersAreMine: true }, { comparableLast: 5000 }]
     .forEach(s => {
-      const p = G.pickMethod(s);
+      const p = M.pickMethod(s);
       assert.ok(p.because.length > 40, 'too terse to teach anything: ' + p.because);
       JARGON.forEach(w => assert.ok(!p.because.includes(w), 'jargon in the reason: ' + w));
     });

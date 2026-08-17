@@ -32,6 +32,17 @@ tools/
 # be tested has no reason to answer 200 to the people being tested.
 docs/
 
+# The target contract, not the shipped page. landing/post-call.html states what
+# POST-CALL is supposed to be able to do, and landing.test.js holds every one of
+# those claims against a product test. Until they all pass, the page describes a
+# product that does not exist yet — and a page like that answering 200 is the
+# exact failure the contract was written to prevent. The page carries
+# noindex,nofollow as well, but that only stops indexing: the URL would still
+# answer, and a link pasted into WhatsApp does not care about robots meta.
+# Serving it is one line — move it to SERVED in markup.test.js — and that line
+# is the release decision.
+landing/
+
 # repository furniture
 .github/
 LICENSE

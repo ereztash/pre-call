@@ -520,7 +520,7 @@ function setMethod(key){
 /* Decided from what is on the form, unless the operator has taken over. */
 function autoMethod(){
   if (methodPinned) return;
-  const p = PC.guide.pickMethod(guideState());
+  const p = PC.model.pickMethod(guideState());
   if (mc.dataset.sel !== p.method) setMethod(p.method);
   const w = el('methodWhy');
   if (w) w.textContent = p.because;

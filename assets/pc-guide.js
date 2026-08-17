@@ -257,26 +257,8 @@
     };
   }
 
-  /* Which pricing method to use, decided for the operator instead of by
-     them. Four chips asking someone to pick between value, market rate,
-     cost-plus and comparable is a question only a person who already prices
-     work can answer — and getting it wrong costs them money. The tool picks
-     and says why in one plain sentence; changing it stays available but off
-     the main path. */
-  function pickMethod(s) {
-    const hasClientNumbers = (+s.freq > 0 && +s.minutes > 0) && !s.numbersAreMine;
-    if (hasClientNumbers) return { method: 'value',
-      because: tr('המחיר נבנה ממה שהתהליך עולה ללקוח בשנה, כי הוא נתן לך את המספרים. זו הדרך שמחזיקה הכי טוב בשיחה — הדיבור הוא על הכסף שלו, לא על השעות שלכם.') };
-    if (+s.comparableLast > 0) return { method: 'comparable',
-      because: tr('המחיר נבנה מעבודה דומה שכבר עשית, מותאם להיקף כאן. זה מספר שקל להגן עליו, כי הוא באמת קרה.') };
-    if (s.numbersAreMine) return { method: 'market',
-      because: tr('המספרים הם הערכה שלכם ולא של הלקוח, אז המחיר נבנה מהטווח המקובל בשוק לעבודה כזאת. ברגע שיתקבל ממנו מספר אמיתי, החישוב יעבור לערך אצלו — וזה בדרך כלל מעלה את המחיר.') };
-    return { method: 'market',
-      because: tr('עוד אין מספיק מספרים מהלקוח, אז בינתיים המחיר לפי הטווח המקובל בשוק. ברגע שיהיו כמה פעמים זה קורה וכמה זמן זה לוקח, המחיר יתחיל להישען על העסק שלו.') };
-  }
-
   root.PC = root.PC || {};
-  root.PC.guide = { STEPS, next, sanity, pickMethod };
+  root.PC.guide = { STEPS, next, sanity };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.guide;
 })(typeof window !== 'undefined' ? window : globalThis);
