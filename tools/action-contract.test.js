@@ -21,6 +21,8 @@ const pre = read('pre-call.html');
 const postJs = read('assets/post-call.js');
 const preJs = read('assets/pre-call.js');
 const gate = read('assets/pc-gate.js');
+const boot = read('assets/pc-boot.js');
+const contract = read('assets/action-contract-ui.js');
 
 let pass = 0, fail = 0;
 const test = (name, fn) => {
@@ -36,27 +38,39 @@ function buttonLabel(html, act) {
 }
 
 console.log('\naction labels describe the thing the user is trying to do');
-test('proposal actions say copy, PDF and send', () => {
+test('proposal actions still say copy, PDF and send', () => {
   assert.match(buttonLabel(post, 'copy'), /העתק.*הצעה/);
   assert.match(buttonLabel(post, 'print'), /PDF/);
   assert.match(buttonLabel(post, 'send'), /שלח.*לקוח/);
 });
 
-test('transcript entry describes a recognisable transcript task', () => {
-  const label = buttonLabel(post, 'trlocal');
-  assert.match(label, /תמלול/);
-  assert.doesNotMatch(label, /ראי(?:ה|ות)|מועמד/);
+test('the cross-product contract layer is loaded on every booted product page', () => {
+  assert.match(boot, /assets\/action-contract-ui\.js/);
 });
 
-test('PRE-CALL actions stay in task language', () => {
-  assert.match(buttonLabel(pre, 'build'), /בנה.*תסריט/);
-  assert.match(buttonLabel(pre, 'print'), /PDF|הדפס/);
+test('POST-CALL transcript entry uses proposal-task language, not extraction language', () => {
+  assert.match(contract, /setButton\(['\"]trlocal['\"],\s*['\"]מצא מה חשוב להצעה['\"]\)/);
+  assert.match(contract, /השתמש בפרטים שאישרתי/);
+  assert.match(contract, /על מה המחיר נשען/);
 });
 
-console.log('\ninternal evidence vocabulary does not become user-facing controls');
-test('no evidence-candidate jargon is visible or emitted as UI copy', () => {
-  const shipped = [post, pre, postJs, preJs].map(stripComments).join('\n');
-  assert.doesNotMatch(shipped, /מועמד(?:י|ים)?\s+ראי(?:ה|ות)|ראיות?\s+מועמד/);
+test('PRE-CALL pasted profile action says what the user gets', () => {
+  assert.match(contract, /מלא את הפרופיל מהטקסט/);
+  assert.match(contract, /המשך להכנת השיחה/);
+  assert.match(contract, /שלב 2 · מי מולכם/);
+});
+
+console.log('\ninternal evidence vocabulary does not become a required action');
+test('no evidence-candidate jargon is visible in shipped button markup', () => {
+  const buttonText = [post, pre].map(s => {
+    const buttons = s.match(/<button[\s\S]*?<\/button>/g) || [];
+    return buttons.map(text).join('\n');
+  }).join('\n');
+  assert.doesNotMatch(buttonText, /מועמד(?:י|ים)?\s+ראי(?:ה|ות)|ראיות?\s+מועמד/);
+});
+
+test('the contract layer does not introduce evidence-candidate jargon either', () => {
+  assert.doesNotMatch(stripComments(contract), /מועמד(?:י|ים)?\s+ראי(?:ה|ות)|ראיות?\s+מועמד/);
 });
 
 console.log('\nexport labels and external destinations keep the same contract');
@@ -69,13 +83,21 @@ test('a locked export raises the in-product wall before any external navigation'
   assert.doesNotMatch(body, /openContact|window\.open|location\./);
 });
 
-test('the manual purchase control names WhatsApp before opening WhatsApp', () => {
-  assert.match(gate, /function contactChannel\(\)[\s\S]*wa\\\.me[\s\S]*tr\(['\"]וואטסאפ['\"]\)/);
-  assert.match(gate, /setText\(['\"]payBtn['\"],[\s\S]*channel/);
+test('WhatsApp is named before a manual key request changes channel', () => {
+  assert.match(contract, /פתח WhatsApp לבקשת מפתח/);
+  assert.match(contract, /contactChannel\(\)/);
+  assert.match(contract, /buyContact/);
 });
 
 test('unlock resumes exactly the export the user originally asked for', () => {
   assert.match(gate, /if \(pendingExport\) \{ const f = pendingExport; pendingExport = null; f\(\); \}/);
+});
+
+console.log('\ncontract language is applied to dynamic UI, not only initial markup');
+test('a mutation observer reapplies the contract after transcript review and gate renders', () => {
+  assert.match(contract, /new MutationObserver\(schedule\)/);
+  assert.match(contract, /characterData:\s*true/);
+  assert.match(contract, /makeExternalRouteExplicit\(\)/);
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
