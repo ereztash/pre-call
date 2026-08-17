@@ -161,8 +161,31 @@ const BUDGETS = {
      It was 1.1KB of dead weight for about ten minutes first: the module shipped
      before anything called it, and this budget is what said so. Wiring it into
      the local extraction path is what made the raise honest rather than a
-     rounding-up. */
-  'post-call.html':     151 * 1024
+     rounding-up.
+
+     A seventh raise, 151 → 154KB, and the page does something it could not do
+     before: decide what kind of evidence a call can carry before reading a
+     single number out of it. The order used to be the other way round — read
+     every cue, then pick a pricing method from whatever came back — and the
+     first real transcript anybody ran through this tool showed what that
+     costs. A consulting call with no process in it, where the fee being agreed
+     in the room, "300 שקל לפגישה", came back as the cost of an incident,
+     because the cue for incident cost is a number beside a currency word and
+     that is the whole of it. pc-ladder.js inverts the order: four rungs, and
+     the rung licenses which cues may be read at all, so on a call that
+     established no recurring process nobody looks for one.
+
+     And the same trap as the sixth raise, caught by the same test: the module
+     shipped with eleven sentences of operator-facing copy — which rung the
+     call reached, and what was absent from every rung above it — and none of
+     them rendered. The licence was wired, the reasons were not. That is the
+     second time this budget has caught copy paying rent without being on the
+     screen, which is a pattern in how these modules get written and worth
+     naming rather than fixing quietly. The reasons render now, including on
+     the case that matters most: a call that yields no rows at all yields none
+     for a reason, and the list of skipped rungs is the list of what to go back
+     and ask about. */
+  'post-call.html':     154 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

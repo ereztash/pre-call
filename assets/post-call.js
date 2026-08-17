@@ -186,7 +186,7 @@ function clearTemplateChoice(){
    backend, of a key, and of any claim about where the transcript went — the
    operator decides that. See the note at the top of pc-transcript.js for why
    nothing here applies itself. */
-let trCandidates = [], trRejected = new Set();
+let trCandidates = [], trRejected = new Set(), trLadder = null;
 
 function trText(){ const t = el('trIn'); return t ? t.value : ''; }
 
@@ -224,6 +224,10 @@ function parseExtraction(){
   if (!fields) { flashDoc(tr('לא הצלחתי לקרוא את הפלט. ודא שהעתקת את כל התשובה.')); return; }
   trCandidates = PC.transcript.candidates(fields, trText());
   trRejected.clear();
+  /* The ladder licenses the local cue reading and nothing else. This path read
+     the call through a model, which was never held to that licence, so the
+     rung note would be describing a reading it did not govern. */
+  trLadder = null;
   if (!trCandidates.length) { flashDoc(tr('לא נמצא שום ערך עם ציטוט')); return; }
   renderReview();
   track('transcript_parsed');
@@ -237,11 +241,25 @@ function localExtraction(){
      still could not say what the project connects. It comes back as an
      ordinary candidate row, so it goes through the same review the figures do. */
   const seen = PC.transcript.observe(t);
-  trCandidates = PC.transcript.heuristics(t);
+  /* Decide what this call can carry before reading a single number out of it.
+     The first real transcript run through this tool was a consulting call with
+     no process in it, and "300 שקל לפגישה" — the fee being agreed — came back
+     as the cost of an incident. Under the ladder that cue is not looked for on
+     a call like that, so the misreading cannot happen rather than being caught
+     afterwards. */
+  trLadder = PC.ladder.assess({
+    text: t,
+    systems: seen.systems.map(s => s.value),
+    comparableLast: num('c_last')
+  });
+  trCandidates = PC.transcript.heuristics(t, trLadder.licence);
   if (seen.systemsRow) trCandidates.push(seen.systemsRow);
   trRejected.clear();
   if (!trCandidates.length) {
-    flashDoc(tr('לא נמצאו מספרים ברורים. פתחתי את החילוץ עם הבינה המלאכותית.')); showPrompt(); return;
+    /* Not "no numbers were found" — on a call that landed low there were none
+       looked for, and renderReview() puts that reason on the screen. */
+    renderReview();
+    flashDoc(tr('אין מה למלא מהשיחה עצמה. פתחתי את החילוץ עם הבינה המלאכותית.')); showPrompt(); return;
   }
   renderReview();
 }
@@ -251,6 +269,7 @@ function loadDemo(){
   const fields = PC.transcript.parseExtraction(PC.example.EXTRACTION);
   trCandidates = PC.transcript.candidates(fields, PC.example.TRANSCRIPT);
   trRejected.clear();
+  trLadder = null;
   renderReview();
   track('example_loaded');
 }
@@ -260,9 +279,29 @@ const SPEAKER = { client: tr('הלקוח אמר'), seller: tr('אתם אמרתם
 /* Every row shows the sentence it came from. That is the whole point: a
    number you cannot trace is the thing this tool exists to keep out of a
    price, and an extraction step is the easiest way to let one back in. */
+/* Which rung the call landed on, and what was absent from every rung above
+   it. On a call that landed at the bottom this is the only thing on the screen
+   worth reading — the rows are empty precisely because nothing above cost was
+   licensed, and the skipped list is the list of what to go back and ask. */
+function ladderNote(){
+  if (!trLadder || !trLadder.label) return '';
+  return '<div class="tr-prov"><b>' + tr('על מה נשען המחיר') + ': ' +
+    esc(trLadder.label) + '.</b> ' + esc(trLadder.because) +
+    (trLadder.skipped.length
+      ? '<b class="mt14">' + tr('מה חסר כדי להישען על משהו חזק יותר') + ':</b><ul>' +
+        trLadder.skipped.map(s => '<li>' + esc(s.label) + ' — ' + esc(s.missing) + '</li>').join('') +
+        '</ul>'
+      : '') + '</div>';
+}
+
 const renderReview = guard('transcript', function (){
   const box = el('trReview'); if (!box) return;
-  if (!trCandidates.length) { show('trReview', false); box.innerHTML = ''; return; }
+  if (!trCandidates.length) {
+    /* Still shown when the ladder has something to say: a call that yielded no
+       rows yielded none for a reason, and hiding the panel hides the reason. */
+    const note = ladderNote();
+    box.innerHTML = note; show('trReview', !!note); return;
+  }
   const prov = PC.transcript.provenance(
     trCandidates.filter(c => !trRejected.has(c.key)), trText());
 
@@ -283,6 +322,7 @@ const renderReview = guard('transcript', function (){
           esc(c.key) + '">' + (off ? tr('להחזיר') : tr('להסיר')) + '</button>' +
       '</div>';
     }).join('') +
+    ladderNote() +
     '<div class="tr-prov"><b>' + tr('מאיפה הגיעו המספרים:') + '</b> ' + esc(prov.why) + '. ' +
       esc(prov.value === 'unprompted'
         ? tr('זה המצב החזק ביותר — המחיר יישען על מה שהוא עצמו אמר.')

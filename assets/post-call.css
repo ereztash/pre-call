@@ -912,6 +912,10 @@
   .t-unver{color:var(--red-text);border-color:var(--red-text);border-style:dashed}
   .tr-prov{background:var(--charcoal-2);border-inline-start:3px solid var(--turq);border-radius:var(--r-md);
            padding:var(--sp-4) var(--sp-5);margin-top:var(--sp-4);font-size:var(--fs-xs);color:var(--tq-21);line-height:1.6}
+  /* the rungs the call could not reach, one line each */
+  .tr-prov b.mt14{display:block}
+  .tr-prov ul{margin:var(--sp-2) 0 0;padding-inline-start:var(--sp-5)}
+  .tr-prov li{margin-top:var(--sp-2)}
 
   /* ---- micro-interactions ----
      Two, both earning their place. The price beat exists because the tool's
