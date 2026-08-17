@@ -914,6 +914,10 @@
            padding:var(--sp-4) var(--sp-5);margin-top:var(--sp-4);font-size:var(--fs-xs);color:var(--tq-21);line-height:1.6}
   /* the rungs the call could not reach, one line each */
   .tr-prov b.mt14{display:block}
+  /* the buyer said no. Red rather than turquoise because it is the one panel
+     here that is not an explanation of the price — it is a reason to doubt it. */
+  .tr-prov.stall{border-inline-start-color:var(--red-text);color:var(--nt-9)}
+  .tr-prov .tr-q{border-inline-start-width:2px;margin-top:var(--sp-3)}
   .tr-prov ul{margin:var(--sp-2) 0 0;padding-inline-start:var(--sp-5)}
   .tr-prov li{margin-top:var(--sp-2)}
 

@@ -184,8 +184,27 @@ const BUDGETS = {
      naming rather than fixing quietly. The reasons render now, including on
      the case that matters most: a call that yields no rows at all yields none
      for a reason, and the list of skipped rungs is the list of what to go back
-     and ask about. */
-  'post-call.html':     154 * 1024
+     and ask about.
+
+     An eighth raise, 154 → 157KB, from running two real soft calls through the
+     thing. Positioning and branding work: no process, no systems, no ledger
+     history, both landing on the bottom rung with the identical answer — which
+     is a ladder that has stopped telling calls apart. What those calls did
+     carry was a price the client named as his own reference ("like a session
+     with a psychologist"), and a buyer saying out loud that there was no
+     money. The page now reads both: a fifth rung for the first, and a
+     quote-backed warning above the rung for the second, because a confident
+     number for a deal the other person already declined in the room is the
+     most expensive quiet this tool has.
+
+     Also in this raise, and cheaper than either: the ladder now reads the
+     client's lines rather than the whole transcript when the transcript says
+     who is speaking. Half a discovery call is the seller describing their own
+     business, and every cue in that file was written for the other side of the
+     table. Neither real transcript carries a single speaker label, so the page
+     also had to learn to say that out loud rather than quietly resting a rung
+     on the operator's own sentence. */
+  'post-call.html':     157 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

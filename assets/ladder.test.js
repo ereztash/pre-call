@@ -1,15 +1,20 @@
 /* node assets/ladder.test.js — no browser, no deps.
 
-   The ladder exists because of one transcript. A real discovery call, the
-   first anybody ran through this product, selling positioning rather than
-   automation: no systems, no process, nothing recurring. The tool read
-   "300 שקל לפגישה" — the fee being agreed in the room — as errCost, the cost
-   of an incident, and would have computed a year of the client's losses out of
-   the seller's own price. Nothing flagged it, because the cue for incident
-   cost is a number beside a currency word and that is the whole of it.
+   The ladder exists because of real discovery calls, and the ones that taught
+   it the most were not the automation work it was written for. Positioning and
+   branding: no process, no systems, nothing recurring, no ledger history —
+   and the tool read "300 שקל לפגישה", the fee being agreed in the room, as
+   errCost, the cost of an incident, on its way to computing a year of the
+   client's losses out of the seller's own price.
 
-   So most of what is below is about refusal: which calls may not reach which
-   rung, and what a rung is not allowed to read. The happy path is one test. */
+   The fixtures below are not those transcripts. They are their shape: no
+   speaker labels anywhere, sentences that run for a paragraph because that is
+   what speech-to-text returns, currency spelled the way a transcriber hears
+   it, and a buyer saying out loud that there is no money. The content is
+   invented.
+
+   Most of what follows is about refusal — which calls may not reach which
+   rung, and what a rung is not allowed to read. The happy paths are few. */
 const L = require('./pc-ladder.js');
 const T = require('./pc-transcript.js');
 const assert = require('assert');
@@ -20,14 +25,22 @@ const test = (name, fn) => {
   catch (e) { fail++; console.log('  FAIL ' + name + '\n       ' + e.message); }
 };
 
-/* The call itself, cut to the two exchanges that matter: no process anywhere,
-   and a fee stated near the end. */
+/* A soft call: no process anywhere, and near the end the client reaches for a
+   price by naming what he thinks the category costs. */
 const CONSULTING =
   'איך זה עובד אצלך היום כשאתה משיג לקוחות חדשים?\n' +
   'כרגע זה לא באמת עובד. יש לי לקוח אחד ואני מלמד תלמידות עיצוב.\n' +
   'כמה זה שווה לך לדעתך?\n' +
   'אני לא יודע.\n' +
   'כרגע אני רואה את זה קצת כמו פגישת פסיכולוג, בשביל שזה 300 שקל לפגישה.';
+
+/* The same call with nothing priced in it at all — which is the more common
+   soft call, and the one that has to fall all the way through. */
+const CONSULTING_NO_PRICE =
+  'איך זה עובד אצלך היום כשאתה משיג לקוחות חדשים?\n' +
+  'כרגע זה לא באמת עובד. יש לי לקוח אחד ואני מלמד תלמידות עיצוב.\n' +
+  'כמה זה שווה לך לדעתך?\n' +
+  'אני לא יודע, אני לא יודע לשים על זה מחיר כרגע.';
 
 const AUTOMATION =
   'לקוח: היום ההזמנות נכנסות בוואטסאפ, בערך 40 הזמנות ביום.\n' +
@@ -49,7 +62,7 @@ test('a call with no process in it does not', () => {
 });
 
 test('the bottom rung always holds, so there is always a price', () => {
-  [undefined, null, {}, { text: '' }, { text: CONSULTING }].forEach(input => {
+  [undefined, null, {}, { text: '' }, { text: CONSULTING_NO_PRICE }].forEach(input => {
     const v = L.assess(input);
     assert.ok(v.method, 'no method for ' + JSON.stringify(input));
     assert.strictEqual(L.RUNGS[L.RUNGS.length - 1].holds(input || {}), true);
@@ -57,34 +70,136 @@ test('the bottom rung always holds, so there is always a price', () => {
 });
 
 test('every rung that was passed over says why, in order', () => {
-  const v = L.assess({ text: CONSULTING });
-  assert.deepStrictEqual(v.skipped.map(s => s.rung), ['value', 'comparable', 'market']);
+  const v = L.assess({ text: CONSULTING_NO_PRICE });
+  assert.deepStrictEqual(v.skipped.map(s => s.rung), ['value', 'comparable', 'anchor', 'market']);
   v.skipped.forEach(s => assert.ok(s.missing && s.missing.length > 20,
     s.rung + ' was skipped without saying what was absent'));
 });
 
-test('your own closed deal outranks a published range', () => {
-  /* comparable sits above market on purpose: a job you actually did and were
-     paid for is better evidence than a table converted from someone else's
-     market. */
-  const withHistory = L.assess({ text: CONSULTING, systems: ['CRM'], comparableLast: 4000 });
-  assert.strictEqual(withHistory.rung, 'comparable');
-  const without = L.assess({ text: CONSULTING, systems: ['CRM'] });
-  assert.strictEqual(without.rung, 'market');
+console.log('\nthe soft call');
+
+test('a price the client names as his own reference is a rung, not noise', () => {
+  /* The whole point of rung 3. This is the same sentence that used to come
+     back as the cost of an incident. It is not that — it is the client saying
+     what he thinks this class of work costs, which is the only priced thing
+     anybody says out loud on a call like this. */
+  const v = L.assess({ text: CONSULTING });
+  assert.strictEqual(v.rung, 'anchor');
+  assert.strictEqual(v.method, 'comparable', 'the engine has no fifth method and does not need one');
 });
 
-test('a count with no period is not a rate of work, and neither is a period with no count', () => {
-  assert.notStrictEqual(L.assess({ text: 'יש לנו 40 הזמנות שממתינות' }).rung, 'value',
-    'a backlog was read as a rate');
-  assert.notStrictEqual(L.assess({ text: 'אנחנו מעלים פוסט בשבוע' }).rung, 'value',
-    'a habit with no quantity was read as a rate');
+test('a number beside a currency word is not a reference price', () => {
+  /* Without the per-unit this is the old bug's exact shape, and it must not
+     reach the rung that was built to replace it. */
+  ['השנה הפסדנו 300 שקל על זה', 'קנינו מדפסת ב-1800 ₪', 'הוא חייב לי 500 שח'].forEach(t =>
+    assert.notStrictEqual(L.assess({ text: t }).rung, 'anchor',
+      'a stray figure was read as what the client thinks the work is worth: ' + t));
+});
+
+test('the rung carries the sentence it read, never the number', () => {
+  const v = L.assess({ text: CONSULTING });
+  assert.ok(v.quote && v.quote.indexOf('300') !== -1, 'the rung named a price with no sentence under it');
+  Object.keys(v).forEach(k => assert.ok(!/price|amount|₪/i.test(k),
+    'the ladder is carrying a parsed price, and the engine is the only thing allowed to'));
+});
+
+test('a paragraph-long transcript line is windowed, and the window stays verbatim', () => {
+  /* Speech-to-text returns sentences that run for hundreds of characters with
+     no punctuation, and an unreadable quote is not a quote. The middle has to
+     survive intact or it cannot be found again in the transcript. */
+  const filler = 'ואז אמרתי לו שזה מה שיש וזה מה שאני חושב על הדברים האלה בערך ';
+  const line = filler.repeat(6) + 'בסוף זה 300 שקל לפגישה אצלי ' + filler.repeat(6);
+  const v = L.assess({ text: line });
+  assert.strictEqual(v.rung, 'anchor');
+  assert.ok(v.quote.length < 250, 'the quote is ' + v.quote.length + ' characters, which nobody reads');
+  assert.ok(line.indexOf(v.quote.replace(/^…|…$/g, '')) !== -1,
+    'the windowed middle is not in the transcript any more');
+  assert.ok(/…/.test(v.quote), 'text was cut without saying so');
+});
+
+test('your own closed deal outranks what the client thinks it costs', () => {
+  /* comparable sits above anchor: a job you did and were paid for is evidence
+     that a price cleared. What the client reaches for is evidence of what he
+     expects to pay, which is a different and weaker thing. */
+  assert.strictEqual(L.assess({ text: CONSULTING, comparableLast: 4000 }).rung, 'comparable');
+  assert.strictEqual(L.assess({ text: CONSULTING }).rung, 'anchor');
+});
+
+test('what the client named outranks a published range', () => {
+  /* anchor sits above market: the client's own reference is about this buyer,
+     and the market table is ranges converted from somebody else's projects in
+     a vertical this call may have nothing to do with. */
+  assert.strictEqual(L.assess({ text: CONSULTING, systems: ['CRM'] }).rung, 'anchor');
+  assert.strictEqual(L.assess({ text: CONSULTING_NO_PRICE, systems: ['CRM'] }).rung, 'market');
+});
+
+console.log('\nthe buyer said no');
+
+test('a stated absence of budget comes back with the sentence', () => {
+  const v = L.assess({ text: 'השירות נשמע לי מעניין אבל אני אהיה איתך כנה, אין לי כסף.' });
+  assert.ok(v.stalled, 'the buyer said there was no money and nothing carried it back');
+  assert.ok(v.stalled.indexOf('אין לי כסף') !== -1, 'the wrong sentence was quoted');
+});
+
+test('it is reported on any rung, including the top one', () => {
+  /* A call can carry perfectly good evidence and still have ended in a no.
+     Tying this to a low rung would hide exactly the case worth seeing: a
+     well-qualified process that the buyer is not buying. */
+  const v = L.assess({ text: AUTOMATION + '\nלקוח: אבל אין לי תקציב לזה השנה.' });
+  assert.strictEqual(v.rung, 'value');
+  assert.ok(v.stalled, 'the refusal disappeared because the call priced well');
+});
+
+test('it does not change which method wins', () => {
+  const with_ = L.assess({ text: CONSULTING + '\nאין לי תקציב.' });
+  const without = L.assess({ text: CONSULTING });
+  assert.strictEqual(with_.rung, without.rung, 'a refusal moved the pricing method');
+  assert.strictEqual(with_.method, without.method);
+});
+
+test('hesitation is not refusal', () => {
+  /* Kept narrow on purpose. Everything below is ordinary in a discovery call
+     and reading any of it as a no would make the warning noise, and a warning
+     that is noise is a warning nobody reads. */
+  ['אני צריך לחשוב על זה', 'אני לא יודע לשים על זה מחיר כרגע',
+   'תחזור אליי בעוד חודש', 'זה קצת יקר לי', 'אני צריך לבדוק מול השותף שלי'
+  ].forEach(t => assert.ok(!L.assess({ text: t }).stalled, 'read as a refusal: ' + t));
+});
+
+console.log('\nwho the ladder is listening to');
+
+test('when the transcript names speakers, your own numbers do not lift the call', () => {
+  /* Half a discovery call is the seller describing their own business. Every
+     cue here was written for the other side of the table. */
+  const t = 'מוכר: אני שולח 5 פניות בשבוע וזה עובד לי מצוין.\n' +
+            'לקוח: אני עוד לא יודע מה אני עושה.';
+  const v = L.assess({ text: t, lines: T.withSpeakers(t) });
+  assert.strictEqual(v.labelled, true);
+  assert.notStrictEqual(v.rung, 'value',
+    'the call was priced on the seller\'s own posting cadence');
+});
+
+test('when it does not, everything is read — and it says so', () => {
+  /* Neither real transcript this was built from carries a single speaker
+     label, so this is the ordinary case, not the edge one. It is allowed,
+     because reading nothing would be worse, and it is reported, because the
+     operator has to know the rung may be resting on their own sentence. */
+  const t = 'אני שולח 5 פניות בשבוע וזה עובד לי מצוין.\nאני עוד לא יודע מה אני עושה.';
+  const v = L.assess({ text: t, lines: T.withSpeakers(t) });
+  assert.strictEqual(v.labelled, false);
+  assert.strictEqual(v.rung, 'value', 'the unlabelled reading narrowed instead of being flagged');
+});
+
+test('a caller that passes no lines at all is in the same position, not a worse one', () => {
+  assert.strictEqual(L.assess({ text: AUTOMATION }).labelled, false);
+  assert.strictEqual(L.assess({ text: AUTOMATION }).rung, 'value');
 });
 
 console.log('\nwhat a rung is allowed to read');
 
 test('the fee agreed in the room is not read as the cost of an incident', () => {
-  /* The whole reason this file exists. Under the ladder the incident cue is
-     not merely unused on this call — it is never looked for. */
+  /* Under the ladder the incident cue is not merely unused on this call — it
+     is never looked for. */
   const v = L.assess({ text: CONSULTING });
   const rows = T.heuristics(CONSULTING, v.licence);
   assert.deepStrictEqual(rows, [],
@@ -110,9 +225,14 @@ test('the value rung licenses exactly the three cues its formula needs', () => {
 });
 
 test('no rung below value licenses a quantitative cue', () => {
-  ['comparable', 'market', 'cost'].forEach(id =>
+  ['comparable', 'anchor', 'market', 'cost'].forEach(id =>
     assert.deepStrictEqual(L.LICENCE[id], [],
       id + ' may read a number, and a number on those calls means something else'));
+});
+
+test('every rung has a licence entry, so a new one cannot arrive unrestricted', () => {
+  L.RUNGS.forEach(r => assert.ok(Array.isArray(L.LICENCE[r.id]),
+    r.id + ' was added to the ladder without saying what it may read'));
 });
 
 test('an omitted licence still reads everything, so nothing that worked stopped working', () => {
@@ -126,17 +246,17 @@ console.log('\nwhat the ladder does not decide');
 test('it names a method and never a price', () => {
   const v = L.assess({ text: AUTOMATION, systems: ['WhatsApp'] });
   assert.ok(v.method, 'no method named');
-  Object.keys(v).forEach(k => assert.ok(!/price|amount|₪/i.test(k),
-    'the ladder is carrying a price, and the engine is the only thing allowed to'));
 });
 
 test('every rung states whether it needs a vertical behind it', () => {
-  /* Two of the four do, and they are not the two you would guess: market looks
-     generic and is keyed on how many systems connect, with ranges converted
-     from automation projects. Reading complexity for other work needs a
-     different metric, not a translation of this one. */
+  /* Two of the five do. market looks generic and is keyed on how many systems
+     connect, with ranges converted from automation projects; reading
+     complexity for other work needs a different metric, not a translation of
+     this one. anchor is vertical-free precisely because the number comes from
+     the buyer rather than from a table about somebody else's industry. */
   L.RUNGS.forEach(r => assert.strictEqual(typeof r.vertical, 'boolean', r.id));
   assert.strictEqual(L.RUNGS.find(r => r.id === 'market').vertical, true);
+  assert.strictEqual(L.RUNGS.find(r => r.id === 'anchor').vertical, false);
   assert.strictEqual(L.RUNGS.find(r => r.id === 'comparable').vertical, false);
   assert.strictEqual(L.RUNGS.find(r => r.id === 'cost').vertical, false);
 });

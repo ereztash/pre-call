@@ -464,8 +464,13 @@
   }
 
   root.PC = root.PC || {};
+  /* withSpeakers is exported because pc-ladder.js needs the same split this
+     file already does: which sentences are the client's. Two answers to that
+     question in one product would drift apart, and the one that drifted would
+     be the one deciding whether a rung rests on the operator's own words. */
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
-                         candidates, provenance, heuristics, observe, toState };
+                         candidates, provenance, heuristics, observe, toState,
+                         withSpeakers };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
 })(typeof window !== 'undefined' ? window : globalThis);

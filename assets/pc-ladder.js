@@ -16,17 +16,32 @@
    cannot be misread as an incident cost on a call that never established a
    recurring process, because on that call nobody looks for one.
 
-   Four rungs, ordered by how much they need from the client. Descend until
+   Five rungs, ordered by how much they need from the client. Descend until
    one holds:
 
      1  value      a quantity of work, recurring over time, from the client
      2  comparable a similar job you have already closed
-     3  market     a readable complexity
-     4  cost       your own hours and rate
+     3  anchor     a reference price the client named
+     4  market     a readable complexity
+     5  cost       your own hours and rate
 
-   Rung 4 always holds. That is the point of it — there is no bottom, so the
-   ladder cannot fail to produce a price, and a call it does not understand
-   gets an honest cheap answer instead of a confident wrong one.
+   The bottom rung always holds. That is the point of it — there is no floor
+   under it, so the ladder cannot fail to produce a price, and a call it does
+   not understand gets an honest cheap answer instead of a confident wrong one.
+
+   Rung 3 arrived from two real calls that were nothing like the automation
+   work the first four rungs were written for. Positioning and branding: no
+   process, no systems, no ledger history, and both landing on the bottom rung
+   with the identical answer, which is a ladder that has stopped
+   discriminating. What those calls did carry was a price the client named as
+   their own reference — and that is a rung, because it is the client saying
+   what this class of work is worth to them.
+
+   Separately, and not a rung: both of those calls contained the buyer saying
+   there was no money or no reason to start, and the tool priced them anyway.
+   `stalled` carries that sentence back verbatim. It does not change the
+   method. It changes what the operator is looking at when they read the
+   number.
 
    What the ladder does NOT do is pick the price. Once the rung is known the
    engine still computes every method it has data for and says which yields
@@ -46,6 +61,7 @@
   const LICENCE = {
     value:      ['freq', 'minutes', 'errCost'],
     comparable: [],
+    anchor:     [],
     market:     [],
     cost:       []
   };
@@ -58,6 +74,75 @@
   const FREQ = /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|חשבוניות|טפסים|\btimes?\b|\borders?\b|\bleads?\b|\brequests?\b|\binvoices?\b)/i;
   const PER_TIME = /ביום|ליום|בשבוע|לשבוע|בחודש|לחודש|\bper\s+(?:day|week|month)\b|\ba\s+(?:day|week|month)\b/i;
 
+  /* A price the client names as their own reference — "like a session with a
+     psychologist, 300 a session". On the soft calls this is the only priced
+     thing anybody says out loud, and the four rungs above could not read it:
+     there is no process to value, no closed job in your ledger, and no systems
+     to place in a range.
+
+     Three parts, all required, and the third is what keeps this from being the
+     old bug wearing a new name. A number beside a currency word is what read
+     the fee in the room as the cost of an incident. A number beside a currency
+     word *per unit of engagement* — a session, an hour, a month — is a rate,
+     and a rate is the one shape a stray figure in a discovery call does not
+     accidentally take. */
+  const RATE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שק|\bNIS\b|\bILS\b)\s*ל(?:פגישה|מפגש|שיחה|שעה|חודש|שבוע|יום)/i;
+
+  /* The buyer said there is no money, or no reason to start. Both soft calls
+     behind this file end that way and the tool priced them anyway, which is
+     the most expensive kind of quiet: a confident number for a deal that the
+     other person already declined, in the room, out loud.
+
+     This is not a rung. It does not change which method wins — you may still
+     want the figure for your own records — it changes what the screen says
+     above it. Kept deliberately narrow: a stated absence of budget or reason,
+     not a hesitation, not "I need to think", not a soft postponement. Those
+     are ordinary and reading them as refusal would make the warning noise. */
+  const STALL = /אין לי\s+(?:אף\s+)?(?:כסף|תקציב|אינסנטיב|תמריץ|סיבה)|\bno\s+budget\b|can'?t\s+afford/i;
+
+  /* Who the ladder is allowed to listen to.
+
+     Every cue here is about what the CLIENT's business looks like, and a
+     discovery call is half the seller talking about their own. The seller
+     describing their own posting cadence, their own rate, their own last
+     project — each of those trips a cue that was written for the other side of
+     the table.
+
+     So when the transcript carries speaker labels the ladder reads the client
+     lines and nothing else. When it does not — and neither of the real
+     transcripts this was built from carries a single one — it reads
+     everything, reports `labelled: false`, and the operator gets told rather
+     than quietly handed a rung that may rest on their own sentence. */
+  function heard(it) {
+    const lines = it.lines;
+    const all = String(it.text || '');
+    if (!Array.isArray(lines) || !lines.length) return { text: all, labelled: false };
+    if (!lines.some(l => l && l.speaker && l.speaker !== 'unknown')) return { text: all, labelled: false };
+    return { text: lines.filter(l => l.speaker === 'client').map(l => l.line).join('\n'), labelled: true };
+  }
+
+  /* The sentence, verbatim, or null. The ladder hands over the quote and never
+     the number parsed out of it — same rule the extraction rows follow, and
+     for the same reason: a figure you cannot trace is what this tool exists to
+     keep out of a price. */
+  function firstMatch(text, re) {
+    const line = String(text || '').split(/\n|(?<=[.!?])\s+/)
+      .map(l => l.trim()).find(l => re.test(l));
+    if (!line) return null;
+    if (line.length <= 200) return line;
+    /* Speech-to-text returns paragraph-long "sentences" with no punctuation in
+       them — the line this cue matched in the call it was written from is 570
+       characters, and a 570-character quote is not a quote anybody reads. So
+       it is windowed around the match: the middle stays verbatim and stays
+       searchable in the transcript, and the ellipses say plainly that the rest
+       was cut rather than that the client said only this. */
+    const m = line.match(re), at = line.indexOf(m[0]);
+    let from = Math.max(0, at - 70), to = Math.min(line.length, at + m[0].length + 70);
+    while (from > 0 && !/\s/.test(line[from])) from--;
+    while (to < line.length && !/\s/.test(line[to])) to++;
+    return (from > 0 ? '…' : '') + line.slice(from, to).trim() + (to < line.length ? '…' : '');
+  }
+
   const RUNGS = [
     {
       id: 'value',
@@ -67,7 +152,7 @@
       /* Both halves, because either alone is common and neither alone is a
          process. "40 orders" with no period is a backlog; "every week" with no
          count is a habit. */
-      holds: input => FREQ.test(input.text || '') && PER_TIME.test(input.text || ''),
+      holds: input => { const h = heard(input); return FREQ.test(h.text) && PER_TIME.test(h.text); },
       because: tr('הלקוח נקב בכמות עבודה שחוזרת על עצמה, ולכן אפשר לגזור מה התהליך עולה לו בשנה.'),
       missing: tr('לא נמצאה בשיחה כמות עבודה שחוזרת על עצמה — כמה פעמים ביום, בשבוע או בחודש. בלי זה אין ערך שנתי לגזור ממנו.')
     },
@@ -82,6 +167,23 @@
       holds: input => +(input.comparableLast || 0) > 0,
       because: tr('יש בפנקס שלכם עבודה דומה שנסגרה, והמחיר נגזר ממנה מותאם להיקף כאן.'),
       missing: tr('אין בפנקס עסקה דומה שנסגרה, ולכן אין ממה לגזור.')
+    },
+    {
+      id: 'anchor',
+      /* The engine has no fifth method and does not need one: a single
+         reference price is priced the same way a closed job of yours is, by
+         adjusting it to the scope here. What differs is where the number came
+         from, and that difference is the whole reason this is its own rung
+         rather than a second way into the one above — your ledger is evidence
+         that a price cleared, the client's reference is evidence of what they
+         expect to pay. The operator should never be unable to tell which one
+         is under their number. */
+      method: 'comparable',
+      label: tr('מחיר ייחוס של הלקוח'),
+      vertical: false,
+      holds: input => RATE.test(heard(input).text),
+      because: tr('הלקוח נקב במחיר ייחוס משלו לעבודה דומה בעיניו, והמחיר נגזר ממנו מותאם להיקף כאן.'),
+      missing: tr('הלקוח לא נקב במחיר ייחוס — כמה עבודה דומה בעיניו עולה, לפגישה, לשעה או לחודש.')
     },
     {
       id: 'market',
@@ -111,10 +213,17 @@
     }
   ];
 
-  /* input: { text, systems, comparableLast }
-     Everything optional. A caller with nothing gets rung 4 and a reason. */
+  /* input: { text, lines, systems, comparableLast }
+     Everything optional. A caller with nothing gets the bottom rung and a
+     reason. `lines` is the output of PC.transcript.withSpeakers() — pass it
+     and the ladder listens to the client only; omit it and it listens to the
+     whole room and says so. */
   function assess(input) {
     const it = input || {};
+    const h = heard(it);
+    /* Independent of the rung, and reported even when the rung is the top one:
+       a call can carry perfectly good evidence and still have ended in a no. */
+    const stalled = firstMatch(h.text, STALL);
     const tried = [];
     for (const rung of RUNGS) {
       if (rung.holds(it)) {
@@ -124,6 +233,11 @@
           label: rung.label,
           vertical: rung.vertical,
           because: rung.because,
+          /* The sentence the rung rests on, when it rests on one it read out of
+             the call rather than out of your ledger. */
+          quote: rung.id === 'anchor' ? firstMatch(h.text, RATE) : null,
+          stalled: stalled,
+          labelled: h.labelled,
           /* Everything above it that did not hold, with the reason. This is
              what the operator reads when they want to know why the price is
              not resting on something stronger — and it is the list of what to
@@ -138,7 +252,8 @@
        thrown so that a future edit to that condition degrades instead of
        taking the page down. */
     return { rung: null, method: 'cost', label: null, vertical: false,
-             because: null, skipped: tried, licence: [] };
+             because: null, quote: null, stalled: stalled, labelled: h.labelled,
+             skipped: tried, licence: [] };
   }
 
   /* Whether a cue may be read at all under a given licence. The default when

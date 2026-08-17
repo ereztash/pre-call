@@ -226,8 +226,12 @@ function parseExtraction(){
   trRejected.clear();
   /* The ladder licenses the local cue reading and nothing else. This path read
      the call through a model, which was never held to that licence, so the
-     rung note would be describing a reading it did not govern. */
-  trLadder = null;
+     rung would be describing a reading it did not govern and is dropped.
+     Whether the buyer said there is no budget is not about who did the
+     reading — it is about what was said in the room — so that part stays, and
+     stays on the path most real transcripts actually take. */
+  const read = PC.ladder.assess({ text: trText(), lines: PC.transcript.withSpeakers(trText()) });
+  trLadder = read.stalled ? { label: null, stalled: read.stalled, skipped: [] } : null;
   if (!trCandidates.length) { flashDoc(tr('לא נמצא שום ערך עם ציטוט')); return; }
   renderReview();
   track('transcript_parsed');
@@ -249,6 +253,10 @@ function localExtraction(){
      afterwards. */
   trLadder = PC.ladder.assess({
     text: t,
+    /* so the ladder listens to the client and not to you. Half a discovery
+       call is the seller describing their own business, and every cue here was
+       written for the other side of the table. */
+    lines: PC.transcript.withSpeakers(t),
     systems: seen.systems.map(s => s.value),
     comparableLast: num('c_last')
   });
@@ -287,11 +295,30 @@ function ladderNote(){
   if (!trLadder || !trLadder.label) return '';
   return '<div class="tr-prov"><b>' + tr('על מה נשען המחיר') + ': ' +
     esc(trLadder.label) + '.</b> ' + esc(trLadder.because) +
+    /* the sentence the rung read, when it read one. Same rule as every row
+       above it: a number that cannot be traced to something said does not get
+       to sit under a price. */
+    (trLadder.quote ? '<div class="tr-q">«' + esc(trLadder.quote) + '»</div>' : '') +
     (trLadder.skipped.length
       ? '<b class="mt14">' + tr('מה חסר כדי להישען על משהו חזק יותר') + ':</b><ul>' +
         trLadder.skipped.map(s => '<li>' + esc(s.label) + ' — ' + esc(s.missing) + '</li>').join('') +
         '</ul>'
-      : '') + '</div>';
+      : '') +
+    (trLadder.labelled ? '' :
+      '<b class="mt14">' + tr('בתמלול אין סימוני דובר, ולכן נקרא גם מה שאתם אמרתם. עברו על הציטוטים.') + '</b>') +
+    '</div>';
+}
+
+/* The buyer said there is no money, or no reason to start. This sits above the
+   rung and not inside it, because it does not change which method wins — it
+   changes whether the number underneath is a proposal or an exercise. Both
+   real calls that produced this feature ended this way and the tool priced
+   them without a word. */
+function stallNote(){
+  if (!trLadder || !trLadder.stalled) return '';
+  return '<div class="tr-prov stall"><b>' + tr('הלקוח אמר בשיחה שאין תקציב או שאין סיבה להתחיל עכשיו') + '.</b> ' +
+    tr('המחיר שייצא מכאן הוא תרגיל, לא הצעה — עד שיש תשובה אחרת מהלקוח עצמו.') +
+    '<div class="tr-q">«' + esc(trLadder.stalled) + '»</div></div>';
 }
 
 const renderReview = guard('transcript', function (){
@@ -299,7 +326,7 @@ const renderReview = guard('transcript', function (){
   if (!trCandidates.length) {
     /* Still shown when the ladder has something to say: a call that yielded no
        rows yielded none for a reason, and hiding the panel hides the reason. */
-    const note = ladderNote();
+    const note = stallNote() + ladderNote();
     box.innerHTML = note; show('trReview', !!note); return;
   }
   const prov = PC.transcript.provenance(
@@ -322,7 +349,7 @@ const renderReview = guard('transcript', function (){
           esc(c.key) + '">' + (off ? tr('להחזיר') : tr('להסיר')) + '</button>' +
       '</div>';
     }).join('') +
-    ladderNote() +
+    stallNote() + ladderNote() +
     '<div class="tr-prov"><b>' + tr('מאיפה הגיעו המספרים:') + '</b> ' + esc(prov.why) + '. ' +
       esc(prov.value === 'unprompted'
         ? tr('זה המצב החזק ביותר — המחיר יישען על מה שהוא עצמו אמר.')
