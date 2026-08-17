@@ -215,13 +215,23 @@ test('the client gave numbers — price on what it costs him', () => {
   assert.ok(/הכסף שלו|עולה ללקוח/.test(p.because));
 });
 test('the numbers are the operator\'s own — do not price on them', () => {
-  const p = M.pickMethod({ freq: 20, minutes: 7, numbersAreMine: true });
+  const p = M.pickMethod({ freq: 20, minutes: 7, numbersAreMine: true, systems: ['CRM'] });
   assert.strictEqual(p.method, 'market');
   assert.ok(/הערכה שלכם/.test(p.because));
 });
+test('and market is only offered when there is a complexity to read', () => {
+  /* Market is keyed on how many systems connect. With none, marketTier()
+     returns nothing, M.market is null, and compute() quietly prices from the
+     cost floor instead — so the chip read "טווח מקובל" over a number that came
+     from cost plus margin. Measured across 200 generated calls, this branch
+     was almost all of a 72% rate of naming a method the data could not price. */
+  const p = M.pickMethod({ freq: 20, minutes: 7, numbersAreMine: true, systems: [] });
+  assert.strictEqual(p.method, 'cost');
+  assert.ok(/הערכה שלכם/.test(p.because), 'it stopped saying whose numbers these are');
+});
 test('nothing entered yet still yields a usable method and a reason', () => {
   const p = M.pickMethod({});
-  assert.strictEqual(p.method, 'market');
+  assert.strictEqual(p.method, 'cost', 'named a method that cannot price an empty form');
   assert.ok(p.because.length > 40);
 });
 test('a past comparable deal is used when there are no client numbers', () => {

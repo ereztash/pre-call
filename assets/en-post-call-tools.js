@@ -337,4 +337,5 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "לא נקראה מהשיחה מורכבות שאפשר למקם בטווח מקובל.": "No complexity was read from the call that could be placed in a going range.",
   "העבודה הצפויה": "The work you expect",
   "המחיר נגזר מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם, בלי להישען על מספר של הלקוח.": "The price is derived from the work you expect to put in and your rate, without leaning on a number from the client.",
+  "מחיר ייחוס שהלקוח נקב": "The reference price the client named",
 });

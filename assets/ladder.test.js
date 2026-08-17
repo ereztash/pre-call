@@ -198,13 +198,28 @@ test('a caller that passes no lines at all is in the same position, not a worse 
 console.log('\nwhat a rung is allowed to read');
 
 test('the fee agreed in the room is not read as the cost of an incident', () => {
-  /* Under the ladder the incident cue is not merely unused on this call — it
-     is never looked for. */
+  /* The number is read now — as what it is. The incident cue is not merely
+     unused on this call, it is never looked for, and what comes back instead
+     is the client's own reference price headed for the comparable field. Same
+     sentence, same 300, a different thing entirely. */
   const v = L.assess({ text: CONSULTING });
   const rows = T.heuristics(CONSULTING, v.licence);
-  assert.deepStrictEqual(rows, [],
-    'a number was extracted from a call with no process: ' +
-    rows.map(r => r.key + '=' + r.value).join(', '));
+  assert.ok(!rows.some(r => r.key === 'errCost'),
+    'the fee in the room came back as the cost of an incident');
+  assert.deepStrictEqual(rows.map(r => r.key), ['anchor'],
+    'the rung read something it did not license: ' + rows.map(r => r.key).join(', '));
+  assert.strictEqual(rows[0].value, 300);
+});
+
+test('the anchor reaches the field the engine actually prices from', () => {
+  /* Without this the rung names `comparable` and compute() cannot price
+     comparable, because M.comparable is null with no figure in the form. The
+     rung said one thing and the engine did another, on 12% of every call the
+     ladder assessed. */
+  const v = L.assess({ text: CONSULTING });
+  const rows = T.heuristics(CONSULTING, v.licence);
+  assert.strictEqual(rows[0].target, 'c_last', 'the number has nowhere to land');
+  assert.strictEqual(v.method, 'comparable');
 });
 
 test('without the ladder the same call still misreads it, which is the bug', () => {
@@ -224,10 +239,22 @@ test('the value rung licenses exactly the three cues its formula needs', () => {
     ['errCost', 'freq', 'minutes'], 'the rung licensed cues it did not read, or read cues it did not license');
 });
 
-test('no rung below value licenses a quantitative cue', () => {
-  ['comparable', 'anchor', 'market', 'cost'].forEach(id =>
+test('a rung licenses only cues that feed the method it names', () => {
+  /* The invariant is not "low rungs read nothing" — anchor has to read one
+     number or the method it names cannot be priced. It is that a rung never
+     licenses a cue belonging to a method it is not proposing. errCost, freq
+     and minutes feed the value formula, so nothing below value may look for
+     them; that is the whole reason a fee in the room stopped being read as the
+     cost of an incident. */
+  assert.deepStrictEqual(L.LICENCE.anchor, ['anchor']);
+  ['comparable', 'market', 'cost'].forEach(id =>
     assert.deepStrictEqual(L.LICENCE[id], [],
       id + ' may read a number, and a number on those calls means something else'));
+  Object.entries(L.LICENCE).forEach(([id, keys]) => {
+    if (id === 'value') return;
+    ['freq', 'minutes', 'errCost'].forEach(k => assert.ok(keys.indexOf(k) === -1,
+      id + ' licenses ' + k + ', which only the value formula consumes'));
+  });
 });
 
 test('every rung has a licence entry, so a new one cannot arrive unrestricted', () => {

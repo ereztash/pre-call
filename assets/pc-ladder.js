@@ -61,7 +61,12 @@
   const LICENCE = {
     value:      ['freq', 'minutes', 'errCost'],
     comparable: [],
-    anchor:     [],
+    /* The one rung below value that licenses a cue, and it licenses exactly
+       one: the rate the client named. Without it the rung names `comparable`
+       and the engine cannot price comparable, because the number stays in a
+       quote and never reaches the field. Measured across 200 runs: that gap
+       was 12% of every call the ladder assessed. */
+    anchor:     ['anchor'],
     market:     [],
     cost:       []
   };
@@ -85,8 +90,16 @@
      the fee in the room as the cost of an incident. A number beside a currency
      word *per unit of engagement* — a session, an hour, a month — is a rate,
      and a rate is the one shape a stray figure in a discovery call does not
-     accidentally take. */
-  const RATE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שק|\bNIS\b|\bILS\b)\s*ל(?:פגישה|מפגש|שיחה|שעה|חודש|שבוע|יום)/i;
+     accidentally take.
+
+     One definition, and it lives in pc-transcript.js with the other cues. The
+     rung's admission test and the cue that fills the field have to be the same
+     expression — two copies would drift, and the copy that drifted would be the
+     one deciding whether a rung rests on a number the form never received.
+     Resolved at call time rather than at load: pc-transcript.js loads first in
+     the page, and in Node whichever file is required first still has the other
+     in place by the time assess() runs. */
+  const RATE = () => root.PC.transcript.ANCHOR_RE;
 
   /* The buyer said there is no money, or no reason to start. Both soft calls
      behind this file end that way and the tool priced them anyway, which is
@@ -181,7 +194,7 @@
       method: 'comparable',
       label: tr('מחיר ייחוס של הלקוח'),
       vertical: false,
-      holds: input => RATE.test(heard(input).text),
+      holds: input => RATE().test(heard(input).text),
       because: tr('הלקוח נקב במחיר ייחוס משלו לעבודה דומה בעיניו, והמחיר נגזר ממנו מותאם להיקף כאן.'),
       missing: tr('הלקוח לא נקב במחיר ייחוס — כמה עבודה דומה בעיניו עולה, לפגישה, לשעה או לחודש.')
     },
@@ -235,7 +248,7 @@
           because: rung.because,
           /* The sentence the rung rests on, when it rests on one it read out of
              the call rather than out of your ledger. */
-          quote: rung.id === 'anchor' ? firstMatch(h.text, RATE) : null,
+          quote: rung.id === 'anchor' ? firstMatch(h.text, RATE()) : null,
           stalled: stalled,
           labelled: h.labelled,
           /* Everything above it that did not hold, with the reason. This is

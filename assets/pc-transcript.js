@@ -51,6 +51,11 @@
     { key: 'systems',  target: null,          kind: 'list',   label: tr('תוכנות') },
     { key: 'errFreq',  target: 'q_err_freq',  kind: 'number', label: tr('תקלות בחודש') },
     { key: 'errCost',  target: 'q_err_cost',  kind: 'number', label: tr('עלות לתקלה') },
+    /* Lands in the same field a comparable job of yours does, because the
+       engine prices both the same way — by adjusting one known number to the
+       scope here. Where it came from is the difference, and the review row
+       says so before anything reaches the field. */
+    { key: 'anchor',   target: 'c_last',      kind: 'number', label: tr('מחיר ייחוס שהלקוח נקב') },
     { key: 'client',   target: 'q_client',    kind: 'text',   label: tr('שם הלקוח') },
     { key: 'decider',  target: 'q_decider',   kind: 'text',   label: tr('מי מאשר') },
     { key: 'trigger',  target: 'q_trigger',   kind: 'text',   label: tr('מה קרה לאחרונה') },
@@ -248,7 +253,23 @@
      less than one that fires on the word "minutes", because an hourly rate,
      a salary and a price all look identical to it. Nothing downstream may
      price on it, and nothing may skip approval because of it. */
+  /* A price the client names as their own reference: number, currency, and a
+     unit of engagement. The third part is the whole discriminator — "a number
+     beside a currency word" is what read a fee in the room as the cost of an
+     incident, and a *rate* is the one shape a stray figure in a discovery call
+     does not accidentally take.
+
+     Defined here rather than in pc-ladder.js because it is a transcript cue
+     and the cues live in this file. The ladder's rung 3 reads it from here, so
+     the admission test for the rung and the cue that fills the field are one
+     regular expression and cannot drift apart. */
+  const ANCHOR_RE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שק|\bNIS\b|\bILS\b)\s*ל(?:פגישה|מפגש|שיחה|שעה|חודש|שבוע|יום)/i;
+
   const CUES = [
+    { key: 'anchor', re: ANCHOR_RE, label: tr('מחיר ייחוס שהלקוח נקב'),
+      /* Higher than errCost by a distance, and for the reason errCost is low:
+         this one requires three things to line up, not one. */
+      confidence: 0.75 },
     { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?|\bminutes?\b|\bmins?\b)/i, label: tr('דקות לכל פעם'),
       confidence: 0.85 },
     { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה'),
@@ -470,7 +491,7 @@
      be the one deciding whether a rung rests on the operator's own words. */
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
                          candidates, provenance, heuristics, observe, toState,
-                         withSpeakers };
+                         withSpeakers, ANCHOR_RE };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
 })(typeof window !== 'undefined' ? window : globalThis);

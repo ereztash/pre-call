@@ -57,10 +57,22 @@
       because: tr('המחיר נבנה ממה שהתהליך עולה ללקוח בשנה, כי הוא נתן לך את המספרים. זו הדרך שמחזיקה הכי טוב בשיחה — הדיבור הוא על הכסף שלו, לא על השעות שלכם.') };
     if (+s.comparableLast > 0) return { method: 'comparable',
       because: tr('המחיר נבנה מעבודה דומה שכבר עשית, מותאם להיקף כאן. זה מספר שקל להגן עליו, כי הוא באמת קרה.') };
-    if (s.numbersAreMine) return { method: 'market',
-      because: tr('המספרים הם הערכה שלכם ולא של הלקוח, אז המחיר נבנה מהטווח המקובל בשוק לעבודה כזאת. ברגע שיתקבל ממנו מספר אמיתי, החישוב יעבור לערך אצלו — וזה בדרך כלל מעלה את המחיר.') };
-    return { method: 'market',
-      because: tr('עוד אין מספיק מספרים מהלקוח, אז בינתיים המחיר לפי הטווח המקובל בשוק. ברגע שיהיו כמה פעמים זה קורה וכמה זמן זה לוקח, המחיר יתחיל להישען על העסק שלו.') };
+    /* Market is keyed on how many systems connect — marketTier() returns
+       nothing at zero, so M.market is null and compute() falls through to the
+       cost floor. Returning 'market' anyway is how the chip came to read one
+       thing while the price came from another: measured across 200 generated
+       calls, this function named an unpriceable method in 72% of them, and
+       nearly all of those were these two lines. Naming cost when cost is what
+       will actually run is not a worse answer, it is the true one. */
+    const canMarket = (s.systems || []).length > 0;
+    if (s.numbersAreMine) return canMarket ? { method: 'market',
+      because: tr('המספרים הם הערכה שלכם ולא של הלקוח, אז המחיר נבנה מהטווח המקובל בשוק לעבודה כזאת. ברגע שיתקבל ממנו מספר אמיתי, החישוב יעבור לערך אצלו — וזה בדרך כלל מעלה את המחיר.') }
+      : { method: 'cost',
+      because: tr('המספרים הם הערכה שלכם, ועוד לא נבחרו מערכות שאפשר לקרוא מהן מורכבות — אז בינתיים המחיר נבנה מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם.') };
+    return canMarket ? { method: 'market',
+      because: tr('עוד אין מספיק מספרים מהלקוח, אז בינתיים המחיר לפי הטווח המקובל בשוק. ברגע שיהיו כמה פעמים זה קורה וכמה זמן זה לוקח, המחיר יתחיל להישען על העסק שלו.') }
+      : { method: 'cost',
+      because: tr('עוד אין מספרים מהלקוח ולא נבחרו מערכות, אז בינתיים המחיר נבנה מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם. ברגע שיהיו כמה פעמים זה קורה וכמה זמן זה לוקח, המחיר יתחיל להישען על העסק שלו.') };
   }
 
   const PRICE = {

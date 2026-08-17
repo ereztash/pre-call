@@ -203,8 +203,20 @@ const BUDGETS = {
      business, and every cue in that file was written for the other side of the
      table. Neither real transcript carries a single speaker label, so the page
      also had to learn to say that out loud rather than quietly resting a rung
-     on the operator's own sentence. */
-  'post-call.html':     157 * 1024
+     on the operator's own sentence.
+
+     A ninth raise, 157 -> 159KB, and it is the smallest kind of change with
+     the largest evidence behind it. 200 generated calls through the engines
+     and 200 more through a real browser said three things: the method chip was
+     naming a method the data could not price in 72% of calls, the anchor rung
+     named `comparable` while the number stayed in a quote and never reached
+     the field, and the one entry card written for somebody who does not know
+     what the product is was the only route of five that never reached a price.
+     What the page carries now is the fix to all three — a cue that lands the
+     client's reference price in the field the engine reads, a guard that
+     refuses to select a method compute() cannot run, and a sentence saying so
+     when it happens. */
+  'post-call.html':     159 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');
