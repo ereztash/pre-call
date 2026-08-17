@@ -48,13 +48,15 @@ const manifest = JSON.parse(
    the last null is gone. */
 const PROOF = {
   'core-promise':        null,  // per-commitment readiness does not exist yet
-  'transcript-input':    null,  // heuristics() is the fallback, not the default path
-  'candidate-evidence':  null,  // heuristics() emits verified:true and no confidence
-  'evidence-approval':   null,  // the local path self-approves
+  'transcript-input':    null,  // heuristics() runs on a second button, not on paste
   'commitment-gate':     null,  // guide.next computes one boolean for the whole deal
   'decision-episodes':   null,  // STEPS is a fixed sequence
   'handoff-valid':       null,  // no handoff outcome exists
-  'mechanism-proof':     null,  // provenance covers numbers, not candidate vs approved
+  'candidate-evidence':  'transcript.test.js · a local candidate carries its sentence, ' +
+                         'its speaker and its confidence',
+  'evidence-approval':   'transcript.test.js · rejecting a row keeps it out of the state',
+  'mechanism-proof':     'transcript.test.js · the local path can reach a client-sourced ' +
+                         'provenance, not only mine',
   'pricing-authority':   'landing.test.js · the demo states no commercial price',
   'product-vs-demo':     'landing.test.js · the demo price is marked illustrative',
   'pilot-price':         'landing.test.js · the page and the paywall agree on the price',
@@ -83,6 +85,24 @@ test('every claim names the product test that proves it, or states that none doe
   assert.deepStrictEqual(missing, [],
     'these claims have no entry in PROOF — add the test that proves them, or null: ' +
     missing.join(', '));
+});
+
+/* Without this the map is a promise about promises: a claim can name a test
+   that was renamed, moved or never written, and the page ships on the strength
+   of a string. Each entry is "file.test.js · the test name", and both halves
+   have to be real. */
+test('every named proof is a test that actually exists', () => {
+  const broken = [];
+  Object.entries(PROOF).forEach(([claim, proof]) => {
+    if (!proof) return;
+    const [file, name] = proof.split(' · ');
+    const suite = path.join(root, 'assets', file);
+    if (!fs.existsSync(suite)) return broken.push(claim + ' → no such suite: ' + file);
+    if (!fs.readFileSync(suite, 'utf8').includes(name))
+      broken.push(claim + ' → ' + file + ' has no test called "' + name + '"');
+  });
+  assert.deepStrictEqual(broken, [],
+    'a claim is resting on a test that is not there:\n       ' + broken.join('\n       '));
 });
 
 test('every claim carries a capability sentence, not just an id', () => {

@@ -285,8 +285,8 @@ updateInput();
   "claims":[
     {"id":"core-promise","required":true,"capability":"Transcript -> evidence candidates -> human confirmation -> per-commitment readiness -> valid commercial progress."},
     {"id":"transcript-input","required":true,"capability":"Paste transcript directly; core local path requires no external AI network request."},
-    {"id":"candidate-evidence","required":true,"capability":"Local extraction creates candidate evidence with quote, speaker/source, confidence and verified=false."},
-    {"id":"evidence-approval","required":true,"capability":"Candidate evidence cannot become authoritative input until human approval; rejected candidates cannot feed readiness."},
+    {"id":"candidate-evidence","required":true,"capability":"Local extraction creates candidate evidence carrying the sentence it came from, who spoke it, and a confidence short of certainty. An earlier wording asked for verified=false; the product already spends `verified` on a different and sharper question - whether the cited sentence is really in the transcript, which is how a paraphrasing model gets caught - so approval is named separately below instead of sharing that flag."},
+    {"id":"evidence-approval","required":true,"capability":"Candidate evidence cannot become authoritative input until the operator approves it in review; a rejected row reaches neither the form, nor the price, nor the document. Holds for the model path and the local path alike."},
     {"id":"commitment-gate","required":true,"capability":"Material commitments are evaluated individually as READY, CONDITIONAL or BLOCKED."},
     {"id":"decision-episodes","required":true,"capability":"Only consequential unresolved commitments generate the smallest decision-changing question."},
     {"id":"handoff-valid","required":true,"capability":"Need-to-ask-client produces a valid handoff preserving already valid deal state."},

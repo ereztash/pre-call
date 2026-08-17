@@ -178,16 +178,25 @@
       const quote = clean(got.quote);
       if (!quote) return;   // no citation, no candidate
 
+      const found = src.length
+        ? src.replace(/\s+/g, ' ').includes(quote.replace(/\s+/g, ' ')) : false;
+      const spoken = speakerOf(got.speaker);
+
       out.push({
         key: f.key, target: f.target, kind: f.kind, label: f.label,
         value, quote,
-        speaker: /לקוח|client/i.test(clean(got.speaker)) ? 'client'
-               : /מוכר|seller/i.test(clean(got.speaker)) ? 'seller' : 'unknown',
+        speaker: spoken,
         /* Whether the quote is actually in the transcript. A model that
            paraphrases has invented the evidence, and evidence that cannot be
            checked is worse than none — the row is kept but marked, so the
            operator sees which ones to read for themselves. */
-        verified: src.length ? src.replace(/\s+/g, ' ').includes(quote.replace(/\s+/g, ' ')) : false
+        verified: found,
+        /* Same scale as the local cues, from the two things that can be
+           checked without trusting the model: whether the sentence it cited is
+           really in the transcript, and whether it could say who spoke it. A
+           row whose quote is not in the source is the one the operator has to
+           read, so it must not sort above a row that checked out. */
+        confidence: found ? (spoken === 'unknown' ? 0.75 : 0.9) : 0.3
       });
     });
     return out;
@@ -233,11 +242,40 @@
      side by side (case-insensitive, so "Minutes" and "minutes" both
      land), so a transcript pasted in either language still yields
      candidates. */
+  /* confidence is not a probability and is not measured. It is how much the
+     match can carry on its own, and the only thing it is allowed to do is
+     order the review and warn: a cue that fires on any shekel figure is worth
+     less than one that fires on the word "minutes", because an hourly rate,
+     a salary and a price all look identical to it. Nothing downstream may
+     price on it, and nothing may skip approval because of it. */
   const CUES = [
-    { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?|\bminutes?\b|\bmins?\b)/i, label: tr('דקות לכל פעם') },
-    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה') },
-    { key: 'freq',    re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|\btimes?\b(?:\s*(?:a|per)\s*(?:day|week|month))?|\borders?\b|\bleads?\b|\brequests?\b)/i, label: tr('כמה פעמים') }
+    { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?|\bminutes?\b|\bmins?\b)/i, label: tr('דקות לכל פעם'),
+      confidence: 0.85 },
+    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה'),
+      /* Weakest cue here by a distance. Every figure in a discovery call that
+         carries a currency word matches it — the hourly rate this same
+         transcript states, most of all. */
+      confidence: 0.55 },
+    { key: 'freq',    re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|\btimes?\b(?:\s*(?:a|per)\s*(?:day|week|month))?|\borders?\b|\bleads?\b|\brequests?\b)/i, label: tr('כמה פעמים'),
+      confidence: 0.85 }
   ];
+
+  /* One vocabulary for who spoke, because there is one question downstream —
+     provenance() asks whether a figure came from the client — and two ways in.
+     The model path reads a field it was asked to fill; the local path reads
+     the label the transcript already puts at the head of the line. Different
+     inputs, and they have to produce the same three words or provenance
+     silently answers "mine" for half of them. */
+  function speakerOf(text) {
+    const s = clean(text);
+    if (/לקוח|client|customer/i.test(s)) return 'client';
+    /* No \b around אני. In JavaScript a word boundary is defined on ASCII word
+       characters, so it never fires between a Hebrew letter and the end of the
+       string — /^אני\b/ matched nothing at all. Explicit edges instead, which
+       still keeps it from matching inside a longer word. */
+    if (/מוכר|יועץ|(^|\s)אני($|\s)|seller|\bme\b/i.test(s)) return 'seller';
+    return 'unknown';
+  }
 
   function heuristics(transcript) {
     const src = String(transcript || '');
@@ -252,8 +290,24 @@
         if (!isFinite(n) || n <= 0) continue;
         seen.add(cue.key);
         const f = FIELDS.find(x => x.key === cue.key);
+        /* The speaker label, when the transcript has one. Every figure used to
+           come back 'unknown' here, which reads like a small gap and is not
+           one: provenance() decides between client-said and operator-guessed
+           by this exact field, so an unknown speaker made every locally
+           extracted number the operator's own. That routes pickMethod to
+           market pricing, drops the ROI paragraph out of the document, and
+           does all of it without a message — the local path quietly priced
+           every deal as though the client had said nothing. */
+        const label = (line.match(/^\s*([^:]{1,20}?)\s*:/) || [])[1];
         out.push({ key: cue.key, target: f.target, kind: 'number', label: cue.label,
-                   value: n, quote: line, speaker: 'unknown', verified: true,
+                   value: n, quote: line, speaker: speakerOf(label),
+                   /* True because the quote is the line, taken whole. This
+                      field asks whether the citation exists in the source, not
+                      whether a human accepted the row — approval is the review
+                      step, and it runs for this path exactly as it does for
+                      the model's. There is no paraphrase here to check. */
+                   verified: true,
+                   confidence: cue.confidence,
                    guessed: true });
       }
     });
