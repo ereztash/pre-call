@@ -70,8 +70,8 @@ test('a locked export raises the in-product wall before any external navigation'
 });
 
 test('the manual purchase control names WhatsApp before opening WhatsApp', () => {
-  assert.match(gate, /wa\\\.me/);
-  assert.match(gate, /setText\(['\"]payBtn['\"],[\s\S]*tr\(['\"]וואטסאפ['\"]\)/);
+  assert.match(gate, /function contactChannel\(\)[\s\S]*wa\\\.me[\s\S]*tr\(['\"]וואטסאפ['\"]\)/);
+  assert.match(gate, /setText\(['\"]payBtn['\"],[\s\S]*channel/);
 });
 
 test('unlock resumes exactly the export the user originally asked for', () => {
