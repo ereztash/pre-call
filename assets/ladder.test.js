@@ -190,6 +190,36 @@ test('when it does not, everything is read — and it says so', () => {
   assert.strictEqual(v.rung, 'value', 'the unlabelled reading narrowed instead of being flagged');
 });
 
+test('a quantity here and a period over there is not a rate', () => {
+  /* The fixtures in this file are five lines long, and that is what hid this:
+     rung 1 used to test for a quantity somewhere in the text and a period
+     somewhere in the text, independently. On a real transcript of thirty
+     thousand characters both are true of almost any call — run against five
+     actual discovery calls it held on four, and every one of them had no
+     process in it at all. The two that extracted anything matched the seller
+     talking: the length of the call itself, and the seller's own arithmetic
+     about the client's working hours.
+
+     Long fixture on purpose. A short one cannot fail this test. */
+  const filler = 'ואז דיברנו על כל מיני דברים שקשורים למה שהיא עושה היום וזה היה מעניין. ';
+  const t = filler.repeat(20) +
+    'יש לי שלוש פניות פתוחות מהחודש שעבר. ' + filler.repeat(20) +
+    'ואנחנו נדבר על זה שוב בחודש הבא. ' + filler.repeat(20);
+  assert.notStrictEqual(L.assess({ text: t }).rung, 'value',
+    'a document long enough to contain both words was read as a process');
+});
+
+test('and the rung asks the question with the expression that answers it', () => {
+  /* One regex, in pc-transcript.js with the other cues. A rung that holds
+     while nothing fills the fields it licensed is worse than one that never
+     holds, and two copies of the test would drift into exactly that. */
+  const yes = 'לקוח: נכנסות בערך 40 הזמנות ביום.';
+  const v = L.assess({ text: yes });
+  assert.strictEqual(v.rung, 'value');
+  assert.ok(T.heuristics(yes, v.licence).some(r => r.key === 'freq'),
+    'the rung held and the cue it licensed found nothing');
+});
+
 test('a caller that passes no lines at all is in the same position, not a worse one', () => {
   assert.strictEqual(L.assess({ text: AUTOMATION }).labelled, false);
   assert.strictEqual(L.assess({ text: AUTOMATION }).rung, 'value');

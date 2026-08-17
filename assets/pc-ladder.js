@@ -73,11 +73,26 @@
 
   /* A recurring quantity of work is what the value method is built on —
      compute() turns freq × freqUnit into runs and everything else follows. No
-     frequency, no annual value, and therefore no rung 1. This is a stricter
-     test than "a number appeared": a fee, a headcount and a year are all
-     numbers, and none of them is a rate of work. */
-  const FREQ = /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|חשבוניות|טפסים|\btimes?\b|\borders?\b|\bleads?\b|\brequests?\b|\binvoices?\b)/i;
-  const PER_TIME = /ביום|ליום|בשבוע|לשבוע|בחודש|לחודש|\bper\s+(?:day|week|month)\b|\ba\s+(?:day|week|month)\b/i;
+     frequency, no annual value, and therefore no rung 1.
+
+     This used to be two independent tests, a quantity somewhere and a period
+     somewhere, and that is not a test of anything on a real transcript. Run
+     against five actual discovery calls of 24 to 42 thousand characters, it
+     held on four of them — every one of which had no process in it at all. A
+     thirty-thousand-character document contains a number beside a noun and it
+     contains the word "בחודש", and neither fact says they have anything to do
+     with each other. What the two that extracted something matched was the
+     seller talking: "אנחנו מדברים 20 דקות" — the length of the call — and
+     "60 בשבוע 240 בחודש" — the seller's own arithmetic about the client's
+     working hours, on a call about search engine optimisation.
+
+     It only ever looked safe because real transcripts had no digits in them,
+     and pc-numerals.js removed that accident. So the rung now asks the same
+     question the cue answers, with the same expression: a quantity and a
+     period, adjacent, in one line. One regex, in pc-transcript.js with the
+     other cues, because a rung that holds while nothing fills the fields it
+     licensed is worse than a rung that never holds. */
+  const FREQ = () => root.PC.transcript.FREQ_RE();
 
   /* A price the client names as their own reference — "like a session with a
      psychologist, 300 a session". On the soft calls this is the only priced
@@ -185,7 +200,7 @@
       /* Both halves, because either alone is common and neither alone is a
          process. "40 orders" with no period is a backlog; "every week" with no
          count is a habit. */
-      holds: input => { const t = numeric(heard(input).text); return FREQ.test(t) && PER_TIME.test(t); },
+      holds: input => FREQ().test(numeric(heard(input).text)),
       because: tr('הלקוח נקב בכמות עבודה שחוזרת על עצמה, ולכן אפשר לגזור מה התהליך עולה לו בשנה.'),
       missing: tr('לא נמצאה בשיחה כמות עבודה שחוזרת על עצמה — כמה פעמים ביום, בשבוע או בחודש. בלי זה אין ערך שנתי לגזור ממנו.')
     },

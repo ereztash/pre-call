@@ -263,6 +263,12 @@
      and the cues live in this file. The ladder's rung 3 reads it from here, so
      the admission test for the rung and the cue that fills the field are one
      regular expression and cannot drift apart. */
+  /* Exported for the ladder, which decides whether a call can carry the value
+     method and must ask that question with the same expression that answers
+     it. Two tests would drift, and the drift would be invisible: a rung that
+     holds while nothing fills the fields it licensed. */
+  let FREQ_RE;
+
   const ANCHOR_RE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שק|\bNIS\b|\bILS\b)\s*ל(?:פגישה|מפגש|שיחה|שעה|חודש|שבוע|יום)/i;
 
   const CUES = [
@@ -272,7 +278,7 @@
       confidence: 0.75 },
     { key: 'minutes', re: /(\d+)\s*(?:דקות|דק['׳]?|\bminutes?\b|\bmins?\b)/i, label: tr('דקות לכל פעם'),
       confidence: 0.85 },
-    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה'),
+    { key: 'errCost', re: /(\d[\d,]*)\s*(?:₪|ש\s?₪|שקל|שח|ש["״]ח|\bnis\b|\bshekels?\b|\bils\b)/i, label: tr('עלות לתקלה'),
       /* Weakest cue here by a distance. Every figure in a discovery call that
          carries a currency word matches it — the hourly rate this same
          transcript states, most of all. */
@@ -292,7 +298,7 @@
        frequency is a quantity per unit of time, and a quantity with no unit of
        time is a backlog. */
     { key: 'freq',
-      re: /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|חשבוניות|טפסים|\btimes?\b|\borders?\b|\bleads?\b|\brequests?\b|\binvoices?\b)?\s*(?:ביום|ליום|בשבוע|לשבוע|בחודש|לחודש|\b(?:a|per)\s+(?:day|week|month)\b)/i,
+      re: FREQ_RE = /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|חשבוניות|טפסים|\btimes?\b|\borders?\b|\bleads?\b|\brequests?\b|\binvoices?\b)?\s*(?:ביום|ליום|בשבוע|לשבוע|בחודש|לחודש|\b(?:a|per)\s+(?:day|week|month)\b)/i,
       label: tr('כמה פעמים'), confidence: 0.85 }
   ];
 
@@ -521,7 +527,7 @@
      be the one deciding whether a rung rests on the operator's own words. */
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
                          candidates, provenance, heuristics, observe, toState,
-                         withSpeakers, ANCHOR_RE };
+                         withSpeakers, ANCHOR_RE, FREQ_RE: () => FREQ_RE };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
 })(typeof window !== 'undefined' ? window : globalThis);
