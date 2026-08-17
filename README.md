@@ -448,7 +448,7 @@ node tools/mint-key.js --check PC-AB23-CD4F  מה יקרה למפתח הזה, ו
 ## מבנה
 
 ```
-product-landing.html  דף המערכת — מה לשאול, מה לשמוע, מה להציע, כמה לקחת
+product-landing.html  שני הכלים והפנקס — מה לשאול, מה לשמוע, מה להציע, כמה לקחת
 post-call-landing.html  דף POST-CALL בפירוט, לרגע שאחרי השיחה
 index.html            מסך הפתיחה — שואל איפה אתם ומנתב
 pre-call.html         PRE-CALL — תסריט השאלות

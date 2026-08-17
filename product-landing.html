@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PRE-CALL · POST-CALL — מה לשאול, מה לשמוע, מה להציע, כמה לקחת</title>
-<meta name="description" content="מערכת אחת שמלווה עסקה משיחת האפיון ועד הצעת המחיר: PRE-CALL מכין את השאלות שמוציאות את המספרים, POST-CALL הופך את מה שנאמר לסקופ ולמחיר, ומה שקרה לעסקה משנה את השיחה הבאה.">
+<meta name="description" content="שני כלים ופנקס אחד: PRE-CALL בונה את תסריט השיחה, POST-CALL הופך את מה שנאמר לסקופ ולמחיר, ומה שקרה למחיר שלכם משנה את מה שהתסריט אומר לפני השיחה הבאה.">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://pre-call-swart.vercel.app/product-landing">
 <meta property="og:type" content="website">
@@ -12,7 +12,7 @@
 <meta property="og:locale" content="he_IL">
 <meta property="og:url" content="https://pre-call-swart.vercel.app/product-landing">
 <meta property="og:title" content="מה לשאול. מה לשמוע. מה להציע. כמה לקחת.">
-<meta property="og:description" content="מערכת אחת משיחת האפיון עד הצעת המחיר — והמחיר שנסגר בפעם שעברה משנה את השאלות שתשאלו בפעם הבאה.">
+<meta property="og:description" content="שני כלים ופנקס אחד — והמחיר שנסגר בפעם שעברה משנה את מה שהתסריט אומר לכם לפני השיחה הבאה.">
 <meta property="og:image" content="https://pre-call-swart.vercel.app/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -28,7 +28,11 @@
 <header>
   <div class="q">שירותים מותאמים · אוטומציה ואינטגרציות</div>
   <h1>מה לשאול. מה לשמוע.<br>מה להציע. כמה לקחת.</h1>
-  <p class="sub" data-claim-id="system-promise"><strong>מערכת אחת שמלווה עסקה משיחת האפיון ועד הצעת המחיר.</strong> PRE-CALL מכין את השאלות שמוציאות את המידע שתצטרכו אחר כך; POST-CALL הופך את מה שנאמר לסקופ, מחיר והצעה; ומה שקרה לעסקה נשמר כדי לדייק את הפעם הבאה.</p>
+  <!-- The first version of this said "one system spanning the discovery call
+       and the proposal", which is more than the code does: PRE-CALL hands
+       POST-CALL nothing. What actually joins them is a shared ledger in one
+       direction and the operator in the other, and the page says so. -->
+  <p class="sub" data-claim-id="two-tools-one-ledger"><strong>שני כלים שחולקים פנקס עסקאות אחד.</strong> PRE-CALL בונה את תסריט השיחה; POST-CALL הופך את מה שנאמר בה לסקופ, מחיר והצעה; והפנקס שומר מה נשלח, מה נסגר ובכמה — ומשנה את מה שהתסריט אומר לכם לפני השיחה הבאה.</p>
 </header>
 
 <main id="main" tabindex="-1">
@@ -42,13 +46,11 @@
     <a class="card" data-contact-route data-contact-message="היי ארז, אני מוכר שירותי אוטומציה ורוצה לבדוק את PRE-CALL / POST-CALL על עסקה אמיתית" href="#contact">
       <span class="card-when">מעדיף לבדוק יחד</span>
       <span class="card-t">שלחו לי שיחה אמיתית</span>
-      <span class="card-d">נריץ עליה את המסלול המלא ונראה איפה הוא עוזר ואיפה הוא טועה.</span>
+      <span class="card-d">נריץ עליה את המסלול ונראה איפה הוא עוזר ואיפה הוא טועה.</span>
       <span class="card-go">לפתוח שיחה ←</span>
     </a>
   </div>
 
-  <!-- The device, in the order it is actually used. Four steps because the
-       fourth is the one nobody expects a proposal tool to have. -->
   <section class="strip">
     <div class="strip-h">איך זה עובד, בשורה אחת</div>
     <ol class="strip-steps">
@@ -62,8 +64,8 @@
   <div class="cards">
     <article class="card" data-claim-id="pre-call-prepares">
       <span class="card-when">1 · מה לשאול, ומה לשמוע</span>
-      <span class="card-t">השאלות נבנות לפי מה שיידרש כדי לתמחר.</span>
-      <span class="card-d">תדירות, זמן טיפול, תקלות ומי מחליט — סדר מחייב, נקודות עצירה, וכרטיס קריאה שמתרגם תשובות נפוצות לסוג ההצעה המתאים.</span>
+      <span class="card-t">תסריט שאלות עומק, בסדר מחייב.</span>
+      <span class="card-d">שתים־עשרה שאלות על הכאב, מי מחזיק אותו ומה צריך לזוז — עם נקודות עצירה וכרטיס קריאה שמתרגם תשובות נפוצות לסוג ההצעה המתאים.</span>
     </article>
     <article class="card" data-claim-id="post-call-prices">
       <span class="card-when">2 · מה להציע, וכמה לקחת</span>
@@ -82,15 +84,24 @@
     </article>
   </div>
 
-  <!-- The differentiator, stated as a mechanism rather than as an adjective.
-       A proposal generator receives a transcript that already exists; this
-       tries to change what gets said in the room before it does. -->
-  <section class="strip" data-claim-id="loop-not-generator">
-    <div class="strip-h">למה זה לא עוד מחולל הצעות</div>
-    <p class="strip-n">מחולל הצעות מקבל תמלול אחרי שהראיות כבר נוצרו. כאן PRE-CALL יודע איזה מידע יידרש בהמשך ולכן מנסה לגרום לשיחה להוציא אותו, POST-CALL יודע מאיפה כל נתון הגיע ולכן לא הופך השערה לעובדה, והפנקס מתחיל לבדוק אם הדרך שבה שאלתם ותימחרתם באמת החזיקה מול לקוחות אמיתיים.</p>
+  <!-- The differentiator, narrowed to the half that actually ships. The earlier
+       version claimed preparation was derived from what pricing would require —
+       it is not, the two tools ask about different things, and nothing carries
+       between them automatically. What is left is still the part no proposal
+       generator has, and it is enough on its own. -->
+  <section class="strip" data-claim-id="ledger-not-just-output">
+    <div class="strip-h">מה שמחולל הצעות לא עושה</div>
+    <p class="strip-n">מחולל הצעות מסתכל על שיחה אחת ומייצר ממנה מסמך. כאן המחיר שנשלח, המחיר שנסגר ומי יזם את ההנחה נשמרים — ובפעם הבאה שאתם פותחים תסריט, הוא כבר אומר משהו אחר בגללם. זו הלמידה היחידה שהמוצר טוען לה, והיא בנויה על העסקאות שלכם ולא על מדד שוק.</p>
   </section>
 
   <div class="cards">
+    <!-- Stated on the marketing page and not only in the README, because this is
+         the gap a reader would otherwise assume closed. -->
+    <article class="card" data-claim-id="handoff-is-manual">
+      <span class="card-when">מה עוד לא מחובר</span>
+      <span class="card-t">PRE-CALL לא מעביר נתונים ל-POST-CALL.</span>
+      <span class="card-d">התסריט משנה את מה שנאמר בחדר; מה שמגיע ל-POST-CALL הוא התמלול ואתם. שני הכלים גם שואלים על דברים שונים — התסריט על הכאב ועל מי מחליט, המנוע על תדירות, זמן ותקלות. הפנקס הוא החיבור האוטומטי היחיד, והוא בכיוון אחד.</span>
+    </article>
     <article class="card" data-claim-id="field-proof-pending">
       <span class="card-when">מה עדיין לא נטען</span>
       <span class="card-t">אין הבטחה לשיעור סגירה גבוה יותר.</span>
@@ -112,7 +123,7 @@
     <a class="card card-hot" href="index.html">
       <span class="card-when">יש לכם שיחת אפיון בשבועות הקרובים?</span>
       <span class="card-t">התחילו מהשאלות.</span>
-      <span class="card-d">התסריט לוקח כמה דקות, ומה שיוצא ממנו הוא מה שיתמחר את ההצעה.</span>
+      <span class="card-d">התסריט לוקח כמה דקות, ומה שתשמעו בשיחה הוא מה שיתמחר את ההצעה.</span>
       <span class="card-go">פתחו את המערכת ←</span>
     </a>
     <a class="card" data-contact-route data-contact-message="היי ארז, אני מוכר שירותי אוטומציה ורוצה לבדוק את PRE-CALL / POST-CALL על עסקה אמיתית" href="#contact">
@@ -134,15 +145,16 @@
 <script src="assets/pc-contact.js"></script>
 <script type="application/json" id="publicLandingContract">
 {
-  "version":"1.0",
+  "version":"1.1",
   "mode":"public-system-landing",
   "claims":[
-    {"id":"system-promise","required":true,"capability":"One system spanning the discovery call and the proposal: PRE-CALL prepares the questions, POST-CALL turns what was said into scope and price, and the ledger carries the outcome into the next call."},
-    {"id":"pre-call-prepares","required":true,"capability":"PRE-CALL builds a discovery script targeting the frequency, handling time, incident and decision-maker facts the pricing engine will need."},
+    {"id":"two-tools-one-ledger","required":true,"capability":"Two tools sharing one deal ledger, with an entry screen that routes by situation. Version 1.0 called this one system spanning the call and the proposal, which claimed an integration that does not exist: PRE-CALL passes POST-CALL nothing."},
+    {"id":"pre-call-prepares","required":true,"capability":"PRE-CALL builds a twelve-question discovery script with a fixed order, stopping points and a reading card that maps common answers to a proposal type."},
     {"id":"post-call-prices","required":true,"capability":"POST-CALL turns approved transcript evidence into scope, price and a proposal, with every figure still attached to the sentence and speaker it came from."},
     {"id":"pricing-authority","required":true,"capability":"Existing four-method pricing engine, cost floor, guardrails and deal history remain authoritative."},
     {"id":"ledger-informs-next-call","required":true,"capability":"The deal ledger changes the next call's script: a concession offered before being asked, a price that never moved, or proposals with no close each produce a different opening instruction."},
-    {"id":"loop-not-generator","required":true,"capability":"Preparation is derived from what pricing will require, so the system acts on the call before the transcript exists rather than only on the transcript afterwards."},
+    {"id":"ledger-not-just-output","required":true,"capability":"Sent price, closed price and who initiated the concession are recorded and read back into preparation, so the only learning claimed is over the operator's own deals rather than a market benchmark."},
+    {"id":"handoff-is-manual","required":true,"capability":"No automatic data path runs from PRE-CALL to POST-CALL, and the two ask about different things; the ledger is the single automatic link and it runs one way."},
     {"id":"pilot-price","required":true,"capability":"The discovery script is free and proposal construction is free; export is gated at NIS 49 in the current pilot."},
     {"id":"field-proof-pending","required":true,"capability":"No fabricated outcome metrics; conversion, time and price effects remain field questions until measured."},
     {"id":"fit","required":true,"capability":"Aimed at sellers of automation and integration work, because the value engine requires a process that can be quantified in hours, loaded rate and incidents."}

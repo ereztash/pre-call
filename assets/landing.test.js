@@ -192,16 +192,47 @@ console.log('\nthe system landing');
    the README that no such path existed. It does, it is loaded on the page that
    uses it, and it has had tests since it was written. */
 const PRODUCT_PROOF = {
-  'system-promise':           'scenario.test.js · the call is read locally and the open boundary is the only thing asked',
+  'two-tools-one-ledger':     'landing.test.js · the ledger reaches the next call in the shipped journey',
   'pre-call-prepares':        'pre-call.test.js · a filled f_what is enough to build',
   'post-call-prices':         'scenario.test.js · the work is ready and the value claim is not',
   'pricing-authority':        'model.test.js · every method it can return is one the engine can actually price',
   'ledger-informs-next-call': 'pre-call.test.js · a discount the operator offered unasked is named before the call, not after',
-  'loop-not-generator':       'landing.test.js · the ledger reaches the next call in the shipped journey',
+  'ledger-not-just-output':   'pre-call.test.js · a price that has never moved is reported as untested, not as a good record',
+  'handoff-is-manual':        'landing.test.js · nothing carries from PRE-CALL to POST-CALL on its own',
   'pilot-price':              'landing.test.js · the system landing agrees with the paywall on the price',
   'field-proof-pending':      'landing.test.js · the system landing states no outcome number before FIELD',
   'fit':                      'model.test.js · no client numbers -> no value method, tool still prices'
 };
+
+/* A limitation is a claim, and it needs the same treatment as any other. This
+   one pins the absence: version 1.0 of the page said preparation was derived
+   from what pricing would require and that the two halves were one system, and
+   neither was true — PRE-CALL asks about the pain and who holds it, the engine
+   prices frequency, handling time and incidents, and no code carries anything
+   between them. Stating that on the page is only worth something if something
+   notices when it stops being true, so if the path is ever built this fails and
+   the copy has to be rewritten rather than quietly becoming understated. */
+test('nothing carries from PRE-CALL to POST-CALL on its own', () => {
+  const PRE_KEY = 'precall_profile_v1';
+  /* Scoped to what POST-CALL loads, because that is the claim. entry.js reads
+     the same key and is not a counter-example: it is the routing screen, it is
+     not on post-call.html, and its own comment says it takes a count and a
+     name and never the contents. Naming it in an exclusion list would have
+     been a guess dressed as a rule; asking which page loads it is the rule. */
+  const onPostCall = [...postcall.matchAll(/<script src="assets\/([^"]+)"/g)].map(m => m[1]);
+  const consumers = onPostCall
+    .filter(f => read('assets/' + f).includes(PRE_KEY))
+    /* pc-backup.js is exempt only while its mention stays inside the key list
+       it bundles into a downloadable file. That is an export of everything the
+       browser holds, not a path between the tools — and if it ever reads the
+       profile for any other purpose, this stops exempting it. */
+    .filter(f => !(f === 'pc-backup.js' &&
+      /DATA_KEYS = \[[^\]]*precall_profile_v1[^\]]*\]/.test(read('assets/' + f)) &&
+      read('assets/' + f).split(PRE_KEY).length === 2));
+  assert.deepStrictEqual(consumers, [],
+    'the page says PRE-CALL hands POST-CALL nothing, and these read its store: ' +
+    consumers.join(', '));
+});
 
 test('every claim on the system landing is governed, and every governed one is visible', () => {
   const onPage = [...new Set([...product.matchAll(/data-claim-id="([^"]+)"/g)].map(m => m[1]))].sort();
