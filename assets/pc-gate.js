@@ -233,6 +233,17 @@ function contactLabel(){
   return wa ? '+' + wa[1] : c.replace(/^mailto:/i, '');
 }
 
+/* The label on a control that leaves the product has to name where it goes.
+   A user who asked for a PDF must never discover WhatsApp only after clicking.
+   Reuse existing translated product words so the destination contract stays
+   bilingual without adding a second contact configuration. */
+function contactChannel(){
+  const c = (SALES.contact || '').trim();
+  if (/^https:\/\/wa\.me\//i.test(c)) return tr('וואטסאפ');
+  if (/^mailto:/i.test(c)) return tr('אימייל');
+  return '';
+}
+
 function openContact(){
   if (/^mailto:/i.test(SALES.contact)) window.location.href = SALES.contact;
   else window.open(SALES.contact, '_blank', 'noopener');
@@ -249,11 +260,13 @@ function renderBuyRoute(){
   }
 
   if (route === 'manual') {
-    // never "קנה" here: that promises a key on the spot, and this one arrives
-    // when a person sends it
-    setText('payBtn', tr('בקשו מפתח בהודעה'));
-    setText('buyHow', tr('התשלום נסגר איתי ישירות, והמפתח נשלח ביד — {turnaround}. בהודעה כתבו שם, ואת המייל שאליו לשלוח את המפתח.',
-      { turnaround: SALES.turnaround }));
+    // The destination is part of the action contract. In production this says
+    // "בקשו מפתח בהודעה · וואטסאפ" before a WhatsApp tab can open.
+    const channel = contactChannel();
+    setText('payBtn', tr('בקשו מפתח בהודעה') + (channel ? ' · ' + channel : ''));
+    setText('buyHow', (channel ? channel + ': ' : '') +
+      tr('התשלום נסגר איתי ישירות, והמפתח נשלח ביד — {turnaround}. בהודעה כתבו שם, ואת המייל שאליו לשלוח את המפתח.',
+        { turnaround: SALES.turnaround }));
     /* The text under the button is the fallback for the case where the button
        did nothing — a blocked popup, no WhatsApp on this machine. So it has to
        be the thing itself and not a route to it: an email address reads as an
