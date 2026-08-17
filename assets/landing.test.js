@@ -49,7 +49,7 @@ const manifest = JSON.parse(
 const PROOF = {
   'core-promise':        null,  // per-commitment readiness does not exist yet
   'transcript-input':    'transcript.test.js · reading a transcript needs no network at all',
-  'commitment-gate':     null,  // guide.next computes one boolean for the whole deal
+  'commitment-gate':     'commitments.test.js · one deal carries different verdicts at the same time',
   'decision-episodes':   null,  // STEPS is a fixed sequence
   'handoff-valid':       null,  // no handoff outcome exists
   'candidate-evidence':  'transcript.test.js · a local candidate carries its sentence, ' +
@@ -232,6 +232,29 @@ test('the buyer\'s route is declared exactly once in the repository', () => {
   assert.deepStrictEqual(copies, [],
     'the sales route is copied outside pc-contact.js, so there are now two ' +
     'places for it to be wrong: ' + copies.join(', '));
+});
+
+/* The demo is the most persuasive thing on the page and therefore the most
+   dangerous: it walks the decision path convincingly, and if it walks its own
+   copy of that path then the page is demonstrating something the product does
+   not do. That is the exact failure the contract exists to catch, reproduced
+   inside the page that states the contract. It carried its own readiness
+   engine — seven commitments, hand-written statuses, a second opinion about
+   what BLOCKED means — until the engine became a module both could load. */
+test('the demo asks the engine rather than keeping its own copy of it', () => {
+  assert.ok(/pc-commitments\.js/.test(landing),
+    'the landing page does not load the readiness engine');
+  assert.ok(/PC\.commitments\.assess/.test(landing),
+    'the landing page loads the engine and does not ask it');
+});
+
+test('the demo holds no second opinion about what the verdicts mean', () => {
+  const script = landing.match(/<script>([\s\S]*?)<\/script>/g)
+    .map(s => s.replace(/<\/?script>/g, '')).join('\n');
+  const own = script.match(/["'](READY|CONDITIONAL|BLOCKED)["']/g) || [];
+  assert.deepStrictEqual(own, [],
+    'the demo spells out a verdict of its own, so there are two definitions of ' +
+    'it to drift apart: ' + own.join(', '));
 });
 
 test('the paywall and the landing page both read that one declaration', () => {

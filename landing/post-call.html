@@ -149,6 +149,7 @@ footer{padding:27px 0;color:#8490a2;font-size:10px}.footerrow{padding-top:14px;b
      with pc-gate.js by a test, which is two sources of truth wearing one. It
      is loaded now, and every WhatsApp link below is built from it. -->
 <script src="../assets/pc-contact.js"></script>
+<script src="../assets/pc-commitments.js"></script>
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const OPENER="היי ארז, יש לי שיחת אפיון אמיתית שאני רוצה לבדוק עם POST-CALL";
@@ -199,22 +200,31 @@ function syncVerified(){
   const risk=state.verified.find(x=>x.type==="risk");state.enterpriseOpen=!!risk&&/לא סגרנו|עוד לא|לא ברור|לא דיברנו|יכול להיות/i.test(risk.quote);
   const val=state.verified.find(x=>x.type==="value");state.noRoi=!val||/אין לי מושג|לא מדדנו|לא יודע/i.test(val.quote);
 }
-function C(id,label,status,reason,source){return{id,label,status,reason,source}}
-function buildReadiness(){
-  syncVerified();const cs=[];
-  cs.push(C("systems","אילו מערכות / צדדים מתחברים",state.systems.length>=2?"READY":"BLOCKED",state.systems.length>=2?state.systems.join(" · "):"אין עדיין שני צדדים מאושרים",state.systems.length>=2?"transcript-verified":"missing"));
-  cs.push(C("delivery","מה בדיוק צריך לקרות",state.flow?"READY":"BLOCKED",state.flow||"מטרת החיבור עדיין לא אושרה",state.flow?"transcript-verified":"missing"));
-  if(state.freeText)cs.push(C("exception-owner","מי נושא באחריות לחריג",state.edgeOwner?"READY":"BLOCKED",state.edgeOwner?(state.edgeOwner==="client"?"הלקוח מטפל בחריג":"האוטומציה מטפלת בחריג"):"החריג הופיע; ownership לא נסגר",state.edgeOwner?"post-call-user-decision":"transcript-verified + missing-decision"));
-  if(state.enterpriseOpen)cs.push(C("enterprise-risk","אבטחה / SLA / טיפול בכשל",state.riskDisposition?(state.riskDisposition==="exclude"?"CONDITIONAL":"READY"):"BLOCKED",state.riskDisposition?(state.riskDisposition==="exclude"?"מחוץ להצעה הנוכחית":state.riskDetails||"נדרש ניסוח מחייב"):"השיחה אומרת שהנושא עדיין פתוח",state.riskDisposition?"post-call-user-decision":"transcript-verified + unresolved"));
-  cs.push(C("value-claim","טענת ערך / ROI",state.noRoi?"BLOCKED":"READY",state.noRoi?"אין evidence מאושר לטענת ROI":"קיים value evidence מאושר",state.noRoi?"missing":"transcript-verified"));
-  cs.push(C("cost-pricing","מסלול cost-based",(state.systems.length>=2&&state.flow)?"READY":"BLOCKED",(state.systems.length>=2&&state.flow)?"יכול להתקדם גם בלי ROI":"צריך קודם לדעת מה בונים","existing-pricing-engine"));
-  cs.push(C("value-pricing","מסלול value-based",state.noRoi?"BLOCKED":"READY",state.noRoi?"חסר value evidence; המסלול לא רשאי להמציא אותו":"קיים בסיס לבדיקה במנוע המלא","existing-pricing-engine"));
-  state.commitments=cs;
+/* The demo used to keep its own copy of this: seven commitments, hand-written
+   statuses, a second opinion about what BLOCKED means. Two implementations of
+   one rule is how a page ends up promising something the product does not do —
+   which is the failure this whole contract exists to catch, reproduced inside
+   the page that states the contract. It maps its own state onto the deal shape
+   and asks the engine now. */
+function toDeal(){
+  syncVerified();
+  return {
+    systems: state.systems,
+    systemsSource: state.systems.length ? PC.commitments.SOURCES.clientSaid : undefined,
+    delivery: state.flow,
+    deliverySource: state.sources && state.sources.flow === 'conversation'
+      ? PC.commitments.SOURCES.clientSaid : PC.commitments.SOURCES.operatorSaid,
+    provenance: state.noRoi ? 'mine' : 'prompted',
+    signals: { freeText: state.freeText, enterpriseOpen: state.enterpriseOpen },
+    decisions: { exceptionOwner: state.edgeOwner, risk: state.riskDisposition,
+                 riskDetail: state.riskDetails }
+  };
 }
+function buildReadiness(){ state.commitments = PC.commitments.assess(toDeal()); }
 function renderReadiness(){
   buildReadiness();
   $("#readinessGrid").innerHTML=state.commitments.map(c=>`<article class="commitment"><div><b>${esc(c.label)}</b><p>${esc(c.reason)} · source: ${esc(c.source)}</p></div><span class="status ${c.status.toLowerCase()}">${c.status}</span></article>`).join("");
-  const consequential=state.commitments.filter(c=>c.status==="BLOCKED"&&["systems","delivery","exception-owner","enterprise-risk"].includes(c.id));
+  const consequential=PC.commitments.blocking(state.commitments);
   $("#readinessSummary").textContent=consequential.length?`${consequential.length} התחייבויות מהותיות עדיין דורשות החלטה. נבחר רק את הראשונה שמשנה את העסקה.`:"החוסרים שנשארו אינם חייבים לחסום את ההצעה הנוכחית.";
   $("#readinessNext").textContent=consequential.length?"פתחו את ההחלטה הקטנה ביותר ←":"המשיכו להצעה הראשונית ←";
 }
@@ -244,7 +254,7 @@ function applyAnswer(value){
   if(ep.key==="riskDetails")state.riskDetails=value;
   syncAdded();renderReadiness();const next=nextEpisode();if(next)renderEpisode(next);else finishProposal();
 }
-function validReady(){return state.commitments.filter(c=>c.status==="READY"||c.status==="CONDITIONAL")}
+function validReady(){return PC.commitments.admissible(state.commitments)}
 function finishHandoff(title,question){
   buildReadiness();$("#handoffTitle").textContent=title;$("#handoffReason").textContent="ההתחייבות הזאת נשארת BLOCKED. שאר ה־READY/CONDITIONAL לא נמחק.";$("#handoffQuestion").textContent=question;
   const keep=validReady().filter(c=>c.id!=="value-pricing");$("#handoffReadyList").innerHTML=(keep.length?keep:[{label:"המידע שכבר אושר",reason:"נשמר לעסקה"}]).map(c=>`<li>${esc(c.label)} — ${esc(c.reason)}</li>`).join("");show("handoffScreen","5 · handoff תקף",100);
