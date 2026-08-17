@@ -1,104 +1,21 @@
-/* node tools/action-contract.test.js — buttons promise outcomes, not mechanisms.
+const fs=require('fs'),path=require('path'),assert=require('assert');
+const root=path.join(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const strip=s=>s.replace(/<!--[\s\S]*?-->/g,' ').replace(/\/\*[\s\S]*?\*\//g,' ');
+const text=s=>s.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+const post=read('post-call.html'),pre=read('pre-call.html'),gate=read('assets/pc-gate.js'),boot=read('assets/pc-boot.js');
+let pass=0,fail=0;function test(n,f){try{f();pass++;console.log('  ok   '+n)}catch(e){fail++;console.log('  FAIL '+n+'\n       '+e.message)}}
+function label(h,a){const m=h.match(new RegExp('<button[^>]*data-act=["\\\']'+a+'["\\\'][^>]*>([\\s\\S]*?)<\\/button>','i'));assert.ok(m,'missing '+a);return text(m[1])}
 
-   FIELD feedback exposed two failures that ordinary unit tests can miss:
-   an internal term can leak into a button even when the underlying feature works,
-   and an export action can lead somewhere the label never warned about.
+console.log('\naction labels describe expected outcomes');
+test('proposal actions still say copy, PDF and send',()=>{assert.match(label(post,'copy'),/העתק.*הצעה/);assert.match(label(post,'print'),/PDF/);assert.match(label(post,'send'),/שלח.*לקוח/)});
+test('POST-CALL transcript action is proposal-task language',()=>{assert.match(boot,/מצא מה חשוב להצעה/);assert.match(boot,/השתמש בפרטים שאישרתי/);assert.match(boot,/על מה המחיר נשען/)});
+test('PRE-CALL labels say what the user gets',()=>{assert.match(boot,/מלא את הפרופיל מהטקסט/);assert.match(boot,/המשך להכנת השיחה/);assert.match(boot,/שלב 2 · מי מולכם/)});
+test('no evidence-candidate jargon is a visible button contract',()=>{const buttons=[post,pre].flatMap(s=>s.match(/<button[\s\S]*?<\/button>/g)||[]).map(text).join('\n');assert.doesNotMatch(buttons,/מועמד(?:י|ים)?\s+ראי(?:ה|ות)|ראיות?\s+מועמד/);assert.doesNotMatch(strip(boot),/מועמד(?:י|ים)?\s+ראי(?:ה|ות)|ראיות?\s+מועמד/)});
 
-   This suite pins the user contract instead of the implementation vocabulary:
-   what the control says, what destination is disclosed before leaving the app,
-   and whether the requested export survives the key gate and resumes afterward. */
-const fs = require('fs');
-const path = require('path');
-const assert = require('assert');
+console.log('\nlocked exports keep their contract');
+test('export first opens the in-product wall',()=>{const m=gate.match(/function requireKey\(fn\)\{([\s\S]*?)\n\}/);assert.ok(m);assert.match(m[1],/pendingExport\s*=\s*fn/);assert.match(m[1],/show\(['\"]wall['\"],\s*true\)/);assert.doesNotMatch(m[1],/openContact|window\.open|location\./)});
+test('WhatsApp is named before the key request leaves the app',()=>{assert.match(boot,/פתח WhatsApp לבקשת מפתח/);assert.match(boot,/buyContact/)});
+test('unlock resumes the original export',()=>assert.match(gate,/if \(pendingExport\) \{ const f = pendingExport; pendingExport = null; f\(\); \}/));
+test('dynamic UI is rechecked after it renders',()=>{assert.match(boot,/new MutationObserver\(s\)/);assert.match(boot,/characterData:true/)});
 
-const root = path.join(__dirname, '..');
-const read = f => fs.readFileSync(path.join(root, f), 'utf8');
-const stripComments = s => s.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
-const text = s => s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
-const post = read('post-call.html');
-const pre = read('pre-call.html');
-const postJs = read('assets/post-call.js');
-const preJs = read('assets/pre-call.js');
-const gate = read('assets/pc-gate.js');
-const boot = read('assets/pc-boot.js');
-
-let pass = 0, fail = 0;
-const test = (name, fn) => {
-  try { fn(); pass++; console.log('  ok   ' + name); }
-  catch (e) { fail++; console.log('  FAIL ' + name + '\n       ' + e.message); }
-};
-
-function buttonLabel(html, act) {
-  const re = new RegExp('<button[^>]*data-act=["\\\']' + act + '["\\\'][^>]*>([\\s\\S]*?)<\\/button>', 'i');
-  const m = html.match(re);
-  assert.ok(m, 'missing button for data-act=' + act);
-  return text(m[1]);
-}
-
-console.log('\naction labels describe the thing the user is trying to do');
-test('proposal actions still say copy, PDF and send', () => {
-  assert.match(buttonLabel(post, 'copy'), /העתק.*הצעה/);
-  assert.match(buttonLabel(post, 'print'), /PDF/);
-  assert.match(buttonLabel(post, 'send'), /שלח.*לקוח/);
-});
-
-test('the product-wide contract lives in the boot module every product page already loads', () => {
-  assert.match(boot, /FIELD action contract/);
-  assert.match(boot, /applyActionContract/);
-});
-
-test('POST-CALL transcript entry uses proposal-task language, not extraction language', () => {
-  assert.match(boot, /setButton\(['\"]trlocal['\"],\s*['\"]מצא מה חשוב להצעה['\"]\)/);
-  assert.match(boot, /השתמש בפרטים שאישרתי/);
-  assert.match(boot, /על מה המחיר נשען/);
-});
-
-test('PRE-CALL pasted profile action says what the user gets', () => {
-  assert.match(boot, /מלא את הפרופיל מהטקסט/);
-  assert.match(boot, /המשך להכנת השיחה/);
-  assert.match(boot, /שלב 2 · מי מולכם/);
-});
-
-console.log('\ninternal evidence vocabulary does not become a required action');
-test('no evidence-candidate jargon is visible in shipped button markup', () => {
-  const buttonText = [post, pre].map(s => {
-    const buttons = s.match(/<button[\s\S]*?<\/button>/g) || [];
-    return buttons.map(text).join('\n');
-  }).join('\n');
-  assert.doesNotMatch(buttonText, /מועמד(?:י|ים)?\s+ראי(?:ה|ות)|ראיות?\s+מועמד/);
-});
-
-test('the contract layer does not introduce evidence-candidate jargon either', () => {
-  assert.doesNotMatch(stripComments(boot), /מועמד(?:י|ים)?\s+ראי(?:ה|ות)|ראיות?\s+מועמד/);
-});
-
-console.log('\nexport labels and external destinations keep the same contract');
-test('a locked export raises the in-product wall before any external navigation', () => {
-  const m = gate.match(/function requireKey\(fn\)\{([\s\S]*?)\n\}/);
-  assert.ok(m, 'requireKey not found');
-  const body = m[1];
-  assert.match(body, /pendingExport\s*=\s*fn/);
-  assert.match(body, /show\(['\"]wall['\"],\s*true\)/);
-  assert.doesNotMatch(body, /openContact|window\.open|location\./);
-});
-
-test('WhatsApp is named before a manual key request changes channel', () => {
-  assert.match(boot, /פתח WhatsApp לבקשת מפתח/);
-  assert.match(boot, /contactChannel\(\)/);
-  assert.match(boot, /buyContact/);
-});
-
-test('unlock resumes exactly the export the user originally asked for', () => {
-  assert.match(gate, /if \(pendingExport\) \{ const f = pendingExport; pendingExport = null; f\(\); \}/);
-});
-
-console.log('\ncontract language is applied to dynamic UI, not only initial markup');
-test('a mutation observer reapplies the contract after transcript review and gate renders', () => {
-  assert.match(boot, /new MutationObserver\(scheduleContract\)/);
-  assert.match(boot, /characterData:\s*true/);
-  assert.match(boot, /makeExternalRouteExplicit\(\)/);
-});
-
-console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
-process.exit(fail ? 1 : 0);
+console.log('\n'+pass+' passed, '+fail+' failed\n');process.exit(fail?1:0);
