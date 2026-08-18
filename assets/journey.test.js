@@ -14,6 +14,20 @@
 
      PW_ENGINES=chromium,firefox,webkit   pick engines explicitly
      PW_BASE=http://127.0.0.1:8940        point at an already-running server
+     PW_VIEWPORT=390x844                  walk the journey at that size
+
+   PW_BASE was documented here for a long time and never read: the runner
+   below called serve() unconditionally, so the flag was a sentence rather
+   than an option. Found while trying to use it.
+
+   PW_VIEWPORT exists because the whole journey only ever ran at 1000x900.
+   The phone-sized contexts in this file are single-purpose checks — the
+   pinned guide, the choice count, one scroll — and none of them walks the
+   flow. This product is a link pasted into WhatsApp and opened on a phone,
+   so the main route was the one route never measured at the size most
+   people arrive at. It passed at 390x844 and at 320 the first time it was
+   run, which is the good outcome and not a reason to leave it unguarded:
+   nothing was stopping the next change from breaking it.
 
    Requires playwright; if it is not resolvable the file exits 0 with a
    printed reason rather than failing CI on an environment problem. The
@@ -85,17 +99,33 @@ async function usableEngines() {
   return out;
 }
 
+/* WxH, or the desktop default. A malformed value throws rather than
+   silently falling back — a run that was asked for 390x844 and quietly
+   walked 1000x900 would report a pass for a size it never visited, which
+   is the one failure this flag exists to prevent. */
+const VIEWPORT = (() => {
+  const raw = process.env.PW_VIEWPORT;
+  if (!raw) return { width: 1000, height: 900 };
+  const m = /^(\d+)x(\d+)$/.exec(raw.trim());
+  if (!m) throw new Error('PW_VIEWPORT must look like 390x844, got: ' + raw);
+  return { width: +m[1], height: +m[2] };
+})();
+const AT = VIEWPORT.width + 'x' + VIEWPORT.height;
+
 /* ---------- the journey, once per engine ---------- */
 async function journey(engineName, base) {
   const browser = await playwright[engineName].launch();
-  const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+  const ctx = await browser.newContext({ viewport: { ...VIEWPORT } });
   const errors = [];
   ctx.on('weberror', e => errors.push(String(e.error()).split('\n')[0]));
 
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 
-  const label = s => '[' + engineName + '] ' + s;
+  /* The size is in every label, not only the non-default one. CI now walks
+     this twice, and two runs whose failures are named identically are two
+     runs you cannot tell apart from the log. */
+  const label = s => '[' + engineName + ' ' + AT + '] ' + s;
 
   // --- the entry page, arriving cold ---
   await test(label('the entry page opens and asks where you are, not which tool you want'), async () => {
@@ -1405,14 +1435,20 @@ async function journey(engineName, base) {
 }
 
 (async () => {
-  const { srv, base } = await serve();
-  console.log('\nserving ' + root + ' at ' + base);
+  /* PW_BASE skips the built-in server entirely. srv is null in that case and
+     every close() below has to tolerate it — the flag was documented for a
+     long time while this line read `await serve()` unconditionally. */
+  const external = (process.env.PW_BASE || '').trim();
+  const { srv, base } = external ? { srv: null, base: external.replace(/\/$/, '') } : await serve();
+  console.log(external ? '\nusing the server already at ' + base
+                       : '\nserving ' + root + ' at ' + base);
+  console.log('walking at ' + AT);
 
   const engines = await usableEngines();
   if (!engines.length) {
     console.log('\n  no browser engine could be launched — nothing was verified.');
     results.forEach(r => console.log('  · ' + r.engine + ': ' + r.status));
-    srv.close();
+    if (srv) srv.close();
     process.exit(1);
   }
 
@@ -1427,6 +1463,6 @@ async function journey(engineName, base) {
   }
   console.log('\nengines verified: ' + engines.join(', '));
   console.log(pass + ' passed, ' + fail + ' failed\n');
-  srv.close();
+  if (srv) srv.close();
   process.exit(fail ? 1 : 0);
 })();
