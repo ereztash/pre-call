@@ -14,15 +14,20 @@
    repository would stay green. That is the exact failure mode the journey file
    was written to catch, one altitude down.
 
-   With this file the same measurement reads 68 of 78. What it found on the way
-   there: a rate arriving in the field that means "what one mistake costs", a
-   system the operator confirmed reaching no chip at all, and one deal missing
-   one date turning the whole ledger into an error box. None of the three threw
-   anything a person would see.
+   With this file the same measurement reads 72 of 78. Two other files came
+   along with it: pc-gate.js — the one paid door, 41 assertions in Node and
+   never once a key pasted into the field — from 12 of 19 to 17, and
+   pc-followup.js to 11 of 13.
 
-   The ten still dark are the clipboard, the print dialog, the file picker, the
-   FileReader error branch, and the two shims that only run when a module is
-   absent. A test for those would be asserting the harness.
+   What it found on the way there: a rate arriving in the field that means
+   "what one mistake costs", a system the operator confirmed reaching no chip
+   at all, and one deal missing one date turning the whole ledger into an error
+   box. None of the three threw anything a person would see.
+
+   What is still dark, in all three files: the clipboard, the print dialog, the
+   file picker, the FileReader error branch, the payment button that has no
+   payment link behind it yet, and the tr() shims that only run when pc-i18n.js
+   is absent. A test for those would be asserting the harness.
 
    One engine. Nothing here is about rendering or about a browser quirk — it is
    about whether clicking a button reaches a function and whether that function
@@ -871,6 +876,143 @@ async function readLocally(page, text) {
     await p.waitForTimeout(300);
     assert.notStrictEqual(await p.textContent('#guideBar'), before,
       'skipping ' + step + ' left the guide where it was');
+    await p.close();
+  });
+
+  console.log('\nthe one paid door, opened by hand');
+
+  /* Three actions put the proposal in front of the client — copy, PDF, send —
+     and all three are behind a key. pc-gate.js has 41 assertions in Node on
+     what makes a key valid; nothing had ever pasted one into the box and
+     pressed the button. The gap matters more here than anywhere else on the
+     page, because the failure mode is a person who has paid and cannot get in.
+
+     No server here, which is the case the minting tool exists for: fetch
+     fails, the checksum decides, and a key that satisfies only the server's
+     allowlist would lock its buyer out on file://, offline, or after a
+     cleared browser — all three of which the README promises work. */
+  const MINTED = require('child_process')
+    .execFileSync('node', [path.join(root, 'tools', 'mint-key.js')], { encoding: 'utf8' })
+    .trim().split('\n')[0].trim();
+
+  const reachWall = async p => {
+    await templates(p).first().click();
+    await p.waitForTimeout(250);
+    await p.click('[data-act="copy"]');
+    await p.waitForTimeout(250);
+  };
+
+  await test('a minted key opens the wall and is still open after a reload', async () => {
+    const p = await fresh();
+    await reachWall(p);
+    assert.ok(await p.locator('#wall').isVisible(), 'the paid action was not gated at all');
+    await p.fill('#keyIn', MINTED);
+    await p.click('[data-act="unlock"]');
+    await p.waitForTimeout(600);
+    assert.strictEqual(await p.locator('#wall').isVisible(), false,
+      'a key that satisfies the shipped checksum did not open the wall');
+    await p.reload();
+    await p.waitForTimeout(300);
+    await reachWall(p);
+    assert.strictEqual(await p.locator('#wall').isVisible(), false,
+      'the buyer was asked for their key again on the next page load');
+    await p.close();
+  });
+
+  await test('a key of the wrong shape is refused without spending an attempt', async () => {
+    /* Ten attempts per ten minutes on the server. A string that the regex
+       already rejects must not cost one of them, so this never leaves the
+       page — which also means it has to say so itself. */
+    const p = await fresh();
+    await reachWall(p);
+    let calls = 0;
+    await p.route('**/api/**', r => { calls++; r.abort(); });
+    await p.fill('#keyIn', 'not-a-key');
+    await p.click('[data-act="unlock"]');
+    await p.waitForTimeout(400);
+    assert.ok(await p.locator('#keyErr').isVisible(), 'a rejected key said nothing');
+    assert.strictEqual(calls, 0, 'a malformed key was sent to the server anyway');
+    assert.ok(await p.locator('#wall').isVisible(), 'a malformed key opened the wall');
+    await p.close();
+  });
+
+  await test('a well-formed key that is not one is refused too', async () => {
+    /* The shape is eight characters and a check digit; getting the shape right
+       is not the same as having bought anything. */
+    const wrong = MINTED.slice(0, -1) + (MINTED.slice(-1) === 'Z' ? 'Y' : 'Z');
+    const p = await fresh();
+    await reachWall(p);
+    await p.fill('#keyIn', wrong);
+    await p.click('[data-act="unlock"]');
+    await p.waitForTimeout(600);
+    assert.ok(await p.locator('#wall').isVisible(),
+      'a key with a broken check digit opened the wall');
+    assert.ok(await p.locator('#keyErr').isVisible(), 'and it was refused silently');
+    await p.close();
+  });
+
+  await test('the key is offered ahead of time, and the offer can be turned down', async () => {
+    /* The key is sent by hand today, so asking for it at the moment of sending
+       means waiting at exactly the wrong moment. The note appears once there is
+       a real price on the screen. */
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(300);
+    assert.ok(await p.locator('#keyAhead').isVisible(),
+      'a priced proposal never offered to sort the key out early');
+    await p.click('[data-act="laterkey"]');
+    await p.waitForTimeout(200);
+    assert.strictEqual(await p.locator('#keyAhead').isVisible(), false, 'the offer would not go away');
+    await p.close();
+  });
+
+  await test('the dismissal lasts the session and not longer, which is worth knowing', async () => {
+    /* `keyAheadDismissed` is a variable, not a stored preference, so a reload
+       brings the note back. Pinned rather than changed: on a new proposal that
+       is the right behaviour, and on a restored draft — the same proposal, the
+       same operator, the second time today — it is a note that will not take no
+       for an answer. Which of those matters more is a call for whoever is
+       selling with it, and the point of this test is that it is now a decision
+       rather than an omission nobody had noticed. */
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(300);
+    await p.click('[data-act="laterkey"]');
+    await p.waitForTimeout(200);
+    await p.reload();
+    await p.waitForTimeout(500);
+    assert.ok(await p.locator('#keyAhead').isVisible(),
+      'the dismissal now survives a reload — if that was deliberate, this test is the place to say so');
+    await p.close();
+  });
+
+  await test('with no payment link configured, the buyer is sent to a person and never to example.com', async () => {
+    /* PAYMENT_URL still holds its placeholder, so this is the shipping state,
+       not a hypothetical one. configuredPayment() rejects anything containing
+       example.com, which routes the sale to the contact address instead — and
+       the only way to know that reaches the button is to press the button.
+
+       The failure this forbids is a buyer, at the moment they decided to pay,
+       landing on example.com. */
+    const p = await fresh();
+    const opened = [];
+    await p.exposeFunction('__opened', u => opened.push(u));
+    /* window.open only. location.href cannot be redefined in chromium, and it
+       is not the branch this configuration takes: openContact() navigates for
+       a mailto: route and opens a tab for anything else, and the configured
+       route here is a WhatsApp link. If that ever becomes a mailto the
+       assertion below fails on the count rather than passing quietly. */
+    await p.evaluate(() => { window.open = (u) => { window.__opened(String(u)); return null; }; });
+    await templates(p).first().click();
+    await p.waitForTimeout(300);
+    await p.click('[data-act="askkey"]');
+    await p.waitForTimeout(300);
+    assert.strictEqual(opened.length, 1, 'asking for a key opened ' + opened.length + ' things');
+    assert.ok(!/example\.com/.test(opened[0]),
+      'the buyer was sent to the placeholder link: ' + opened[0]);
+    const contact = await p.evaluate(() => PC.contact && PC.contact.ROUTE);
+    assert.strictEqual(opened[0], contact,
+      'asking for a key went somewhere other than the configured contact route');
     await p.close();
   });
 
