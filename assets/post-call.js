@@ -339,8 +339,11 @@ function ladderNote(){
         trLadder.skipped.map(s => '<li>' + esc(s.label) + ' — ' + esc(s.missing) + '</li>').join('') +
         '</ul>'
       : '') +
+    /* Twelve real transcripts carry no label, and the one wrong rung in that
+       corpus disappears once its line has one. This named the problem and
+       asked for proof-reading without saying which setting removes it. */
     (trLadder.labelled ? '' :
-      '<b class="mt14">' + tr('בתמלול אין סימוני דובר, ולכן נקרא גם מה שאתם אמרתם. עברו על הציטוטים.') + '</b>') +
+      '<b class="mt14">' + tr('בתמלול אין סימוני דובר, ולכן נקרא גם מה שאתם אמרתם. הפעילו זיהוי דוברים בכלי התמלול וייצאו מחדש — בינתיים עברו על הציטוטים.') + '</b>') +
     '</div>';
 }
 

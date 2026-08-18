@@ -194,7 +194,8 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "מה חסר כדי להישען על משהו חזק יותר": "What is missing to rest on something stronger",
   "הלקוח אמר בשיחה שאין תקציב או שאין סיבה להתחיל עכשיו": "The client said in the call that there is no budget, or no reason to start now",
   "המחיר שייצא מכאן הוא תרגיל, לא הצעה — עד שיש תשובה אחרת מהלקוח עצמו.": "The price that comes out of this is an exercise, not a proposal — until there is a different answer from the client themselves.",
-  "בתמלול אין סימוני דובר, ולכן נקרא גם מה שאתם אמרתם. עברו על הציטוטים.": "The transcript has no speaker labels, so what you said was read too. Go over the quotes.",
+  "בתמלול אין סימוני דובר, ולכן נקרא גם מה שאתם אמרתם. הפעילו זיהוי דוברים בכלי התמלול וייצאו מחדש — בינתיים עברו על הציטוטים.":
+    "The transcript has no speaker labels, so what you said was read too. Turn on speaker detection in your transcription tool and export again — meanwhile, go over the quotes.",
   "הלקוח אמר": "The client said",
   "אתם אמרתם": "You said",
   "לא ידוע מי אמר": "Unknown who said it",

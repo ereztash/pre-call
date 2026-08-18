@@ -275,8 +275,23 @@ const BUDGETS = {
 
      The second raise in a day is itself the finding. This page is 546KB raw,
      and v8 coverage says 283 of 633 functions never run from any entry route.
-     The budget is not what needs to move — that is. */
-  'post-call.html':     165 * 1024
+     The budget is not what needs to move — that is.
+
+     A thirteenth raise, 165 -> 166KB, for ten bytes. The note shown when a
+     transcript carries no speaker labels used to name the problem and ask the
+     operator to proof-read the quotes, without mentioning that one setting in
+     their transcription tool removes it. All twelve real transcripts are
+     unlabelled, and the single wrong rung in that corpus disappears the moment
+     its line is labelled, so this sentence is worth more than most features
+     here. It is now an instruction rather than a description.
+
+     Ten bytes is not a budget problem, and having said twice today that the
+     page is what should move, I looked before raising a third time: every
+     module post-call.html loads is referenced from another module, so there is
+     no orphan to delete and no cheap win. The 283 unreachable functions are
+     inside modules that are genuinely loaded. That is a decomposition job, not
+     a deletion, and it is still not done. */
+  'post-call.html':     166 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');
