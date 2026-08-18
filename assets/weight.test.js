@@ -25,13 +25,27 @@
    still parses — a stripper that ate a quote would show up as a syntax
    error, not a smaller number:
 
-     code    470.7K raw -> 130.4K wire   3.61x
-     prose   240.2K raw ->  83.1K wire   2.89x
+     code    431.1K raw -> 116.7K wire   3.69x
+     prose   279.8K raw ->  96.8K wire   2.89x
 
-   Prose compresses WORSE than code, and it is 39% of the compressed asset
+   Prose compresses WORSE than code, and it is 45% of the compressed asset
    weight. Both halves of the old claim were wrong, and the second one was
    load-bearing: it was the reason nobody looked at what the ceiling was
    actually holding.
+
+   Revised once already, by review rather than by anyone re-running the
+   measurement: the first cut of the stripper below copied a template
+   literal through as one opaque string, so a comment sitting inside a
+   ${...} interpolation compressed as prose but counted as code, and a
+   template nested inside another lost the scanner's place entirely. Both
+   are why the JS path is two mutually recursive functions rather than one
+   loop — an interpolation can hold a nested template and a template can
+   hold another interpolation, and both now run through the same tokenizer
+   instead of a second, divergent copy of it. The numbers above are from
+   the corrected scanner; the first version overstated post-call.html's
+   code alone by 13.4KB — 10.4 of it in post-call.js, the rest in
+   pc-ledger.js and pc-proposal.js, the three files with a template
+   nested inside another template's interpolation.
 
    Which is why there are two ceilings now. Under one combined number a
    paragraph of documentation and a first dependency look identical — the
@@ -120,30 +134,71 @@ function strip(src, kind) {
      identifier or a ) it is division, and treating it as a regex would
      swallow the rest of the line. */
   const prev = () => { for (let j = out.length - 1; j >= 0; j--) if (!/\s/.test(out[j])) return out[j]; return ''; };
-  while (i < src.length) {
-    const c = src[i], d = src[i + 1];
-    if (c === '/' && d === '/') { while (i < src.length && src[i] !== '\n') i++; continue; }
-    if (c === '/' && d === '*') { i += 2; while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++; i += 2; continue; }
-    if (c === '"' || c === "'" || c === '`') {
-      const q = c; out += c; i++;
-      while (i < src.length) {
-        if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
-        out += src[i]; if (src[i] === q) { i++; break; } i++;
+
+  /* A template literal is not one string, it is text with JS spliced into it
+     at every ${...}. Copying that JS through unstripped was found by review:
+     a comment inside an interpolation compressed as prose but counted as
+     code, so CODE_BUDGETS could be inflated by exactly the kind of paragraph
+     it exists to tell apart from a dependency. scanCode() and scanTemplate()
+     call each other — an interpolation can hold a nested template, and a
+     template can sit inside an interpolation's own expression — so both
+     depths of nesting run through the one tokenizer rather than a second,
+     divergent copy of it. */
+  function scanTemplate() {
+    out += src[i]; i++;                                 // the opening `
+    while (i < src.length) {
+      if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
+      if (src[i] === '`') { out += src[i]; i++; return; }
+      if (src[i] === '$' && src[i + 1] === '{') {
+        out += '${'; i += 2;
+        scanCode(true);                                 // strips comments in the interpolation too
+        if (src[i] === '}') { out += '}'; i++; }
+        continue;
       }
-      continue;
+      out += src[i]; i++;                                // literal text: never comment syntax
     }
-    if (c === '/' && '(,=:[!&|?{};+-*%~^<>'.includes(prev())) {
-      out += c; i++;
-      while (i < src.length) {
-        if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
-        if (src[i] === '[') { while (i < src.length && src[i] !== ']') { out += src[i]; i++; } }
-        out += src[i]; if (src[i] === '/') { i++; break; } i++;
-      }
-      while (i < src.length && /[a-z]/.test(src[i])) { out += src[i]; i++; }
-      continue;
-    }
-    out += c; i++;
   }
+
+  /* stopAtBrace is true only inside a ${...}: scanning has to stop at that
+     interpolation's own closing brace rather than run past it, and depth is
+     what tells an unrelated inner `}` — an object literal, a block — apart
+     from that one. False at the top level, where there is no caller waiting
+     for a specific brace and every character gets consumed regardless. */
+  function scanCode(stopAtBrace) {
+    let depth = 0;
+    while (i < src.length) {
+      const c = src[i], d = src[i + 1];
+      if (c === '/' && d === '/') { while (i < src.length && src[i] !== '\n') i++; continue; }
+      if (c === '/' && d === '*') { i += 2; while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++; i += 2; continue; }
+      if (c === '"' || c === "'") {
+        const q = c; out += c; i++;
+        while (i < src.length) {
+          if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
+          out += src[i]; if (src[i] === q) { i++; break; } i++;
+        }
+        continue;
+      }
+      if (c === '`') { scanTemplate(); continue; }
+      if (c === '/' && '(,=:[!&|?{};+-*%~^<>'.includes(prev())) {
+        out += c; i++;
+        while (i < src.length) {
+          if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
+          if (src[i] === '[') { while (i < src.length && src[i] !== ']') { out += src[i]; i++; } }
+          out += src[i]; if (src[i] === '/') { i++; break; } i++;
+        }
+        while (i < src.length && /[a-z]/.test(src[i])) { out += src[i]; i++; }
+        continue;
+      }
+      if (c === '{') { depth++; out += c; i++; continue; }
+      if (c === '}') {
+        if (stopAtBrace && depth === 0) return;           // the interpolation's own close — leave it for scanTemplate
+        depth--; out += c; i++; continue;
+      }
+      out += c; i++;
+    }
+  }
+
+  scanCode(false);
   return out;
 }
 
@@ -494,8 +549,8 @@ const CODE_BUDGETS = {
   'accessibility.html':      10 * 1024,
   'post-call-landing.html':  5 * 1024,
   'product-landing.html':    6 * 1024,
-  'pre-call.html':           29 * 1024,
-  'post-call.html':          98 * 1024
+  'pre-call.html':           28 * 1024,
+  'post-call.html':          84 * 1024
 };
 
 console.log('\nper-page code weight, comments stripped and the result reparsed');
