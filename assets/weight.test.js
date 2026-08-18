@@ -309,8 +309,27 @@ const BUDGETS = {
      Not raised for the prose. The trim that avoided the previous raise is
      still in force — this is the map, the lookup, and the reason each entry is
      where it is, which is the part that stops the next person from moving
-     חשבשבת onto the invoicing chip without knowing it turns off a warning. */
-  'post-call.html':     168 * 1024
+     חשבשבת onto the invoicing chip without knowing it turns off a warning.
+
+     A fifteenth raise, 168 -> 169KB, for 116 bytes. It buys the dark theme
+     having surfaces at all. --charcoal-2 is what every panel, card, box and
+     input in the product sits on, and mirroring it into the dark ramp landed
+     it at ratio 1.012 against the page — the two colours differ in hue and
+     not in value, because both sit at the floor of the ramp. Measured across
+     the three pages: 28 authored surfaces that painted nothing, including
+     every input in both tools and all four cards on the entry page.
+
+     Trimmed four times before raising, and the prose that survived is the
+     part that stops someone restoring the mirrored token as a tidy-up. What
+     is left of the growth is the override itself, .nums becoming a surface,
+     and the transparent card edge that lets three border-color declarations
+     paint for the first time.
+
+     Found by a person looking at a screenshot, which is the part worth
+     recording: the design audit reported "distinct surfaces 1 (max 4)" and
+     called it ok, because every rule in that file is a ceiling. There is a
+     floor now. */
+  'post-call.html':     169 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

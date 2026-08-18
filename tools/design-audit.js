@@ -81,6 +81,28 @@ const RULES = {
          'and the fill is a deeper copper at 80, so the cap is slack — it ' +
          'stays because full-chroma fills are the failure mode either way.'
   },
+  /* The first floor in this file, and it exists because everything else here
+     is a ceiling. Too many boxes, too many hues, too many layers, too much
+     chroma, too big a jump — every rule catches EXCESS, so a page that
+     deleted every surface would score perfectly. One did: index.html
+     reported "distinct surfaces 1 (max 4)" and passed, while all four cards
+     on it were the same colour as the background in the dark theme. It took
+     a person looking at a screenshot.
+
+     A surface someone bothered to author and that paints nothing is the
+     failure this catches. 1.05 is the floor rather than a comfortable step
+     because the question is "is this rendering at all", not "is it enough" —
+     the product's own step measures 1.14 in both themes. Bordered elements
+     are exempt: a border is a different way of saying the same thing, and
+     saying it is what matters. */
+  invisibleSurface: {
+    minRatio: 1.05,
+    why: 'A surface that was authored and does not separate from what is ' +
+         'behind it is a layer that paints nothing. Mirroring a light-theme ' +
+         'pair into the dark ramp is how it happens without anyone editing ' +
+         'the rule: #f6f3ee on #e2e5e9 is a clear step, and its mirror ' +
+         '#1c1712 on #14171a differs in hue and not in value at all.'
+  },
   valueJump: {
     max: 0.75,
     why: 'Elevation is built from neighbouring tones, not from opposite ends ' +
@@ -153,6 +175,7 @@ function probe() {
 
   const bg = {}, size = {}, hues = {}, fills = {};
   let bordered = 0;
+  const isClear = c => !c || /rgba\([^)]*,\s*0\s*\)/.test(c);
 
   for (const e of vis) {
     const s = getComputedStyle(e);
@@ -164,14 +187,45 @@ function probe() {
       if (ch > 60) fills[s.backgroundColor] = Math.max(fills[s.backgroundColor] || 0, ch);
     }
     size[parseFloat(s.fontSize)] = (size[parseFloat(s.fontSize)] || 0) + 1;
-    if (['Top', 'Right', 'Bottom', 'Left'].some(d => parseFloat(s['border' + d + 'Width']) > 0)) bordered++;
+    /* Width AND paint. A border-width with a transparent colour draws no
+       line, and counting it inflates the one number on this page that is
+       supposed to say how boxed-in the design looks. The entry cards carry
+       a 1px transparent edge so the hover and the marker on the primary card
+       have something to colour — that is three declarations working, not
+       three more boxes, and the count should say so. */
+    if (['Top', 'Right', 'Bottom', 'Left'].some(d =>
+        parseFloat(s['border' + d + 'Width']) > 0 && !isClear(s['border' + d + 'Color']))) bordered++;
     /* Accent hue is judged on text and on filled buttons — the two places a
        hue is a deliberate signal rather than a tint of the surface. */
     const h = hueOf(s.color);
     if (h !== null) hues[Math.round(h / 20) * 20] = (hues[Math.round(h / 20) * 20] || 0) + 1;
   }
 
-  return { total: vis.length, bordered, bg, size, hues, fills,
+  /* Authored surfaces that do not separate from whatever is painted behind
+     them. Walks up for the nearest opaque ancestor rather than trusting the
+     parent, because most containers are transparent. */
+  const opaque = c => c && !/rgba\(0, 0, 0, 0\)/.test(c);
+  const behind = el => {
+    let n = el.parentElement;
+    while (n && n !== document.body) {
+      const c = getComputedStyle(n).backgroundColor;
+      if (opaque(c)) return c;
+      n = n.parentElement;
+    }
+    return getComputedStyle(document.body).backgroundColor;
+  };
+  const label = e => (e.tagName.toLowerCase() +
+    (typeof e.className === 'string' && e.className.trim()
+      ? '.' + e.className.trim().split(/\s+/).slice(0, 3).join('.') : '')).slice(0, 46);
+  const flat = [];
+  for (const e of vis) {
+    if (e === document.body || e.offsetHeight < 24) continue;
+    const s = getComputedStyle(e);
+    if (!opaque(s.backgroundColor)) continue;
+    if (['Top', 'Right', 'Bottom', 'Left'].some(d => parseFloat(s['border' + d + 'Width']) > 0)) continue;
+    flat.push({ sel: label(e), bg: s.backgroundColor, under: behind(e) });
+  }
+  return { total: vis.length, bordered, bg, size, hues, fills, flat,
            pageBg: getComputedStyle(document.body).backgroundColor };
 }
 
@@ -258,6 +312,21 @@ function probe() {
     }
     say(worst <= RULES.valueJump.max, 'largest surface value jump',
       worst.toFixed(2) + (worstC ? '  ' + worstC : '') + '  (max ' + RULES.valueJump.max + ')');
+
+    // 6. surfaces that were authored and do not render as surfaces
+    const ratio = (a, b) => {
+      const la = lum(a), lb = lum(b);
+      if (la == null || lb == null) return Infinity;
+      const [hi, lo] = la > lb ? [la, lb] : [lb, la];
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const flat = (r.flat || []).filter(f => ratio(f.bg, f.under) < RULES.invisibleSurface.minRatio);
+    const seen = new Set();
+    const uniq = flat.filter(f => { const k = f.sel + f.bg; if (seen.has(k)) return false; seen.add(k); return true; });
+    say(uniq.length === 0, 'surfaces that paint nothing',
+      (uniq.length ? uniq.slice(0, 4).map(f => f.sel + ' ' + f.bg + ' on ' + f.under).join('   ')
+                   : 'none — every authored surface separates') +
+      '  (min ratio ' + RULES.invisibleSurface.minRatio + ')');
   }
 
   await b.close();

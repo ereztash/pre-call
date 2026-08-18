@@ -240,7 +240,11 @@
      It has since grown a triangulation table, a recommendation and warnings,
      and a pinned block that tall covered the method selector above it and
      swallowed its clicks. Nothing here needs to follow the scroll. */
-  .nums{background:var(--nt-90);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-6);
+  /* A surface, like .box. Controls are filled with --nt-90 and read because
+     they sit one step above it; this panel was --nt-90 too, so the three
+     inside it were the colour of what they sat on. See invisibleSurface in
+     docs/design-persona.md. */
+  .nums{background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-6);
         margin-top:var(--sp-3)}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--sp-5)}
   .stat{background:var(--charcoal-2);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);
@@ -560,7 +564,9 @@
   details.drawer>summary:hover{color:var(--nt-5)}
   details.drawer[open]>summary{border-bottom:1px solid var(--line)}
   details.drawer .box{border:0;background:transparent;margin-bottom:0}
-  details.drawer .nums{border:0;border-radius:0}
+  /* background too, exactly as .box does above: the drawer is already the
+     surface, and a panel repeating it is a layer that paints nothing. */
+  details.drawer .nums{border:0;border-radius:0;background:transparent}
 
   /* Entering deals that already happened. A grid rather than the page's usual
      stacked labels, because these four are one row of one record and reading them

@@ -801,7 +801,8 @@ test('the design document quotes the thresholds the audit actually enforces', ()
     bodySizeCluster: v => v + '×',
     backgrounds:     v => '≤' + v,
     fillChroma:      v => '≤' + v,
-    valueJump:       v => '≤' + v
+    valueJump:       v => '≤' + v,
+    invisibleSurface: v => '≥' + v
   };
 
   const found = [...rules.matchAll(/(\w+):\s*\{[\s\S]*?(?:max|minRatio):\s*([\d.]+)/g)]
