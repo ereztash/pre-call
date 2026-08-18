@@ -185,7 +185,7 @@ test('an elided refusal is missed, and that is measured rather than assumed', ()
      red, either somebody found a rule that costs nothing, in which case delete
      this and say so, or the detector quietly widened and the two lines below
      are what it now warns on. */
-  assert.ok(!L.assess({ text: 'כאילו כרגע פשוט אין לי א' }).stalled,
+  assert.ok(!L.assess({ text: 'אז בעצם אין לי א' }).stalled,
     'the elided refusal is caught now — check what else the new rule catches');
   ['וכרגע אין לי את הפייפליין של הלקוחות',
    'אין לי את היכולת הנפשית לקרוא ספרים',
