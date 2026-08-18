@@ -26,21 +26,26 @@ const test = (name, fn) => {
 };
 
 /* A soft call: no process anywhere, and near the end the client reaches for a
-   price by naming what he thinks the category costs. */
+   price by naming what he thinks the category costs.
+
+   Written to the shape the rungs test for — nothing recurring, no system, one
+   rate named as a reference — and not lifted from a transcript. A fixture is
+   allowed to carry the form of a real call. It is not allowed to carry a
+   sentence somebody actually said. */
 const CONSULTING =
-  'איך זה עובד אצלך היום כשאתה משיג לקוחות חדשים?\n' +
-  'כרגע זה לא באמת עובד. יש לי לקוח אחד ואני מלמד תלמידות עיצוב.\n' +
-  'כמה זה שווה לך לדעתך?\n' +
-  'אני לא יודע.\n' +
-  'כרגע אני רואה את זה קצת כמו פגישת פסיכולוג, בשביל שזה 300 שקל לפגישה.';
+  'ספר לי איך העסק נראה היום.\n' +
+  'אני צלם. פרויקט פה ופרויקט שם, בלי שום דבר קבוע.\n' +
+  'ומה זה שווה לך, לדעתך?\n' +
+  'קשה לי להגיד.\n' +
+  'אני מסתכל על זה כמו פגישה עם יועץ מס, זה 300 שקל לפגישה.';
 
 /* The same call with nothing priced in it at all — which is the more common
    soft call, and the one that has to fall all the way through. */
 const CONSULTING_NO_PRICE =
-  'איך זה עובד אצלך היום כשאתה משיג לקוחות חדשים?\n' +
-  'כרגע זה לא באמת עובד. יש לי לקוח אחד ואני מלמד תלמידות עיצוב.\n' +
-  'כמה זה שווה לך לדעתך?\n' +
-  'אני לא יודע, אני לא יודע לשים על זה מחיר כרגע.';
+  'ספר לי איך העסק נראה היום.\n' +
+  'אני צלם. פרויקט פה ופרויקט שם, בלי שום דבר קבוע.\n' +
+  'ומה זה שווה לך, לדעתך?\n' +
+  'אני לא יודע לשים על זה מחיר כרגע.';
 
 const AUTOMATION =
   'לקוח: היום ההזמנות נכנסות בוואטסאפ, בערך 40 הזמנות ביום.\n' +

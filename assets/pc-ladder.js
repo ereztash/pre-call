@@ -81,10 +81,10 @@
      held on four of them — every one of which had no process in it at all. A
      thirty-thousand-character document contains a number beside a noun and it
      contains the word "בחודש", and neither fact says they have anything to do
-     with each other. What the two that extracted something matched was the
-     seller talking: "אנחנו מדברים 20 דקות" — the length of the call — and
-     "60 בשבוע 240 בחודש" — the seller's own arithmetic about the client's
-     working hours, on a call about search engine optimisation.
+     with each other. Both of the two that extracted something matched the
+     seller rather than the buyer: once the length of the call itself, once the
+     seller's own arithmetic out loud about the buyer's working hours. Neither
+     was a quantity of work, and neither was said by the person being priced.
 
      It only ever looked safe because real transcripts had no digits in them,
      and pc-numerals.js removed that accident. So the rung now asks the same
@@ -94,9 +94,9 @@
      licensed is worse than a rung that never holds. */
   const FREQ = () => root.PC.transcript.FREQ_RE();
 
-  /* A price the client names as their own reference — "like a session with a
-     psychologist, 300 a session". On the soft calls this is the only priced
-     thing anybody says out loud, and the four rungs above could not read it:
+  /* A price the client names as their own reference — the shape of "like a
+     session with X, that's 300 a session". On the soft calls this is the only
+     priced thing anybody says out loud, and the four rungs above cannot read it:
      there is no process to value, no closed job in your ledger, and no systems
      to place in a range.
 
