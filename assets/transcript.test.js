@@ -152,6 +152,61 @@ test('finds numbers next to a unit word, with the sentence around them', () => {
 test('marks itself as a guess so it is never mistaken for an extraction', () => {
   T.heuristics('זה לוקח 8 דקות').forEach(h => assert.strictEqual(h.guessed, true));
 });
+/* An hourly rate and a per-incident cost, in that order, on a call that has
+   both. The incident cue is "a number beside a currency word" and nothing
+   more, so it used to take whichever came first and stop — which on this call
+   is the rate, and the sentence that actually names what a mistake costs went
+   unread. Neither number is wrong; the label on one of them was.
+
+   The ladder cannot help here: at the value rung it licenses errCost and
+   switches `anchor` off, so the one cue that would have recognised the rate
+   correctly is not looking. The refusal has to sit on the cue. */
+test('an hourly rate is not the cost of an incident, and the real one is still found', () => {
+  const tx = 'לקוח: מי שעושה את זה עולה לי 90 שקל לשעה.\n' +
+             'לקוח: כשיש טעות המשלוח חוזר וזה 500 שקל בכל פעם.';
+  const cost = T.heuristics(tx).find(x => x.key === 'errCost');
+  assert.ok(cost, 'the incident cue skipped the line it should have read');
+  assert.strictEqual(cost.value, 500, 'read the rate as the cost of an incident');
+  assert.ok(cost.quote.includes('טעות'), 'quoted a sentence that is not about a mistake');
+});
+test('a call that states only a rate fills nothing from the incident cue', () => {
+  assert.ok(!T.heuristics('לקוח: אני משלם לה 90 שקל לשעה.').some(x => x.key === 'errCost'),
+    'a rate with no incident anywhere in the call still became one');
+});
+/* The forms a review found after the first version of this shipped. It used
+   ANCHOR_RE as the veto, which is the expression deciding whether a number may
+   SET a price — deliberately narrow, and therefore blind to an English rate
+   and to the Hebrew construct form. Both put 90 in the field that means "what
+   one mistake costs", and both then stopped the cue looking, so the real
+   figure later in the same call went unread. */
+const RATE_FORMS = [
+  ['English, per hour', 'Client: the person doing it costs me 90 ILS per hour.\n' +
+                        'Client: when it breaks it is 500 shekels each time.'],
+  ['English, a day',    'Client: it is 200 shekels a day.\n' +
+                        'Client: each mistake costs 500 shekels.'],
+  ['Hebrew, construct', 'לקוח: זה עולה לי 90 שקל לשעת עבודה.\nלקוח: כל טעות עולה 500 שקל.'],
+  ['Hebrew, per month', 'לקוח: אני משלם על זה 90 שקל לחודש.\nלקוח: כל טעות עולה 500 שקל.']
+];
+test('a rate is refused in every form the extractor claims to read', () => {
+  RATE_FORMS.forEach(([name, tx]) => {
+    const cost = T.heuristics(tx).find(x => x.key === 'errCost');
+    assert.ok(cost, name + ': the incident cue found nothing at all');
+    assert.strictEqual(cost.value, 500, name + ': read the rate as the cost of an incident');
+  });
+});
+test('the veto matches everything the anchor does, and more', () => {
+  /* The property that lets these be two expressions instead of one. The anchor
+     asks "may this set a price"; the veto asks "must the weak cue leave this
+     alone". The second question must never have the narrower answer — a
+     sentence tight enough to price from is certainly a rate. */
+  const FORMS = ['300 שקל לפגישה', '300 ש"ח לשעה', '1,200 ₪ לחודש', '90 NIS לשעה',
+                 '450 שקלים למפגש', '80 ILS ליום', '250 שק לשיחה', '600 ₪ לשבוע'];
+  const anchors = FORMS.filter(f => T.ANCHOR_RE.test(f));
+  assert.ok(anchors.length > 3, 'these fixtures stopped being anchor forms — this proves nothing now');
+  anchors.forEach(f => assert.ok(T.RATE_RE.test(f),
+    'the anchor reads "' + f + '" as a rate and the veto does not — that gap is ' +
+    'exactly where an hourly rate becomes the cost of a mistake'));
+});
 test('an empty or wordless transcript yields nothing', () => {
   assert.deepStrictEqual(T.heuristics(''), []);
   assert.deepStrictEqual(T.heuristics('שיחה בלי שום מספר בכלל'), []);
@@ -288,6 +343,48 @@ test('the example fills every field the form needs for a full document', () => {
   ['q_process', 'q_freq', 'q_minutes', 'q_err_freq', 'q_err_cost', 'q_client']
     .forEach(f => assert.ok(s.fields[f], 'example is missing ' + f));
   assert.ok(s.systems.length >= 2);
+});
+
+test('the tools that record time are in the vocabulary, because minutes is priced from them', () => {
+  /* The list held sales, ERP and automation tools and nothing that measures
+     time — while the value method is built on `minutes`, and a time tracker is
+     the one system that holds that answer already measured. Across twelve real
+     calls the single genuinely in-scope system anybody named was Toggl, said
+     in Hebrew, by a prospect explaining that everything she does is already
+     logged and detailed. The product could not see it. */
+  const seen = T.observe('לקוח: אני משתמש בתוגל אצלי הכל מתועד ומדוקדק.').systems.map(s => s.value);
+  assert.ok(seen.indexOf('תוגל') !== -1, 'a time tracker named out loud is still invisible: ' + seen);
+  assert.ok(T.observe('לקוח: אנחנו על Clockify.').systems.length >= 1, 'Latin spelling missed');
+});
+
+test('a transliteration that collides with ordinary Hebrew is a candidate, never a fact', () => {
+  /* The first version of this test made the rule about length, and its own
+     rule then failed on the one entry that works: "תוגל" is four letters.
+     Length was the wrong variable. What matters is whether the string is a
+     substring of ordinary speech, and that has to be checked per word rather
+     than derived from a count.
+
+     "ויקס" was in the list for exactly one measurement. It matched three times
+     across the twelve real calls, two of them inside garbled speech mentioning
+     no website builder, and one of those moved a whole call onto the market
+     rung. Removed; the Latin spelling stays.
+
+     "תוגל" is kept with its ambiguity written down rather than hidden: it is
+     also a Hebrew verb, and this sentence proves the collision is real. It is
+     kept because observe() proposes candidates with the sentence attached and
+     never applies them — the cost of this one is a glance, and the benefit is
+     the only in-scope system anybody named in twelve calls. */
+  const verb = T.observe('לקוח: התוכנית תוגל בשנה הבאה.').systems.map(s => s.value);
+  assert.ok(verb.indexOf('תוגל') !== -1,
+    'the known collision stopped happening — if the matcher got smarter, say so here');
+
+  /* What must hold regardless: a candidate carries the sentence it came from,
+     so the operator can see in one line that this is a verb and not a tool. */
+  const rows = T.observe('לקוח: התוכנית תוגל בשנה הבאה.').systems;
+  assert.ok(rows[0].quote && rows[0].quote.indexOf('תוגל') !== -1,
+    'a proposed system arrived without the sentence that produced it');
+  assert.ok(rows[0].verified !== false || rows[0].source,
+    'a proposed system arrived without a source');
 });
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');

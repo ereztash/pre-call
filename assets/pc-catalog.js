@@ -13,6 +13,54 @@
 
   const SYSTEMS = [tr('וואטסאפ'),tr('אימייל'),tr('גיליונות Google'),'Excel','CRM',tr('חשבונית ירוקה / מורנינג'),
                    tr('מערכת סליקה'),tr('אתר / טפסים'),'ERP','Monday / Asana',tr('מערכת ייעודית'),tr('אחר')];
+  const [WHATSAPP, MAIL, SHEETS, EXCEL, CRM, INVOICING,
+         PAYMENTS, WEB, ERP, PROJECTS, CUSTOM, OTHER] = SYSTEMS;
+
+  /* Which chip a product belongs to.
+
+     The chip row is twelve categories; a transcript names products. The two met
+     only by luck — the page matched them on a shared word, which is how
+     "מורנינג" finds "חשבונית ירוקה / מורנינג" and why "חשבשבת", the same kind
+     of system from a different company, found nothing. Nothing is the part that
+     matters: the panel proposed the system, the operator confirmed it, and no
+     chip moved and no message said why. Found by the first test that clicked
+     the confirm button instead of calling the function behind it.
+
+     חשבשבת and ריווחית sit under ERP rather than under the invoicing chip. Both
+     are accounting systems and either chip is arguable, but only ERP raises the
+     "premium connector" row — and a desktop accounting system is exactly the
+     integration that turns out to need a paid tier. Wrong in the direction that
+     costs the operator nothing.
+
+     null is not "unknown". It means recognised and deliberately not a chip:
+     Zapier, Make and n8n are what the work would be built in, not systems in
+     the client's process, and counting them would inflate the system count the
+     market tier is keyed on. Anything genuinely unrecognised falls to אחר,
+     which is what אחר is for — the confirmation always does something. */
+  const SYSTEM_OF = {
+    'Priority': ERP, 'SAP': ERP, 'Odoo': ERP, 'Dynamics': ERP,
+    'חשבשבת': ERP, 'ריווחית': ERP,
+    'Salesforce': CRM, 'HubSpot': CRM, 'Pipedrive': CRM, 'Zoho': CRM,
+    'Fireberry': CRM, 'פיירברי': CRM,
+    'Stripe': PAYMENTS, 'Cardcom': PAYMENTS, 'קארדקום': PAYMENTS,
+    'Tranzila': PAYMENTS, 'טרנזילה': PAYMENTS,
+    'Wix': WEB, 'Shopify': WEB, 'WooCommerce': WEB,
+    'Jira': PROJECTS, 'Notion': PROJECTS,
+    'Airtable': SHEETS,
+    'Zapier': null, 'Make': null, 'n8n': null
+  };
+
+  /* Word overlap first, so a product already inside a chip label keeps working
+     and the label stays the single place that knowledge lives. */
+  const words = s => String(s).toLowerCase().replace(/[^\wא-ת ]/g, ' ')
+    .split(/\s+/).filter(w => w.length > 2);
+  function chipFor(name) {
+    const mine = words(name);
+    const shared = SYSTEMS.find(sys => words(sys).some(w => mine.indexOf(w) !== -1));
+    if (shared) return shared;
+    const key = Object.keys(SYSTEM_OF).find(k => k.toLowerCase() === String(name).trim().toLowerCase());
+    return key === undefined ? OTHER : SYSTEM_OF[key];
+  }
 
   const METHODS = {
     value:      { name: tr('ערך / ROI'),    hint: tr('המחיר נגזר ממה שהתהליך עולה ללקוח בשנה. הכי חזק בשיחה, אבל דורש שהוא ייתן לך מספרים. אם הוא מנחש אותם, המחיר מנחש איתו.') },
@@ -239,8 +287,9 @@
   };
 
   root.PC = root.PC || {};
-  root.PC.catalog = { SYSTEMS, METHODS, SCOPE_ITEMS, SCOPE_LABEL, PRESETS, EXAMPLES,
-                      TEMPLATES, visibleScope, defaultScopeState, scopeStateFor };
+  root.PC.catalog = { SYSTEMS, SYSTEM_OF, chipFor, METHODS, SCOPE_ITEMS, SCOPE_LABEL,
+                      PRESETS, EXAMPLES, TEMPLATES, visibleScope, defaultScopeState,
+                      scopeStateFor };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.catalog;
 })(typeof window !== 'undefined' ? window : globalThis);

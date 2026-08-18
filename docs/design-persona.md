@@ -42,6 +42,44 @@ what is done with it is.
 
 ---
 
+## Where it actually stands
+
+The table above is her opening verdict and stays as written. This is what the
+same audit reports now, on the same three pages. The redesign landed; all four
+faults are closed, and the audit that used to report has been failing the build
+since.
+
+Everything here is `node tools/design-audit.js` output, not a claim about it.
+The rule keys are the ones in that file, and a test holds this table to them.
+
+| מדד | rule | סף | post-call · לפני | post-call · עכשיו | pre-call | entry |
+|---|---|---|---|---|---|---|
+| אלמנטים עם מסגרת | `borderShare` | ≤15% | **39%** (180/460) | **8%** (36/454) | 5% | 4% |
+| צעדי טיפוגרפיה צמודים | `bodySizeCluster` | 1.2× | **12→13.5→15→16** | אין | אין | אין |
+| מילוי רווי מדי | `fillChroma` | ≤110 | **145** | **80** | 80 | 80 |
+| קפיצת ערך בין משטחים | `valueJump` | ≤0.75 | **0.99** (#fff) | **0.66** | 0.66 | 0.12 |
+| גוני אקסנט | `accentHues` | ≤1 | 1 | 1 (40°) | 1 | 1 |
+| משטחים נבדלים | `backgrounds` | ≤4 | — | 4 | 3 | 1 |
+
+`backgrounds` was not in her opening table because the audit did not yet
+measure it. It does now, and post-call sits **exactly on the cap**.
+
+**Two numbers are close to their limits, and that is the useful part of this
+table.** Surfaces on post-call is 4 of a permitted 4, and the value jump is
+0.66 of a permitted 0.75 — the white proposal sheet, still the highest-contrast
+object in the product, now costing what the ramp says it should rather than
+0.99. The next design change is more likely to trip one of those two than
+anything else here. Dark reports the same border share and a slightly gentler
+jump (0.59), because the ramp is read from the other end rather than recoloured.
+
+**What this table does not say is that it looks good.** Six composition
+properties are inside six thresholds. There is no measurement here for rhythm,
+for alignment, or for the squint test she runs before she opens the CSS — and
+no outside eye has seen the current pages. The verdict that started this file
+was given on the version these numbers replaced.
+
+---
+
 ## The panel she is made of
 
 Five composites. Each is built from a real school of practice, each catches
@@ -146,7 +184,10 @@ contradicts her.
 
 ## Her first five decisions for this product
 
-Ordered by what they buy, not by how satisfying they are.
+Ordered by what they buy, not by how satisfying they are. **All five shipped**
+— the numbers in "Where it actually stands" are what they bought. They are kept
+here as written, because the order she chose is the reusable part, not the
+particular five fixes.
 
 1. **Delete the boxes.** 180 bordered elements → under 70. `.qa` loses its
    border entirely and separates on rhythm instead: one surface step for the
@@ -174,9 +215,13 @@ Ordered by what they buy, not by how satisfying they are.
 
 She is not a substitute for the designer who gave the original verdict. She is a
 way to hold that verdict steady between conversations and to check whether a
-change actually moved anything. The audit reports and does not fail the build —
-every threshold is currently violated, and turning it red today would only teach
-everyone to ignore it. It flips to enforcing when the redesign lands.
+change actually moved anything.
+
+**The audit fails the build.** It reported without failing for exactly one
+commit, while every threshold was still violated and turning it red would only
+have taught everyone to ignore it. The redesign landed, the four faults closed,
+and it flipped to enforcing — which was always the plan and is now the state.
+It runs on every push, on three pages, in both themes.
 
 Her thresholds are opinions. They are written down so they can be argued with
 explicitly, once, instead of relitigated in every pull request.

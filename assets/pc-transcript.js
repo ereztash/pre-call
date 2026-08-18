@@ -271,6 +271,30 @@
 
   const ANCHOR_RE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שק|\bNIS\b|\bILS\b)\s*ל(?:פגישה|מפגש|שיחה|שעה|חודש|שבוע|יום)/i;
 
+  /* Every way a rate can be said, which is deliberately more than ANCHOR_RE
+     recognises. They answer different questions and the costs are not
+     symmetric:
+
+       ANCHOR_RE asks "may this number set a price". A reference price the
+       client named has to be in a tight, unmistakable form, because being
+       wrong means pricing the work off a misread sentence. Narrow is right.
+
+       RATE_RE asks "must this cue keep its hands off this line". Being wrong
+       in the strict direction costs one weak cue not filling one field, which
+       the operator fills by hand. Being wrong in the loose direction puts an
+       hourly rate in the box labelled "what one mistake costs" and prices the
+       proposal from it. Liberal is right.
+
+     The first version used ANCHOR_RE for both, on the reasoning that two ways
+     to say "this is a rate" would drift apart. That was the wrong worry — they
+     are two different questions — and the review that caught it named the two
+     forms it let through: "90 ILS per hour", and "90 שקל לשעת עבודה", where
+     the construct form שעת is not the שעה ANCHOR_RE lists. Both reproduced,
+     both returned 90 as the cost of an incident, and both suppressed the real
+     figure later in the call. The drift worry is answered by a test instead:
+     RATE_RE must match everything ANCHOR_RE matches. */
+  const RATE_RE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שח|שק|\bNIS\b|\bILS\b|\bshekels?\b)\s*(?:ל(?:שע(?:ה|ת)|פגיש(?:ה|ת)|מפגש|שיחה|חודש|שבוע|יום)|(?:\/|\bper\b|\ban?\b)\s*(?:hours?|hrs?|days?|weeks?|months?|sessions?|meetings?|calls?)\b)/i;
+
   const CUES = [
     { key: 'anchor', re: ANCHOR_RE, label: tr('מחיר ייחוס שהלקוח נקב'),
       /* Higher than errCost by a distance, and for the reason errCost is low:
@@ -282,7 +306,16 @@
       /* Weakest cue here by a distance. Every figure in a discovery call that
          carries a currency word matches it — the hourly rate this same
          transcript states, most of all. */
-      confidence: 0.55 },
+      confidence: 0.55,
+      /* So it does not read one. A figure stated per unit of time is a rate,
+         and a rate is not what one incident costs — at any rung, which is why
+         this lives on the cue and not in the licence. It had to: the licence
+         switches `anchor` off on a value-rung call, so the sentence that names
+         an hourly rate has no cue left that would claim it correctly, and the
+         weakest cue in the file picks it up unopposed. Measured on a labelled
+         call stating both an hourly rate and a per-incident cost, errCost came
+         back as the rate and the incident sentence went unread. */
+      veto: RATE_RE },
     /* A rate, not a count, and the noun in the middle is optional because in a
        real call it is in the question rather than in the answer:
 
@@ -377,8 +410,14 @@
            ביום" is what speech-to-text returns and no cue could see it. The
            quote stays the original sentence, so `verified` still means what it
            says: this text is in the transcript, word for word. */
-        const m = numeric(line).match(cue.re);
-        if (!m || seen.has(cue.key)) continue;
+        if (seen.has(cue.key)) break;
+        const said = numeric(line);
+        /* A line the cue is not allowed to read even when it matches. Skips the
+           line and keeps looking, so the same cue can still be filled from a
+           sentence that does mean what it says. */
+        if (cue.veto && cue.veto.test(said)) continue;
+        const m = said.match(cue.re);
+        if (!m) continue;
         const n = parseFloat(m[1].replace(/,/g, ''));
         if (!isFinite(n) || n <= 0) continue;
         seen.add(cue.key);
@@ -418,9 +457,24 @@
      Same rule as everywhere else in this file: it proposes. A system name
      found in a sentence is a candidate with the sentence attached, not a fact,
      and the two signals are reasons to ask rather than answers. */
+  /* Sales, ERP and automation tools — and, until the corpus was read, nothing
+     that records time. The sharpest hole in the list: the value method is
+     built on `minutes`, and a time tracker is the one system holding that
+     answer already measured. The single relevant one in twelve real calls was
+     Toggl, said in Hebrew as תוגל.
+
+     Transliterations sit beside the Latin spellings because speech-to-text
+     writes what it hears — but only where the Hebrew is long enough to survive
+     it. "ויקס" was here for one measurement: three matches across the twelve
+     calls, two of them inside garbled speech mentioning no website builder,
+     and it moved a whole call onto the market rung. */
   const PLATFORMS = ['Priority', 'SAP', 'Salesforce', 'HubSpot', 'Pipedrive', 'Zapier',
                      'Make', 'n8n', 'Airtable', 'Notion', 'Slack', 'Jira', 'Stripe',
-                     'Shopify', 'WooCommerce', 'Monday', 'Zoho', 'Dynamics', 'Odoo'];
+                     'Shopify', 'WooCommerce', 'Monday', 'Zoho', 'Dynamics', 'Odoo',
+                     'Toggl', 'תוגל', 'Clockify', 'Harvest', 'Hubstaff', 'Timely',
+                     'שעון נוכחות',
+                     'Fireberry', 'פיירברי', 'Wix', 'Cardcom', 'קארדקום',
+                     'Tranzila', 'טרנזילה', 'חשבשבת', 'ריווחית'];
 
   /* Naming a system is not the same as having one in a process, and the market
      rung was reading it that way. Measured on twelve real discovery calls: a
@@ -569,8 +623,8 @@
      be the one deciding whether a rung rests on the operator's own words. */
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
                          candidates, provenance, heuristics, observe, toState,
-                         withSpeakers, ANCHOR_RE, FREQ_RE: () => FREQ_RE,
-                         FLOW_RE, systemInFlow };
+                         withSpeakers, ANCHOR_RE, RATE_RE, FREQ_RE: () => FREQ_RE,
+                         FLOW_RE, systemInFlow, PLATFORMS };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
 })(typeof window !== 'undefined' ? window : globalThis);

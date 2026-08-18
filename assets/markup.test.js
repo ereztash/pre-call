@@ -727,17 +727,95 @@ test('privacy.html has balanced div tags', () => {
    this catches. */
 test('the README counts the test packages it actually has', () => {
   const readme = read('README.md');
-  const inNode = SCRIPTS.length && fs.readdirSync(path.join(root, 'assets'))
-    .filter(f => f.endsWith('.test.js') && !/^(journey|a11y|perf)\./.test(f)).length;
-  const browser = fs.readdirSync(path.join(root, 'assets'))
-    .filter(f => /^(journey|a11y|perf)\.test\.js$/.test(f)).length;
-  const words = { 'שתי': 2, 'שלוש': 3, 'ארבע': 4 };
+  /* Which side a suite counts on is not a property of its name. This was a
+     hardcoded list of three filenames, and the first browser suite added under
+     a fourth name was counted as running in Node — precisely the claim the
+     sentence exists to make, and precisely the one it would have got wrong.
+
+     The split the README describes is the split the workflow already has: one
+     job that installs nothing and one that installs browsers. Reading it from
+     there means the two cannot disagree, because there is only one of them. */
+  const workflow = read('.github/workflows/test.yml');
+  const cut = workflow.indexOf('\n  journey:');
+  assert.ok(cut > 0, 'the workflow no longer has a job named journey — re-pin this');
+  /* Unique, because a11y.test.js runs three times up there — dark theme and
+     English are the same package under different environments, not three. */
+  const ran = half => new Set((half.match(/run: node \S+\.test\.js/g) || [])
+    .map(s => s.replace('run: node ', '')));
+  const inNode = SCRIPTS.length && ran(workflow.slice(0, cut)).size;
+  const browser = ran(workflow.slice(cut)).size;
+  const words = { 'שתי': 2, 'שלוש': 3, 'ארבע': 4, 'חמש': 5 };
   assert.ok(new RegExp('ב-' + inNode + ' חבילות').test(readme),
     'the README does not say ' + inNode + ' Node packages');
   const said = Object.entries(words).find(([w]) => new RegExp(w + ' חבילות שכן דורשות דפדפן').test(readme));
   assert.ok(said, 'the sentence counting the browser suites changed shape — re-pin it');
   assert.strictEqual(said[1], browser,
     'the README promises ' + said[0] + ' browser suites and there are ' + browser);
+});
+
+/* The README carries a map of the source tree, and a map is only worth
+   anything if nothing is missing from it. Two of the most consequential
+   modules on this branch — the evidence ladder and the spoken-number reader —
+   were absent from it for as long as they had existed, along with PRE-CALL's
+   own shell. Nothing noticed, because a map has no failing state: it just
+   quietly describes a smaller product than the one in the directory.
+
+   Found by being asked whether the README was updated, which is not a
+   mechanism. This is. */
+test('the README maps every module the product ships', () => {
+  const readme = read('README.md');
+  /* The English dictionaries are one layer, not seven files, and the README
+     explains the layer where it explains pc-i18n.js. Listing them
+     individually would be seven lines that say the same thing. */
+  const EXEMPT = f => /^en-.*\.js$/.test(f);
+  const missing = fs.readdirSync(path.join(root, 'assets'))
+    .filter(f => f.endsWith('.js') && !f.endsWith('.test.js'))
+    .filter(f => !EXEMPT(f))
+    .filter(f => !readme.includes('assets/' + f));
+  assert.deepStrictEqual(missing, [],
+    'these modules ship and the README\'s map does not mention them: ' + missing.join(', '));
+});
+
+/* docs/design-persona.md is where the product's taste is written down, and it
+   had gone stale in the worst possible direction: it still said every threshold
+   was violated and that the audit "reports and does not fail the build", months
+   after the redesign closed all four faults and the audit started failing it.
+   A design document that describes a product two versions old is worse than no
+   document, because it is read as current.
+
+   The thresholds are the checkable part. Each one is an opinion with a
+   practitioner behind it, and the doc argues them — so if a number moves in
+   tools/design-audit.js and the doc keeps quoting the old one, the argument is
+   about something that is no longer enforced. */
+test('the design document quotes the thresholds the audit actually enforces', () => {
+  const doc = read('docs/design-persona.md');
+  const src = read('tools/design-audit.js');
+  const rules = src.slice(src.indexOf('const RULES = {'), src.indexOf('\n};', src.indexOf('const RULES = {')));
+
+  /* name -> how that number is written for a reader. A rule with no entry here
+     fails below rather than being skipped, so adding a metric to the audit
+     forces a decision about how the document says it. */
+  const SHOWN = {
+    borderShare:     v => '≤' + (v * 100) + '%',
+    accentHues:      v => '≤' + v,
+    bodySizeCluster: v => v + '×',
+    backgrounds:     v => '≤' + v,
+    fillChroma:      v => '≤' + v,
+    valueJump:       v => '≤' + v
+  };
+
+  const found = [...rules.matchAll(/(\w+):\s*\{[\s\S]*?(?:max|minRatio):\s*([\d.]+)/g)]
+    .map(m => [m[1], parseFloat(m[2])]);
+  assert.ok(found.length >= 6, 'the RULES block stopped parsing — ' + found.length + ' rules read');
+
+  const wrong = found.filter(([name, value]) => {
+    if (!SHOWN[name]) return true;                 // a new metric nobody documented
+    const line = doc.split('\n').find(l => l.includes('`' + name + '`'));
+    return !line || !line.includes(SHOWN[name](value));
+  });
+  assert.deepStrictEqual(wrong.map(([n, v]) => n + '=' + v), [],
+    'the audit enforces these and docs/design-persona.md does not quote them by ' +
+    'that name and number');
 });
 
 /* The one page whose entire job is to be factually complete. It names the

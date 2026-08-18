@@ -159,5 +159,29 @@ test('a chosen method that has no data still yields a price, never NaN', () => {
   assert.ok(m.price > 0, 'a method with no data priced the work at ' + m.price);
 });
 
+test('a market tier above the published Israeli ceiling says so', () => {
+  /* The table's own comment has said "not measurements of it" since it was
+     written, and for months there was no Israeli number to hold it against.
+     There is one now: published consulting projects here top out at 15,000 for
+     a large business, which puts the two upper tiers entirely outside it — the
+     floor of the top one is 1.67x that ceiling.
+
+     They are marked rather than deleted, because they may be right for an
+     automation project sold to a company, which is the vertical they came
+     from. What must not happen is a tier drifting above the ceiling without
+     the mark, which is the state the whole table was in. */
+  const C = M.IL_PROJECT_CEILING;
+  assert.ok(C > 0, 'the ceiling this is measured against went missing');
+  M.MARKET_TIERS.forEach(t => {
+    if (t.lo > C) assert.strictEqual(t.unpriced, true,
+      'tier "' + t.name + '" starts at ' + t.lo + ', above the published Israeli ceiling of ' +
+      C + ', and does not say it is unchecked');
+  });
+  const marked = M.MARKET_TIERS.filter(t => t.unpriced).length;
+  assert.strictEqual(marked, 2,
+    'the number of tiers priced outside the only market data this product has changed — ' +
+    'that is a finding either way, not a test to relax');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

@@ -327,13 +327,42 @@ test('the anchor reaches the field the engine actually prices from', () => {
   assert.strictEqual(v.method, 'comparable');
 });
 
-test('without the ladder the same call still misreads it, which is the bug', () => {
-  /* Pinned deliberately. If this ever comes back empty the licence has stopped
-     being what protects the call and something else is, and this file should
-     be the thing that notices. */
+/* This slot held the opposite assertion for months: that stripping the licence
+   brought the misread straight back, errCost = 300, and that the ladder was
+   therefore the only thing standing between the fee in the room and the
+   incident field. It was pinned with a note saying that if it ever came back
+   empty, something else had become the protection and this file should be the
+   thing that notices.
+
+   It noticed. The incident cue now refuses any line shaped like a rate —
+   number, currency, per unit of time — which is this sentence exactly, so the
+   fee is safe on this call whether or not a rung ever ran. The two guards are
+   independent and neither replaces the other, so both are pinned here. */
+test('the fee in the room survives with no licence at all — the cue itself refuses it', () => {
   const unlicensed = T.heuristics(CONSULTING);
-  assert.ok(unlicensed.some(r => r.key === 'errCost' && r.value === 300),
-    'the unguarded reading changed — the ladder may no longer be what prevents this');
+  assert.ok(!unlicensed.some(r => r.key === 'errCost'),
+    'a rate came back as the cost of an incident with the licence off');
+  assert.deepStrictEqual(unlicensed.map(r => r.key), ['anchor'],
+    'read as something other than the reference price it is');
+});
+
+/* A stray figure that is not a rate, on a call with no process in it: money
+   paid once to somebody who did not deliver. The cue's veto cannot see
+   anything wrong with it — nothing about the sentence says "per" — so if the
+   licence stops earning its keep, this is where it shows. */
+const SOFT_STRAY =
+  'ספר לי איך העסק נראה היום.\n' +
+  'אני צלם. פרויקט פה ופרויקט שם, בלי שום דבר קבוע.\n' +
+  'ומה ניסית עד היום?\n' +
+  'שילמתי למישהו 4000 שקל בשנה שעברה והוא נעלם.';
+
+test('the licence is still the guard on a stray figure that is not a rate', () => {
+  const v = L.assess({ text: SOFT_STRAY });
+  assert.deepStrictEqual(v.licence, [], 'a call with no process licensed a quantitative cue');
+  assert.deepStrictEqual(T.heuristics(SOFT_STRAY, v.licence).map(r => r.key), [],
+    'the bottom rung read a number it did not license');
+  assert.ok(T.heuristics(SOFT_STRAY).some(r => r.key === 'errCost' && r.value === 4000),
+    'the unguarded reading changed — the licence may no longer be what prevents this');
 });
 
 test('the value rung licenses exactly the three cues its formula needs', () => {

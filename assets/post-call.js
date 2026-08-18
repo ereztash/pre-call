@@ -422,15 +422,18 @@ function applyExtraction(){
   scrollToEl('proposal', 'start');
 }
 
-/* A transcript says "מורנינג"; the chip says "חשבונית ירוקה / מורנינג". Match
-   on any word in common rather than on equality, or every system the call
-   actually named would be silently dropped. */
+/* A transcript says "מורנינג"; the chip says "חשבונית ירוקה / מורנינג". Which
+   chip a named product belongs to is catalog knowledge and lives there — this
+   is the loop that asks, per name, so one product that has no chip cannot take
+   the rest of the list down with it. chipFor() returns null for the automation
+   platforms, which are the tool and not the client's system. */
 function matchSystems(names){
-  const norm = s => String(s).toLowerCase().replace(/[^\wא-ת ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-  return SYSTEMS.filter(sys => {
-    const a = norm(sys);
-    return names.some(n => norm(n).some(w => a.includes(w)));
+  const out = [];
+  (names || []).forEach(n => {
+    const chip = PC.catalog.chipFor(n);
+    if (chip && out.indexOf(chip) === -1) out.push(chip);
   });
+  return out;
 }
 
 /* ---------- presets and example fills ---------- */
@@ -1623,7 +1626,12 @@ const ACTIONS = {
   copy:    () => requireKey(copyProposal),
   print:   () => requireKey(() => window.print()),
   save:    saveCurrentDeal,
-  sent:    markSent,
+  /* `sent` used to sit here and nothing in the product could reach it: no
+     markup anywhere carries data-act="sent". Marking a deal sent is a side
+     effect of picking a send route, never a button of its own — sendVia()
+     calls markSent() because asking the operator to remember a second click
+     is how a follow-up list goes stale. Found by writing the first test that
+     drives the ledger through its buttons instead of seeding localStorage. */
   unlock:  tryUnlock,
   askkey:  askForKeyAhead,
   laterkey: dismissKeyAhead,
