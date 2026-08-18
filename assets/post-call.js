@@ -377,7 +377,11 @@ const renderReview = guard('transcript', function (){
       const off = trRejected.has(c.key);
       return '<div class="tr-row' + (off ? ' off' : '') + '">' +
         '<div class="tr-v"><b>' + esc(c.label) + ':</b> ' +
-          esc(c.kind === 'list' ? c.value.join(', ') : String(c.value)) +
+          /* c.display is the word that was actually said, where the value the
+             form needs is not it: the unit row carries 365 and means "יום".
+             Showing the multiplier asks the operator to confirm a number
+             nobody uttered, which is not a review. */
+          esc(c.kind === 'list' ? c.value.join(', ') : (c.display || String(c.value))) +
           (c.guessed ? '<span class="tr-tag t-guess">' + tr('ניחוש מקומי') + '</span>' : '') +
           (!c.verified ? '<span class="tr-tag t-unver">' + tr('הציטוט לא נמצא בתמלול — קרא בעצמך') + '</span>' : '') +
         '</div>' +

@@ -176,7 +176,19 @@ function rehydrateKey(){
     keyValidRemote(saved).then(v => {
       if (v === false) {
         unlocked = false;
-        try { localStorage.removeItem(KEY_STORE); localStorage.removeItem(KEY_OK_AT); } catch(e){}
+        /* Lock, but do not erase. The key is the buyer's receipt — it is the
+           only evidence they hold of what they paid for, and nothing in this
+           repository records issued keys by design (mint-key.js says to keep
+           that ledger somewhere private).
+
+           This matters most on the day enforcement is switched on. Until
+           POSTCALL_KEYS is set the server answers not_configured, the checksum
+           decides, and keys sold in that window are not in any list. The first
+           recheck after the variable appears refuses every one of them — and
+           the old behaviour also wiped them from the browser, so a buyer had
+           nothing left to quote when they wrote to ask why. The confirmation
+           stamp goes, because that claim is now false; the key stays. */
+        try { localStorage.removeItem(KEY_OK_AT); } catch(e){}
       } else if (v === true) {
         unlocked = true;
         try { localStorage.setItem(KEY_OK_AT, new Date().toISOString()); } catch(e){}

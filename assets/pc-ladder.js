@@ -11,7 +11,13 @@
      licence is the whole mechanism: below rung 1 the quantitative cues are not
      merely unused, they are not looked for. */
   const LICENCE = {
-    value:      ['freq', 'minutes', 'errCost'],
+    /* freqUnit rides on freq — it comes out of the same regex match and cannot
+       be emitted without it — but it is named here anyway rather than exempted
+       downstream. The invariant this table exists to hold is "everything read
+       was licensed", and a rider that is quietly outside the list is the first
+       crack in it. It sits with value because that is the only method whose
+       formula multiplies by it. */
+    value:      ['freq', 'freqUnit', 'minutes', 'errCost'],
     comparable: [],
     /* The one rung below value that licenses a cue, and it licenses exactly
        one: the rate the client named. Without it the rung names `comparable`

@@ -387,5 +387,47 @@ test('a transliteration that collides with ordinary Hebrew is a candidate, never
     'a proposed system arrived without a source');
 });
 
+/* The period the sentence named, not the one the form defaulted to.
+
+   FREQ_RE has always required a period word — that is what makes a backlog
+   ("שתי הזמנות שנפלו בין הכיסאות") a non-match. It then discarded it in a
+   non-capturing group, so q_freq_unit kept the form's שבוע and every "ביום"
+   call priced at 1/7 of what the client described. 365/52 = 7.02, measured
+   end to end at ₪4,710 against ₪33,090.
+
+   The reason it survived is the part worth pinning: there was no review row
+   for the unit, so the operator confirmed "כמה פעמים: 40" while a decision
+   they never saw had already been made for them. Both halves are asserted
+   here — the value, and that it arrives as something a person can refuse. */
+test('the frequency carries the period that was actually said', () => {
+  const said = { 'ביום': '365', 'בשבוע': '52', 'בחודש': '12' };
+  const seen = {};
+  for (const word of Object.keys(said)) {
+    /* Digits, because this file does not load pc-numerals — the spoken-number
+       reader has its own suite. What is under test here is the period, and it
+       is a literal either way. */
+    const line = 'לקוח: נכנסות בערך 40 הזמנות ' + word + ' וכל אחת לוקחת 7 דקות.';
+    const rows = T.heuristics(line, ['freq', 'freqUnit', 'minutes', 'errCost']);
+    const unit = rows.find(r => r.key === 'freqUnit');
+
+    assert.ok(unit, 'no unit row for "' + word + '" — the period was read and thrown away');
+    assert.strictEqual(unit.value, said[word],
+      '"' + word + '" reached the form as ' + unit.value + ' rather than ' + said[word]);
+    assert.strictEqual(T.toState(rows).fields.q_freq_unit, said[word],
+      '"' + word + '" did not reach q_freq_unit');
+
+    /* Reviewable means: the sentence is under it, and what is shown is the
+       word somebody said rather than the multiplier the engine wants. */
+    assert.ok(unit.quote && unit.quote.indexOf(word) !== -1,
+      'the unit row arrived without the sentence it came from');
+    assert.strictEqual(unit.display, word.replace(/^ב/, ''),
+      'the unit row would render as ' + unit.value + ', which is not a thing anybody said');
+
+    seen[word] = unit.value;
+  }
+  assert.strictEqual(new Set(Object.values(seen)).size, 3,
+    'two different periods produced the same annual figure — this is the 7x bug');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);
