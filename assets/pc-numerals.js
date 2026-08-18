@@ -43,7 +43,10 @@
     'שישים': 60, 'ששים': 60, 'שבעים': 70, 'שמונים': 80, 'תשעים': 90
   };
   /* Whole numbers that are one word rather than a count plus a multiplier. */
-  const WHOLE = { 'מאה': 100, 'מאתיים': 200, 'מאתים': 200, 'אלף': 1000, 'אלפיים': 2000, 'אלפים': 1000 };
+  /* `אלפים` is deliberately not here. It is a multiplier and lives in MULT,
+     where a count is required in front of it — as a whole number it would
+     read "אלפים של הזמנות" as one thousand orders. */
+  const WHOLE = { 'מאה': 100, 'מאתיים': 200, 'מאתים': 200, 'אלף': 1000, 'אלפיים': 2000 };
   /* Words that multiply whatever count came just before them. */
   const MULT = { 'מאות': 100, 'אלפים': 1000, 'אלפי': 1000 };
   /* The construct forms Hebrew uses before אלפים — "חמשת אלפים", not
@@ -66,16 +69,28 @@
   };
   const EN_MULT = { hundred: 100, thousand: 1000 };
 
-  /* A word may arrive with the conjunction fused to its front — "ועשרים",
-     "ושמונה" — which is how Hebrew joins the parts of a number out loud. */
-  const bare = w => (w.length > 3 && w[0] === 'ו') ? w.slice(1) : w;
+  const isNum = b => ONES[b] !== undefined || TENS[b] !== undefined ||
+                     WHOLE[b] !== undefined || MULT[b] !== undefined ||
+                     CONSTRUCT[b] !== undefined;
 
-  const known = w => {
-    const b = bare(w);
-    return ONES[b] !== undefined || TENS[b] !== undefined || WHOLE[b] !== undefined ||
-           MULT[b] !== undefined || CONSTRUCT[b] !== undefined ||
-           EN[w.toLowerCase()] !== undefined || EN_MULT[w.toLowerCase()] !== undefined;
+  /* A word may arrive with a one-letter particle fused to its front: "ועשרים"
+     joins the parts of a number, and "כחמישים הזמנות ביום" is how a quantity
+     is usually given out loud. Only ו came off before, so every approximation
+     read as nothing.
+
+     Narrow on purpose in the other direction — the particle comes off only
+     when the whole word is not itself a number and the remainder exactly is,
+     which keeps מאה and מאות from being read as אה and אות. ש and ה are left
+     out: שש and ששים start with ש, and ה fronts the ordinals. */
+  const PARTICLE = /^[ובכלמ]/;
+  const bare = w => {
+    if (isNum(w)) return w;
+    if (w.length > 3 && PARTICLE.test(w) && isNum(w.slice(1))) return w.slice(1);
+    return w;
   };
+
+  const known = w => isNum(bare(w)) ||
+           EN[w.toLowerCase()] !== undefined || EN_MULT[w.toLowerCase()] !== undefined;
 
   /* Accumulate a run of number-words into one value. `run` is the whole
      multiplier phrase, `part` the piece waiting for a multiplier that may or
@@ -99,8 +114,14 @@
       }
       const mult = MULT[w] !== undefined ? MULT[w] : EN_MULT[lower];
       if (mult !== undefined) {
-        if (mult === 1000) { total += (part || 1) * 1000; part = 0; }
-        else part = (part || 1) * mult;
+        /* A multiplier with nothing counting it is not a quantity. "מאות
+           שקלים לשעה" is a client declining to name a figure, and `part || 1`
+           read it as 100 — inventing a number, then handing it the sentence
+           as a quote that appeared to source it. numerals.test.js holds the
+           case and the counted forms that still have to work. */
+        if (!part) return null;
+        if (mult === 1000) { total += part * 1000; part = 0; }
+        else part = part * mult;
         seen = true; continue;
       }
       if (WHOLE[w] !== undefined) {

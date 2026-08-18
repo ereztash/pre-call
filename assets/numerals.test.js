@@ -113,6 +113,56 @@ test('a frequency is a rate, and a count with no period is a backlog', () => {
   assert.strictEqual(freq('שלוש, ארבע פעמים'), undefined, 'incidents were read as the process rate');
 });
 
+test('a multiplier with nothing counting it is not a number', () => {
+  /* The sharpest failure this file has held. "מאות שקלים לשעה" is a client
+     declining to name a figure, and it was read as 100 — which then filled
+     both the anchor and the incident field, each carrying that sentence as a
+     quote that appeared to source it. An invented number with evidence
+     attached is the exact thing this product exists to prevent, and 100 is
+     not even a rounding of "hundreds".
+
+     Found by testing digitize() against Hebrew number forms drawn up
+     independently of its own tables, rather than against its own vocabulary. */
+  ['מאות שקלים לשעה', 'אלפי לקוחות', 'אלפים של הזמנות', 'עשרות אלפים של שקלים', 'מאות אנשים']
+    .forEach(s => assert.ok(!/\d/.test(N.digitize(s)),
+      'a figure nobody named was invented: ' + s + ' → ' + N.digitize(s)));
+  assert.deepStrictEqual(T.heuristics('לקוח: מאות שקלים לשעה.'), [],
+    'the vague answer still reaches a field');
+
+  /* And the counted forms still have to work, or this is a deletion. */
+  [['שלושת אלפים שקל', 3000], ['חמש אלפים', 5000], ['אלף שקל', 1000],
+   ['אלפיים', 2000], ['אלף וחמש מאות', 1500], ['מאה ועשרים לקוחות', 120]
+  ].forEach(([s, want]) => assert.strictEqual(
+    Number((N.digitize(s).match(/\d+/) || [])[0]), want, s + ' stopped being read'));
+});
+
+test('the particle Hebrew fuses to the front of an approximate quantity', () => {
+  /* Only ו came off before, so every "about fifty a day" read as nothing —
+     and an approximation is how a quantity is usually given out loud. All
+     three of these returned no cue at all before this. */
+  assert.strictEqual(T.heuristics('לקוח: מגיעות כחמישים הזמנות ביום.')[0].value, 50);
+  assert.strictEqual(T.heuristics('לקוח: זה לוקח בערך כשמונה דקות להזמנה.')[0].value, 8);
+  assert.strictEqual(T.heuristics('לקוח: כמאתיים פניות בחודש.')[0].value, 200);
+
+  /* The particle comes off only when the whole word is not itself a number
+     and the remainder exactly is, which is what keeps מאה and מאות — both
+     beginning with one of these letters — from being read as אה and אות. */
+  assert.strictEqual(N.digitize('מאה ועשרים'), '120');
+  assert.strictEqual(N.digitize('מאות שקלים'), 'מאות שקלים');
+
+  /* Measured on twelve real calls: this rewrites 41 lines and changes not one
+     extracted field, because a cue still needs the unit beside the number.
+     Two of those rewrites are wrong — "בשנים האחרונות" is "in recent years"
+     and becomes "2 האחרונות" — and both are pinned here as harmless rather
+     than claimed to be absent. If a cue ever starts reading one of them, this
+     is where it shows up. */
+  ['לקוח: בשנים האחרונות עשיתי כמה עסקים.',
+   'לקוח: היינו באחד המלונות.',
+   'לקוח: נפגשים בתשע.'
+  ].forEach(t => assert.deepStrictEqual(T.heuristics(t), [],
+    'a mis-stripped particle reached a field: ' + t));
+});
+
 test('a module that is absent degrades to the old reading, not to a crash', () => {
   /* pc-transcript.js resolves this at call time on purpose: an older page, or
      a test requiring that file alone, should get the deaf reading it had

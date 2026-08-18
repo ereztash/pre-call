@@ -261,8 +261,22 @@ const BUDGETS = {
 
      Worth saying and not burying: zero of the twelve is an automation call, so
      the true-positive side is pinned on constructed lines only. It is measured
-     against real speech in one direction and not the other. */
-  'post-call.html':     164 * 1024
+     against real speech in one direction and not the other.
+
+     A twelfth raise, 164 -> 165KB, and the second in one day. It buys two
+     things in pc-numerals.js, both found by testing digitize() against Hebrew
+     number forms drawn up independently of its own tables instead of against
+     its own vocabulary. First, a multiplier with nothing counting it was read
+     as its own value: "מאות שקלים לשעה" — a client declining to name a figure
+     — came back as 100 and filled both the anchor and the incident field, each
+     quoting that sentence as though it sourced them. Second, only ו came off
+     the front of a number, so "כחמישים הזמנות ביום" read as nothing at all,
+     and an approximation is how a quantity is usually given out loud.
+
+     The second raise in a day is itself the finding. This page is 546KB raw,
+     and v8 coverage says 283 of 633 functions never run from any entry route.
+     The budget is not what needs to move — that is. */
+  'post-call.html':     165 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');
