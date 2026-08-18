@@ -121,13 +121,17 @@
         padding:var(--sp-4) var(--sp-5);border-radius:var(--r-sm);font-size:var(--fs-md);color:var(--nt-17);margin-top:var(--sp-5)}
 
   h2{font-size:var(--fs-xl);font-weight:600;margin:0 0 var(--sp-2)}
-  .sec{margin:var(--sp-8) 0 0}
+  /* --sp-9, whose own comment says "the gap between major regions of a long
+     page" — which is what this is, and it was on --sp-8. All 22 panels here
+     carry the same fill, border and radius, so only distance says where one
+     group ends; 32 against 16 read as one mass. */
+  .sec{margin:var(--sp-9) 0 0}
   .sec-h{font-size:var(--fs-xs);letter-spacing:1.2px;text-transform:uppercase;
          color:var(--copper-label);font-weight:700;margin-bottom:var(--sp-2)}
   .lead{color:var(--muted);font-size:var(--fs-md);margin-bottom:var(--sp-5);max-width:var(--measure);}
 
   .box{background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-md);
-       padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-5)}
+       padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-6)}
 
   .qa{padding:var(--sp-7) 0}
 
@@ -791,6 +795,7 @@
     padding:var(--sp-4) var(--sp-5);
     display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-5);
     border-radius:0 0 var(--r-lg) var(--r-lg);margin-top:0;
+    overflow:hidden;   /* so the progress bar's ends follow the rounded corners */
   }
   /* nowrap here too, not only on .guide-top. With the larger type the title
      and the action stopped fitting on one line of a 375px screen, the flex
@@ -804,8 +809,18 @@
   .guide.stuck .guide-ask,
   .guide.stuck .guide-why,
   .guide.stuck .guide-sug,
-  .guide.stuck .guide-bar,
   .guide.stuck .guide-dots{display:none}
+  /* The bar stays. Everything else here is a paragraph or a row of six; this
+     is three pixels, and the only thing on the pinned bar that moves as the
+     work gets done. Collapsed with the rest, an operator scrolled into the
+     form had a line of text and no sense of progress — measured: 40% and on
+     screen at the top, display:none at every scroll position after it.
+     Along the bottom edge, so it costs the bar no height and cannot push the
+     title into the second line the collapse exists to prevent. */
+  .guide.stuck .guide-bar{
+    position:absolute;left:0;right:0;bottom:0;
+    height:3px;margin:0;border-radius:0;
+  }
   /* nowrap + ellipsis, or the three surviving pieces stack into three rows
      and the bar is 125px instead of the 65px this is for. The title is
      what tells you what you are doing; it gets the room, and truncates
