@@ -125,8 +125,18 @@
      want the figure for your own records — it changes what the screen says
      above it. Kept deliberately narrow: a stated absence of budget or reason,
      not a hesitation, not "I need to think", not a soft postponement. Those
-     are ordinary and reading them as refusal would make the warning noise. */
-  const STALL = /אין לי\s+(?:אף\s+)?(?:כסף|תקציב|אינסנטיב|תמריץ|סיבה)|\bno\s+budget\b|can'?t\s+afford/i;
+     are ordinary and reading them as refusal would make the warning noise.
+
+     Measured on real speech rather than on generated calls: three people
+     refuse outright, this finds two, zero false positives over 211k
+     characters. The third trails off before the object — "אין לי א" — and
+     every rule that catches it also warns on ordinary speech. So it is missed
+     on purpose; ladder.test.js pins the four lines involved and
+     docs/stopping-rule.html carries the measurements and the consequence,
+     which is that this node is P≈0.33 and no longer clears the stopping rule.
+     The Hebrew for "can't afford" is free and is here for the same reason the
+     English already was. */
+  const STALL = /אין לי\s+(?:אף\s+)?(?:כסף|תקציב|אינסנטיב|תמריץ|סיבה)|לא יכול(?:ה|ים|ות)?\s+להרשות|מעבר ליכולת שלי|\bno\s+budget\b|can'?t\s+afford/i;
 
   /* Spoken numbers as digits, for matching only — never for a quote. Resolved
      at call time so this module still loads where pc-numerals.js is absent,

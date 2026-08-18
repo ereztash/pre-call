@@ -171,6 +171,29 @@ test('hesitation is not refusal', () => {
   ].forEach(t => assert.ok(!L.assess({ text: t }).stalled, 'read as a refusal: ' + t));
 });
 
+test('the Hebrew for "can\'t afford" counts, the same as the English already did', () => {
+  ['אני לא יכולה להרשות לעצמי את זה עכשיו',
+   'זה מעבר ליכולת שלי כרגע'
+  ].forEach(t => assert.ok(L.assess({ text: t }).stalled, 'a refusal went unread: ' + t));
+});
+
+test('an elided refusal is missed, and that is measured rather than assumed', () => {
+  /* Pinned so the gap has a number attached to it instead of a comment. One of
+     the three refusals in the six real calls trails off before the object is
+     spoken, and every rule that catches it also fires on ordinary speech —
+     the measurements are in pc-ladder.js beside STALL. If this test ever goes
+     red, either somebody found a rule that costs nothing, in which case delete
+     this and say so, or the detector quietly widened and the two lines below
+     are what it now warns on. */
+  assert.ok(!L.assess({ text: 'כאילו כרגע פשוט אין לי א' }).stalled,
+    'the elided refusal is caught now — check what else the new rule catches');
+  ['וכרגע אין לי את הפייפליין של הלקוחות',
+   'אין לי את היכולת הנפשית לקרוא ספרים',
+   'אין לי כוח ללמוד ואין לי כוח לפסיכומטרי'
+  ].forEach(t => assert.ok(!L.assess({ text: t }).stalled,
+    'this is not a refusal and the tool now says it is: ' + t));
+});
+
 console.log('\nwho the ladder is listening to');
 
 test('when the transcript names speakers, your own numbers do not lift the call', () => {
