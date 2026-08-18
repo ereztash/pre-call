@@ -159,17 +159,23 @@ h1{font-size:var(--fs-4xl);font-weight:700;letter-spacing:-.3px;margin-bottom:va
 
 /* ---- the four situations ---- */
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);margin-bottom:var(--sp-8)}
+/* A transparent border rather than none: `border:0` is zero WIDTH, so the two
+   rules below that set only border-COLOR painted nothing at all. */
 .card{
   display:flex;flex-direction:column;gap:var(--sp-3);
-  background:var(--charcoal-2);border:0;border-radius:var(--r-lg);
+  background:var(--charcoal-2);border:1px solid transparent;border-radius:var(--r-lg);
   padding:var(--sp-6) var(--sp-7) var(--sp-6);text-decoration:none;color:var(--ink);
   transition:border-color .15s,transform .15s;
 }
 .card:hover{border-color:var(--copper-dim);transform:translateY(-2px)}
 .card:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
-/* the one most people arrive for — marked by weight, not by shouting */
-.card-hot{border-color:var(--copper-dim);background:var(--cu-90)}
-.card-quiet{background:transparent}
+/* The one most people arrive for — marked by weight, not by shouting, and the
+   weight is the edge rather than the fill. The fill used to be --cu-90, which
+   on a light page measures 1.023 against the background where a plain card
+   measures 1.142: the card meant to stand out was the hardest to see. */
+.card-hot{border-color:var(--copper-dim)}
+/* Quiet is not invisible. `background:transparent` is the page exactly. */
+.card-quiet{background:var(--charcoal-2)}
 
 .card-when{
   font-size:var(--fs-xs);font-weight:700;letter-spacing:.7px;

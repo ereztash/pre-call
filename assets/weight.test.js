@@ -309,8 +309,40 @@ const BUDGETS = {
      Not raised for the prose. The trim that avoided the previous raise is
      still in force — this is the map, the lookup, and the reason each entry is
      where it is, which is the part that stops the next person from moving
-     חשבשבת onto the invoicing chip without knowing it turns off a warning. */
-  'post-call.html':     168 * 1024
+     חשבשבת onto the invoicing chip without knowing it turns off a warning.
+
+     A fifteenth raise, 168 -> 169KB, for 116 bytes. It buys the dark theme
+     having surfaces at all. --charcoal-2 is what every panel, card, box and
+     input in the product sits on, and mirroring it into the dark ramp landed
+     it at ratio 1.012 against the page — the two colours differ in hue and
+     not in value, because both sit at the floor of the ramp. Measured across
+     the three pages: 28 authored surfaces that painted nothing, including
+     every input in both tools and all four cards on the entry page.
+
+     Trimmed four times before raising, and the prose that survived is the
+     part that stops someone restoring the mirrored token as a tidy-up. What
+     is left of the growth is the override itself, .nums becoming a surface,
+     and the transparent card edge that lets three border-color declarations
+     paint for the first time.
+
+     Found by a person looking at a screenshot, which is the part worth
+     recording: the design audit reported "distinct surfaces 1 (max 4)" and
+     called it ok, because every rule in that file is a ceiling. There is a
+     floor now.
+
+     A sixteenth raise, 169 -> 170KB, for 135 bytes after a trim. It buys the
+     offer under the price: when the ladder holds a price below what the form
+     would support, the panel now says which rung it is resting on, what the
+     other reading would come to, and what taking it costs. The measurement
+     that made it necessary is that the same numbers priced 2.9x apart
+     depending only on whether a transcript had been pasted first — the ladder
+     decided once, from the call, and the editable form it governs was never
+     re-read.
+
+     The alternative price itself is free: compute() has always returned all
+     four methods on every keystroke and shown one. What is paid for here is
+     the sentence that makes taking it a decision rather than a discovery. */
+  'post-call.html':     170 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

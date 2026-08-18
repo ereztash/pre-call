@@ -240,7 +240,11 @@
      It has since grown a triangulation table, a recommendation and warnings,
      and a pinned block that tall covered the method selector above it and
      swallowed its clicks. Nothing here needs to follow the scroll. */
-  .nums{background:var(--nt-90);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-6);
+  /* A surface, like .box. Controls are filled with --nt-90 and read because
+     they sit one step above it; this panel was --nt-90 too, so the three
+     inside it were the colour of what they sat on. See invisibleSurface in
+     docs/design-persona.md. */
+  .nums{background:var(--charcoal-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-6);
         margin-top:var(--sp-3)}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--sp-5)}
   .stat{background:var(--charcoal-2);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);
@@ -262,6 +266,15 @@
   .tri-b{font-size:var(--fs-xs);color:var(--muted);flex:1 0 100%}
   .tri-warn{border-inline-start:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
             padding:var(--sp-4) var(--sp-4);border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-3)}
+  /* An offer, not a warning — so not the red of .tri-warn. The tool is not
+     saying something is wrong; it is saying it declined to price on numbers
+     the call did not carry, and showing what the other reading would be.
+     --charcoal-2 rather than --cu-95 because the dark ramp remaps the first
+     and mirrors the second onto the page colour. */
+  .tri-offer{border-inline-start:3px solid var(--copper-dim);background:var(--charcoal-2);
+             color:var(--ink);padding:var(--sp-4);border-radius:var(--r-md);
+             font-size:var(--fs-xs);margin-top:var(--sp-3)}
+  .tri-act{margin-top:var(--sp-3)}
   .flag{border-inline-start:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
         padding:var(--sp-4) var(--sp-5);border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-4)}
   .ok{border-inline-start:3px solid var(--turq);background:var(--charcoal-2);color:var(--tq-21);
@@ -560,7 +573,9 @@
   details.drawer>summary:hover{color:var(--nt-5)}
   details.drawer[open]>summary{border-bottom:1px solid var(--line)}
   details.drawer .box{border:0;background:transparent;margin-bottom:0}
-  details.drawer .nums{border:0;border-radius:0}
+  /* background too, exactly as .box does above: the drawer is already the
+     surface, and a panel repeating it is a layer that paints nothing. */
+  details.drawer .nums{border:0;border-radius:0;background:transparent}
 
   /* Entering deals that already happened. A grid rather than the page's usual
      stacked labels, because these four are one row of one record and reading them

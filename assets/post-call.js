@@ -614,18 +614,61 @@ Object.entries(METHODS).forEach(([key, m]) => {
   c.className = 'chip' + (key === 'value' ? ' on' : '');
   c.textContent = m.name; c.dataset.k = key;
   c.setAttribute('aria-pressed', String(key === 'value'));
-  c.onclick = () => {
-    methodPinned = true;   // an explicit choice is never overwritten by the tool
-    setMethod(key);
-    recompute();
-  };
+  c.onclick = () => pinMethod(key);
   mc.appendChild(c);
 });
+/* One place, because two callers set this now — the chips and the offer under
+   the price — and the thing that must not drift between them is the sentence.
+   autoMethod() is the only other writer of methodWhy and it returns early once
+   a method is pinned, so a caller that forgot this line would change the chip,
+   the hint and the price and leave the explanation describing the method that
+   was there before. The number saying one thing and the line under it saying
+   another is the single failure this panel exists to prevent. */
+function pinMethod(key){
+  methodPinned = true;   // an explicit choice is never overwritten by the tool
+  setMethod(key);
+  const w = el('methodWhy');
+  if (w) w.textContent = tr('בחרתם את השיטה הזאת ידנית, אז הכלי לא יחליף אותה גם אם המספרים ישתנו.');
+  recompute();
+}
+
+/* c_last holds one number and two facts. Usually it is what the operator
+   charged for a job like this one — their own history, which is what the
+   method called "a comparable deal" describes and what its hint promises
+   ("accurate when you really did something similar. Requires history").
+
+   But the transcript panel lands a reference price the CLIENT named in the
+   same field, because the engine prices both the same way: one known number
+   adjusted to the scope here. That part is right. What was wrong is that
+   three of the four surfaces the operator reads kept describing the first
+   meaning while holding the second — the field label said "what you charged",
+   the hint promised reliability from history there was none of, and only the
+   sentence under the price said whose number it actually was.
+
+   So the labels follow the evidence — all of it. The first version asked only
+   whether an anchor row survived confirmation, which is not the same question:
+   heard() narrows to the client's lines only when the transcript carries
+   speaker labels, and none of the twelve real ones do. On an unlabelled call
+   the row comes back speaker 'unknown', and the operator can mark it 'seller'
+   on the row itself. Either way the label would have asserted that the client
+   named the price on evidence that says nobody knows who did — which is the
+   exact claim-beyond-evidence this file spends its length preventing. */
+function anchorFromClient(){
+  return appliedCites.some(c => c.key === 'anchor' && c.speaker === 'client');
+}
+
 function setMethod(key){
   mc.dataset.sel = key;
   [...mc.children].forEach(x => { const sel = x.dataset.k === key;
     x.classList.toggle('on', sel); x.setAttribute('aria-pressed', String(sel)); });
-  el('methodHint').textContent = METHODS[key].hint;
+  const clientAnchor = key === 'comparable' && anchorFromClient();
+  el('methodHint').textContent = clientAnchor
+    ? tr('המחיר נגזר מהמספר שהלקוח עצמו נקב, מותאם להיקף כאן. זו לא עבודה דומה שעשית — זה מה שהוא חושב שזה עולה, וזה מחזיק בשיחה בדיוק כל עוד הוא עומד מאחוריו.')
+    : METHODS[key].hint;
+  const cl = document.querySelector('label[for="c_last"]');
+  if (cl) cl.textContent = clientAnchor
+    ? tr('המחיר שהלקוח נקב (₪)')
+    : tr('כמה גבית על העבודה הדומה האחרונה (₪)');
   show('m_comparable_in', key === 'comparable');
   show('m_cost_in', key === 'cost');
 }
@@ -729,6 +772,53 @@ function provenanceWarning(m){
   return '';
 }
 
+/* What the call refused, and what the form would have allowed.
+
+   The ladder is right to hold: numbers typed after a call that carried none
+   are the operator's own. But it decided once and then went quiet, so the
+   same numbers priced 2.9x lower for having pasted a transcript first, and
+   nothing on screen said why. The call still wins; it now says so and shows
+   the other reading.
+
+   The offer is a trade and not a number, deliberately. A button that only
+   revealed a bigger figure would be pressed every time and the ladder would
+   be decoration — so what it costs sits on the same line as what it pays, and
+   pressing it makes the claim the operator's own. That is what q_provenance
+   has always been for, asked where the question actually arises.
+
+   Nothing is computed for this: compute() already returns all four methods on
+   every keystroke and throws three away. */
+function ladderHold(m){
+  if (methodPinned || !trLadder || !trLadder.method || !mc) return '';
+  const alt = PC.model.pickMethod(guideState());
+  if (!alt || alt.method === mc.dataset.sel) return '';
+  const other = m.M[alt.method];
+  if (!other || !(other.value > 0) || !(m.price > 0)) return '';
+  /* Within a tenth of each other the choice does not change what gets sent,
+     and interrupting a priced screen for that is noise. */
+  const gap = other.value / m.price;
+  if (gap > 0.9 && gap < 1.1) return '';
+  const p = el('q_provenance') ? el('q_provenance').value : '';
+  return '<div class="tri-offer"><b>' +
+    tr('המחיר נשען על מה שהשיחה נשאה: {rung}.', { rung: esc(trLadder.label || '') }) + '</b> ' +
+    tr('על המספרים שבטופס אפשר לבנות {price} לפי {method}, אבל הם לא נאמרו בשיחה שקראתי.',
+       { price: ils(other.value), method: esc(PC.model.METHOD_LABEL[alt.method] || alt.method) }) + ' ' +
+    /* One line per answer, and the instruction to answer only for the one
+       state that has not. Falling through to "mark where the numbers came
+       from" told an operator who had already marked it to go and mark it. */
+    (p === 'mine'
+      ? tr('סימנת שהמספרים שלך ולא שלו, אז פסקת ההחזר לא תיכנס למסמך בכל מקרה.')
+      : p === 'unprompted'
+      ? tr('סימנת שהוא נקב בהם בעצמו — הלחיצה הופכת את זה לטענה שלך, לא של הכלי.')
+      : p === 'prompted'
+      ? tr('סימנת שהוא נקב בהם אחרי ששאלת, אז הכלי יסמן את זה במסמך בכל מקרה.')
+      : p === 'none'
+      ? tr('סימנת שלא היה מספר בשיחה, אז המספרים האלה הם שלך והמסמך יגיד את זה.')
+      : tr('לפני שתלחץ, סמן מאיפה המספרים הגיעו — זה מה שקובע אם אפשר לצטט אותם לו.')) +
+    '<div class="tri-act"><button type="button" class="ghost" data-act="usemine">' +
+    tr('תמחר לפי מה שבטופס') + '</button></div></div>';
+}
+
 const recompute = guard('recompute', function (){
   autoMethod();          // before the model reads it
   const m = model();
@@ -806,6 +896,7 @@ const recompute = guard('recompute', function (){
         tr('המחיר שלך תלוי בו יותר מאשר בכל השאר. בקש ממנו דוגמה אחת קונקרטית לפני שאתה שולח.') +
         '</div>' : '') +
       provenanceWarning(m) +
+      ladderHold(m) +
       (m.M.cost && m.M.market && Math.max(m.M.cost.value, m.M.market.value) /
         Math.min(m.M.cost.value, m.M.market.value) >= 2
         ? '<div class="tri-warn">' +
@@ -1635,6 +1726,7 @@ const ACTIONS = {
   unlock:  tryUnlock,
   askkey:  askForKeyAhead,
   laterkey: dismissKeyAhead,
+  usemine: () => pinMethod(PC.model.pickMethod(guideState()).method),
   newdeal: confirmNewDeal,
   discard: discardDraft,
   confirmscope: confirmScope,

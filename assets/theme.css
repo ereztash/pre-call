@@ -40,12 +40,18 @@
     /* red — mirrored: 13↔95, 27↔84, 34↔78, 41↔64 */
     --rd-13:#f6eeef; --rd-27:#e3cacd; --rd-34:#dbb3b8; --rd-41:#d07682; --rd-64:#9d3442;
     --rd-78:#7d313b; --rd-84:#5e2b32; --rd-95:#271b1d;
-    /* The two places the mirror is not enough. --paper is a literal #fff
+    /* The three places the mirror is not enough. --paper is a literal #fff
        in the light theme, so nothing flips it; and a white sheet on a
        near-black page is the exact fault the design audit exists to
        catch (largest surface value jump ≤0.75). The document gets the
        first surface step above the page instead. */
     --paper:var(--nt-84);
+    /* The third and widest: the surface every panel, card, box and input
+       sits on. Mirrored it lands at ratio 1.012 — no step at all, both
+       colours at the floor of the ramp — and 28 surfaces painted nothing.
+       --cu-90 is 1.144 against the light theme's 1.142: the same distance
+       rather than the same token. invisibleSurface, in the design doc. */
+    --charcoal-2:var(--cu-90);
     /* The middle of the neutral ramp is safe as text on exactly one
        side of the mirror. Light --muted is nt-41 (#5a6777), chosen at
        4.5:1 on paper; its mirror reads 4.15:1 on the dark page — under
@@ -68,7 +74,9 @@
     --tq-64:#2d5c53; --tq-84:#29423d; --tq-95:#131b19;
     --rd-13:#f6eeef; --rd-27:#e3cacd; --rd-34:#dbb3b8; --rd-41:#d07682; --rd-64:#9d3442;
     --rd-78:#7d313b; --rd-84:#5e2b32; --rd-95:#271b1d;
-    --paper:var(--nt-84);
+--paper:var(--nt-84);
+    /* Same three exceptions as the block above; the reasoning is there. */
+    --charcoal-2:var(--cu-90);
     --muted:var(--nt-34);
   }
 }

@@ -830,6 +830,197 @@ async function readLocally(page, text) {
     await p.close();
   });
 
+  console.log('\none field, two facts');
+
+  /* c_last holds either what the operator charged for a job like this one or a
+     reference price the client named. The engine prices both the same way and
+     that is fine; what was not fine is that three of the four surfaces the
+     operator reads described the first while holding the second. */
+  /* Labelled, because that is the only way the tool can know whose figure it
+     is. Written unlabelled first, and the client's own "אני צלם" reads as the
+     seller — which is right: on a transcript with no labels nobody can say who
+     spoke, and speakerOf() treats first person as the operator. */
+  const ANCHOR_CALL = [
+    'אני: ספר לי איך העסק נראה היום.',
+    'לקוח: אני צלם. פרויקט פה ופרויקט שם, בלי שום דבר קבוע.',
+    'אני: ומה זה שווה לך, לדעתך?',
+    'לקוח: אני מסתכל על זה כמו פגישה עם יועץ מס, זה 300 שקל לפגישה.'
+  ].join('\n');
+  const ANCHOR_UNLABELLED = ANCHOR_CALL.replace(/^(לקוח|אני): /gm, '');
+
+  const cLastLabel = p => p.locator('label[for="c_last"]').first().textContent();
+
+  await test('a price the client named is not described as work the operator did', async () => {
+    const p = await fresh();
+    await readLocally(p, ANCHOR_CALL);
+    await p.click('[data-act="trapply"]');
+    await p.waitForTimeout(600);
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(200);
+    assert.strictEqual(await val(p, 'c_last'), '300', 'the figure the client named never reached the field');
+
+    const label = (await cLastLabel(p)).trim();
+    const hint = (await p.textContent('#methodHint')).trim();
+    assert.ok(!/גבית/.test(label),
+      'the field holding the client\'s number is labelled as money the operator charged: ' + label);
+    assert.ok(!/דורש היסטוריה/.test(hint),
+      'the hint promises accuracy from history the operator does not have: ' + hint);
+    assert.ok(/הלקוח/.test(label) && /הלקוח/.test(hint), 'neither label says whose number this is');
+    await p.close();
+  });
+
+  await test('and a comparable job of the operator\'s own still reads as one', async () => {
+    /* The other meaning has to survive the fix. */
+    const p = await fresh();
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(200);
+    await p.locator('#methodChips button', { hasText: 'עסקה דומה' }).first().click();
+    await p.waitForTimeout(400);
+    await p.fill('#c_last', '6000');
+    await p.waitForTimeout(300);
+    const label = (await cLastLabel(p)).trim();
+    assert.ok(/גבית/.test(label),
+      'a number the operator typed about their own past work is described as the client\'s: ' + label);
+    assert.ok(/דורש היסטוריה/.test((await p.textContent('#methodHint')).trim()),
+      'the hint stopped warning that this method needs history');
+    await p.close();
+  });
+
+  await test('an unlabelled call does not get to say the client named the price', async () => {
+    /* The whole reason the check is on the speaker and not on the row. Twelve
+       real transcripts carry no labels, so an anchor lifted out of one is a
+       figure somebody said — and the tool does not know who. Claiming the
+       client said it would be the same claim-beyond-evidence the ladder above
+       spends its length refusing. */
+    const p = await fresh();
+    await readLocally(p, ANCHOR_UNLABELLED);
+    await p.click('[data-act="trapply"]');
+    await p.waitForTimeout(600);
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(200);
+    assert.strictEqual(await val(p, 'c_last'), '300', 'the figure never reached the field at all');
+    assert.ok(/גבית/.test((await cLastLabel(p)).trim()),
+      'an unlabelled transcript was described as the client naming the price');
+    await p.close();
+  });
+
+  await test('and the operator saying who spoke is what changes it', async () => {
+    /* The row asks. Answering it is evidence, and the label follows evidence. */
+    const p = await fresh();
+    await readLocally(p, ANCHOR_UNLABELLED);
+    const btn = p.locator('[data-act="trwho"][data-key="anchor"][data-who="client"]');
+    assert.ok(await btn.count(), 'the row never offered the question');
+    await btn.first().click();
+    await p.waitForTimeout(200);
+    await p.click('[data-act="trapply"]');
+    await p.waitForTimeout(600);
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(200);
+    assert.ok(!/גבית/.test((await cLastLabel(p)).trim()),
+      'the operator said the client named it and the label still says otherwise');
+    await p.close();
+  });
+
+  console.log('\nwhen the call says less than the form does');
+
+  /* The ladder decides what a price may rest on, and it decided once, from the
+     transcript, and then went quiet. An operator who did exactly what the panel
+     told them to do — "there is nothing here to fill in from the call itself" —
+     got a price built on cost while the form in front of them held everything
+     value pricing needs. Same numbers, 2.9x apart, depending only on whether a
+     transcript had been pasted first. */
+
+  const SOFT_CALL = SOFT;
+  const fillByHand = async (p) => {
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(150);
+    await p.fill('#q_process', 'הקלדת הזמנות מהמייל');
+    await p.fill('#q_freq', '30');
+    await p.fill('#q_minutes', '8');
+    await p.fill('#q_err_freq', '4');
+    await p.fill('#q_err_cost', '500');
+    await p.selectOption('#q_provenance', 'unprompted');
+    await p.locator('#sysChips button').first().click();
+    await p.waitForTimeout(600);
+    return (await p.textContent('#s_price')).trim();
+  };
+
+  await test('a call that carried nothing still prices on the call, and says so', async () => {
+    const p = await fresh();
+    await readLocally(p, SOFT_CALL);
+    const priced = await fillByHand(p);
+    const offer = p.locator('.tri-offer');
+    assert.ok(await offer.count(), 'the price was held down and nothing on screen said why');
+    const text = await offer.first().textContent();
+    assert.ok(/נשען על מה שהשיחה נשאה/.test(text), 'the note does not say what the price rests on');
+    assert.ok(/₪/.test(text), 'the note does not show what the other reading would be');
+    assert.ok(await p.locator('.tri-offer [data-act="usemine"]').count(),
+      'the note explains the trade and offers no way to take it');
+    assert.ok(priced.length > 1, 'no price at all');
+    await p.close();
+  });
+
+  await test('the offer is a trade — it names what the choice costs', async () => {
+    /* A button that only revealed a bigger number would be pressed every time
+       and the ladder would be decoration. */
+    const p = await fresh();
+    await readLocally(p, SOFT_CALL);
+    await fillByHand(p);
+    const text = await p.locator('.tri-offer').first().textContent();
+    assert.ok(/לא נאמרו בשיחה/.test(text), 'the note does not say the numbers were absent from the call');
+    assert.ok(/טענה שלך/.test(text),
+      'marked unprompted, the note does not say pressing makes the claim the operator\'s');
+    await p.close();
+  });
+
+  await test('taking the offer changes the price and the sentence under it', async () => {
+    const p = await fresh();
+    await readLocally(p, SOFT_CALL);
+    const held = await fillByHand(p);
+    await p.click('.tri-offer [data-act="usemine"]');
+    await p.waitForTimeout(600);
+    const taken = (await p.textContent('#s_price')).trim();
+    assert.notStrictEqual(taken, held, 'the offer was taken and the price did not move');
+    const why = await p.textContent('#methodWhy');
+    assert.ok(/ידנית/.test(why),
+      'the price moved and the line explaining it still describes the tool\'s own choice: ' + why);
+    assert.strictEqual(await p.locator('.tri-offer').count(), 0,
+      'the offer is still on screen after it was taken');
+    await p.close();
+  });
+
+  await test('the same numbers with no transcript are priced the same as the taken offer', async () => {
+    /* The property the whole thing is for: once the operator has said the
+       numbers are the client's, pasting a transcript earlier must not change
+       what the work is worth. */
+    const a = await fresh();
+    await readLocally(a, SOFT_CALL);
+    await fillByHand(a);
+    await a.click('.tri-offer [data-act="usemine"]');
+    await a.waitForTimeout(600);
+    const afterOffer = (await a.textContent('#s_price')).trim();
+    await a.close();
+
+    const b = await fresh();
+    const neverPasted = await fillByHand(b);
+    await b.close();
+
+    assert.strictEqual(afterOffer, neverPasted,
+      'pasting a transcript first still changes the price after the operator overrode it: ' +
+      afterOffer + ' vs ' + neverPasted);
+  });
+
+  await test('a call that carried the numbers makes no offer at all', async () => {
+    /* Nothing to decide when the ladder and the form agree. */
+    const p = await fresh();
+    await readLocally(p, CALL);
+    await p.click('[data-act="trapply"]');
+    await p.waitForTimeout(600);
+    assert.strictEqual(await p.locator('.tri-offer').count(), 0,
+      'the tool offered an alternative to a reading nobody disputed');
+    await p.close();
+  });
+
   console.log('\nthe one paid door, opened by hand');
 
   /* Three actions put the proposal in front of the client — copy, PDF, send —
