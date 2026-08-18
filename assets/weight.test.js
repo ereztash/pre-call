@@ -341,8 +341,29 @@ const BUDGETS = {
 
      The alternative price itself is free: compute() has always returned all
      four methods on every keystroke and shown one. What is paid for here is
-     the sentence that makes taking it a decision rather than a discovery. */
-  'post-call.html':     170 * 1024
+     the sentence that makes taking it a decision rather than a discovery.
+
+     A seventeenth raise, 170 -> 171KB, for 165 bytes after a trim, and the
+     third on this page today — which is worth naming rather than burying.
+     All three bought a capability, which is the test this file sets, but a
+     page that moved 168 -> 171 in one session is a page whose next raise
+     should be refused until something is split.
+
+     This one: the progress bar survives the pinned collapse, and the gap
+     between major regions goes to --sp-9, the token whose own comment has
+     said "the gap between major regions of a long page" since it was
+     written. Twenty-two panels here carry the same fill, the same border and
+     the same radius, so distance is the only thing saying where one group
+     ends — and at 32 against 16 it read as a single mass. Measured after: 48
+     between sections, 20 within one.
+
+     The bar is the smaller half and the sharper one. Everything else the
+     collapse hides is a paragraph or a row of six dots; the fill is three
+     pixels and the only thing on the pinned bar that moves as the work gets
+     done. It read 40% and was on screen at the top of the page and
+     display:none at every scroll position after — which is every position
+     where the operator is actually working. */
+  'post-call.html':     171 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');
