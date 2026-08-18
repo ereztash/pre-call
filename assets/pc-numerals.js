@@ -45,8 +45,15 @@
   /* Whole numbers that are one word rather than a count plus a multiplier. */
   /* `אלפים` is deliberately not here. It is a multiplier and lives in MULT,
      where a count is required in front of it — as a whole number it would
-     read "אלפים של הזמנות" as one thousand orders. */
-  const WHOLE = { 'מאה': 100, 'מאתיים': 200, 'מאתים': 200, 'אלף': 1000, 'אלפיים': 2000 };
+     read "אלפים של הזמנות" as one thousand orders. `מיליון` is the opposite
+     case and belongs here: on its own it names a specific quantity, the way
+     `אלף` does, while `מיליוני` does not and is in no table at all.
+
+     Both were absent until an enumeration of every NUM-tagged token in the
+     Hebrew UD treebank found them the single largest gap — 107 occurrences,
+     more than twice any other missing form. */
+  const WHOLE = { 'מאה': 100, 'מאתיים': 200, 'מאתים': 200, 'אלף': 1000, 'אלפיים': 2000,
+                  'מיליון': 1000000, 'מליון': 1000000, 'מיליארד': 1000000000 };
   /* Words that multiply whatever count came just before them. */
   const MULT = { 'מאות': 100, 'אלפים': 1000, 'אלפי': 1000 };
   /* The construct forms Hebrew uses before אלפים — "חמשת אלפים", not

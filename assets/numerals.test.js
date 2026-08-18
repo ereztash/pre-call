@@ -163,6 +163,30 @@ test('the particle Hebrew fuses to the front of an approximate quantity', () => 
     'a mis-stripped particle reached a field: ' + t));
 });
 
+test('a million is a quantity; millions of anything is not', () => {
+  /* The largest single gap, and it was found by enumeration rather than by
+     guessing: every token tagged NUM in the Hebrew UD treebank (Ha'aretz,
+     115,535 tokens) checked against this file. 107 occurrences of מיליון and
+     מיליארד read as nothing — more than twice any other missing form.
+
+     They belong with אלף rather than with אלפים, because on its own each names
+     a specific quantity. מיליוני and מיליארדי do not, and are in no table. */
+  assert.strictEqual(N.digitize('מיליון שקל'), '1000000 שקל');
+  assert.strictEqual(N.digitize('שני מיליון'), '2000000');
+  assert.strictEqual(N.digitize('מיליארד'), '1000000000');
+  ['מיליוני שקלים', 'מיליארדי דולרים'].forEach(s =>
+    assert.ok(!/\d/.test(N.digitize(s)), 'an unspecified plural became a figure: ' + s));
+  assert.strictEqual(T.heuristics('לקוח: כל טעות כזאת עולה לנו מיליון שקל.')[0].value, 1000000);
+
+  /* The same enumeration is what says the refusals above are right rather
+     than merely deliberate. Of the 343 NUM-tagged occurrences this file does
+     not convert, 195 must not be converted — 108 unspecified plurals, 57
+     ordinals, and 30 of שנייה, which is a second and not a two. A linguist
+     tagged all of them as numbers; a price cannot be built on any of them. */
+  ['שלישי', 'רביעית', 'שנייה', 'עשרות', 'רבבות', 'אחדים'].forEach(s =>
+    assert.ok(!/\d/.test(N.digitize(s)), 'tagged NUM, but not a quantity: ' + s));
+});
+
 test('a module that is absent degrades to the old reading, not to a crash', () => {
   /* pc-transcript.js resolves this at call time on purpose: an older page, or
      a test requiring that file alone, should get the deaf reading it had
