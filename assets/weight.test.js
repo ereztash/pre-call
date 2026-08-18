@@ -238,8 +238,31 @@ const BUDGETS = {
      it is derived from speaker labels, and neither real transcript anybody has
      run through this tool carries one. It could not be derived and the
      operator was in the room, so it is asked — on the row, beside the
-     sentence. */
-  'post-call.html':     163 * 1024
+     sentence.
+
+     An eleventh raise, 163 -> 164KB, for the market rung learning the
+     difference between a tool being named and a tool being in a process. It
+     used to admit any mention. Measured on twelve real discovery calls, none
+     of them an automation project: a system was detected in ten of them and
+     the rung held on eight — a website the prospect built for herself, the
+     chat app the call was happening on, an email address, a CRM in passing —
+     each priced against MARKET_TIERS, whose ranges are keyed on how many
+     systems connect. All eight produced the identical sentence saying the
+     complexity had been read from the call, and the identical 1,500–4,000₪
+     band. That is the failure this product exists to prevent: not a missing
+     price, a confident one with a derivation that is not there.
+
+     What the KB buys is one expression in pc-transcript.js requiring the
+     mention to share a line with something moving, the rung asking that same
+     question, and the line itself shown to the operator instead of the claim
+     alone. Eight false positives to zero, and six shapes a real automation
+     call uses still admitted — two of which the first draft missed on Hebrew
+     morphology and are now pinned in ladder.test.js.
+
+     Worth saying and not burying: zero of the twelve is an automation call, so
+     the true-positive side is pinned on constructed lines only. It is measured
+     against real speech in one direction and not the other. */
+  'post-call.html':     164 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

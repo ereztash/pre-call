@@ -116,6 +116,12 @@
      in place by the time assess() runs. */
   const RATE = () => root.PC.transcript.ANCHOR_RE;
 
+  /* A named system in a line that also describes data moving. Resolved at call
+     time for the same reason FREQ and RATE are: pc-transcript.js owns the
+     expression, and a second copy here would be the one that drifted. */
+  const FLOW = input =>
+    root.PC.transcript.systemInFlow(heard(input).text, input.systems);
+
   /* The buyer said there is no money, or no reason to start. Both soft calls
      behind this file end that way and the tool priced them anyway, which is
      the most expensive kind of quiet: a confident number for a deal that the
@@ -240,6 +246,7 @@
       label: tr('מחיר ייחוס של הלקוח'),
       vertical: false,
       holds: input => RATE().test(numeric(heard(input).text)),
+      evidence: input => firstMatch(heard(input).text, RATE()),
       because: tr('הלקוח נקב במחיר ייחוס משלו לעבודה דומה בעיניו, והמחיר נגזר ממנו מותאם להיקף כאן.'),
       missing: tr('הלקוח לא נקב במחיר ייחוס — כמה עבודה דומה בעיניו עולה, לפגישה, לשעה או לחודש.')
     },
@@ -251,10 +258,20 @@
       /* Vertical-bound despite looking generic: MARKET_TIERS is keyed on how
          many systems connect and its ranges are automation-project ranges.
          Reading complexity for a different kind of work needs a different
-         metric and different numbers, not a translation of these. */
-      holds: input => (input.systems || []).length > 0,
+         metric and different numbers, not a translation of these.
+
+         Which is exactly why naming a system is not enough to admit the rung.
+         On twelve real calls this used to hold eight times, every one of them
+         on a system nobody was integrating — a personal website, the chat app
+         the call was happening on — and each produced the same confident
+         sentence saying complexity had been read from the call. It had not.
+         The mention now has to sit in a line that also describes data moving,
+         and the line is shown. Same expression as the cue, in pc-transcript.js
+         with the others, for the same reason freq's is. */
+      holds: input => (input.systems || []).length > 0 && !!FLOW(input),
+      evidence: input => FLOW(input),
       because: tr('אפשר לקרוא את המורכבות מהשיחה, והמחיר נגזר מהטווח המקובל לעבודה כזאת.'),
-      missing: tr('לא נקראה מהשיחה מורכבות שאפשר למקם בטווח מקובל.')
+      missing: tr('לא נקראה מהשיחה מורכבות שאפשר למקם בטווח מקובל — הוזכרו כלים, אבל אף אחד מהם לא הוזכר כשמשהו עובר דרכו.')
     },
     {
       id: 'cost',
@@ -292,8 +309,10 @@
           vertical: rung.vertical,
           because: rung.because,
           /* The sentence the rung rests on, when it rests on one it read out of
-             the call rather than out of your ledger. */
-          quote: rung.id === 'anchor' ? firstMatch(h.text, RATE()) : null,
+             the call rather than out of your ledger. Each rung that has one
+             names it, rather than this line naming the rungs — the second rung
+             to need a quote is what made the special case worth removing. */
+          quote: rung.evidence ? rung.evidence(it) : null,
           stalled: stalled,
           labelled: h.labelled,
           /* Everything above it that did not hold, with the reason. This is

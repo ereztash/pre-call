@@ -422,6 +422,48 @@
                      'Make', 'n8n', 'Airtable', 'Notion', 'Slack', 'Jira', 'Stripe',
                      'Shopify', 'WooCommerce', 'Monday', 'Zoho', 'Dynamics', 'Odoo'];
 
+  /* Naming a system is not the same as having one in a process, and the market
+     rung was reading it that way. Measured on twelve real discovery calls: a
+     system is detected in ten of them and eight land on that rung, priced off
+     MARKET_TIERS — ranges keyed on how many systems connect, for automation
+     projects. None of the twelve is an automation project. What was actually
+     detected was a website the prospect built for herself, WhatsApp as the
+     channel the conversation happens on, an email address, and a CRM named in
+     passing.
+
+     So the same fix the freq cue already got: the mention has to sit beside
+     the thing that makes it a scope fact. A system in a line that also
+     describes data moving is a system in a process; a system named on its own
+     is a topic. One definition, here with the other cues, because the rung's
+     admission test and the evidence it shows the operator have to be the same
+     expression.
+
+     Connects, syncs, feeds, pulls, moves to, copies, keyed in by hand, exports
+     and imports — in that order below. Two forms were wrong in the first draft
+     and both are the standard Hebrew traps: `מזינ` cannot match `מזין`, whose
+     final nun is a different letter, and only the present tense was covered,
+     so "שהאתר יתחבר ל-Priority" read as no connection at all. */
+  const FLOW_RE = /[מיתנל]?תחבר|מחובר|חיבור בין|[מיתל]?סתנכרן|לסנכרן|סנכרון|מזי[נן]|להזי[נן]|הזנה ל|שול[פף]|לשלו[פף]|שליפה|עובר ל|מועבר ל|להעביר ל|מעתיק|להעתיק|העתק|מוקלד|להקליד|הקלד|מייצא|ייצוא|מייבא|ייבוא|אינטגרציה|\bAPI\b/i;
+
+  function systemInFlow(text, names) {
+    const list = (names || []).filter(Boolean);
+    if (!list.length) return null;
+    const looks = list.flatMap(n => String(n).split(/\s*\/\s*/).map(p => p.trim()))
+                      .filter(p => p.length >= 2);
+    const lines = String(text || '').split(/\n|(?<=[.?!])\s+/);
+    for (const line of lines) {
+      if (!FLOW_RE.test(line)) continue;
+      for (const look of looks) {
+        /* Same boundary rule observe() uses: a Hebrew preposition binds to the
+           front of a word, so only the tail can be checked. */
+        const re = new RegExp(look.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                              '(?![\\u0590-\\u05FFa-zA-Z])', 'i');
+        if (re.test(line)) return line.trim();
+      }
+    }
+    return null;
+  }
+
   function observe(transcript) {
     const src = String(transcript || '');
     const walked = withSpeakers(src);
@@ -527,7 +569,8 @@
      be the one deciding whether a rung rests on the operator's own words. */
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
                          candidates, provenance, heuristics, observe, toState,
-                         withSpeakers, ANCHOR_RE, FREQ_RE: () => FREQ_RE };
+                         withSpeakers, ANCHOR_RE, FREQ_RE: () => FREQ_RE,
+                         FLOW_RE, systemInFlow };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
 })(typeof window !== 'undefined' ? window : globalThis);

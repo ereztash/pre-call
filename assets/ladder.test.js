@@ -47,6 +47,11 @@ const CONSULTING_NO_PRICE =
   'ומה זה שווה לך, לדעתך?\n' +
   'אני לא יודע לשים על זה מחיר כרגע.';
 
+/* A line that makes a named tool a scope fact rather than a topic: something
+   moves through it. */
+const FLOW = 'לקוח: כל פנייה מהאתר מוקלדת ידנית לוואטסאפ.';
+const SYS = ['אתר / טפסים', 'וואטסאפ'];
+
 const AUTOMATION =
   'לקוח: היום ההזמנות נכנסות בוואטסאפ, בערך 40 הזמנות ביום.\n' +
   'לקוח: מישהו מעתיק כל אחת ל-Priority, זה 8 דקות להזמנה.\n' +
@@ -134,8 +139,50 @@ test('what the client named outranks a published range', () => {
   /* anchor sits above market: the client's own reference is about this buyer,
      and the market table is ranges converted from somebody else's projects in
      a vertical this call may have nothing to do with. */
-  assert.strictEqual(L.assess({ text: CONSULTING, systems: ['CRM'] }).rung, 'anchor');
-  assert.strictEqual(L.assess({ text: CONSULTING_NO_PRICE, systems: ['CRM'] }).rung, 'market');
+  assert.strictEqual(L.assess({ text: CONSULTING + '\n' + FLOW, systems: SYS }).rung, 'anchor');
+  assert.strictEqual(L.assess({ text: CONSULTING_NO_PRICE + '\n' + FLOW, systems: SYS }).rung, 'market');
+});
+
+test('naming a tool is not the same as having one in a process', () => {
+  /* The market rung used to admit any mention. Measured on twelve real
+     discovery calls, none of them an automation project: a system was detected
+     in ten and the rung held on eight — a website the prospect built for
+     herself, the chat app the call was happening on, an email address — each
+     priced against MARKET_TIERS, whose ranges are keyed on how many systems
+     connect. Every one of the eight produced the same confident sentence
+     saying complexity had been read from the call.
+
+     Requiring the mention to sit in a line that also describes data moving
+     takes those eight to zero and costs nothing here, because none of the
+     twelve had a flow to find. */
+  assert.strictEqual(L.assess({ text: CONSULTING_NO_PRICE, systems: SYS }).rung, 'cost',
+    'a tool named in passing still admits the range');
+  assert.strictEqual(L.assess({ text: 'יש לי אתר ואני מדבר עם לקוחות בוואטסאפ.',
+                                systems: ['אתר / טפסים', 'וואטסאפ'] }).rung, 'cost');
+});
+
+test('and the rung still holds when there genuinely is a flow', () => {
+  /* The other half, and the one that would make the tightening a deletion in
+     disguise if it failed: the six shapes an automation call actually uses.
+     Two of these were broken in the first draft — `מזין` carries a final nun,
+     which is a different letter from the one in `מזינ`, and `יתחבר` is the
+     tense somebody uses when the connection does not exist yet. */
+  ['לקוח: כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לאקסל.',
+   'לקוח: אנחנו צריכים שהאתר יתחבר ל-Priority.',
+   'לקוח: ה-CRM לא מסתנכרן עם המערכת של החשבוניות.',
+   'לקוח: מישהו מזין את הטופס מהאתר לתוך מאנדיי.',
+   'לקוח: כל ליד מהאתר עובר לוואטסאפ.',
+   'לקוח: יש API בין Salesforce לבין המערכת שלנו.'
+  ].forEach(t => assert.strictEqual(
+    L.assess({ text: t, systems: ['אתר / טפסים', 'וואטסאפ', 'CRM', 'Priority', 'Salesforce'] }).rung,
+    'market', 'a real integration stopped reaching the range: ' + t));
+});
+
+test('the rung shows the line it rests on, not just the claim', () => {
+  const v = L.assess({ text: CONSULTING_NO_PRICE + '\n' + FLOW, systems: SYS });
+  assert.strictEqual(v.rung, 'market');
+  assert.ok(v.quote && v.quote.indexOf('מוקלדת') !== -1,
+    'the operator is told complexity was read from the call and not shown where');
 });
 
 console.log('\nthe buyer said no');

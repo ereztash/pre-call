@@ -334,7 +334,8 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "הלקוח לא נקב במחיר ייחוס — כמה עבודה דומה בעיניו עולה, לפגישה, לשעה או לחודש.": "The client named no reference price — what work they consider similar costs, per session, per hour or per month.",
   "טווח מקובל": "The going range",
   "אפשר לקרוא את המורכבות מהשיחה, והמחיר נגזר מהטווח המקובל לעבודה כזאת.": "The complexity can be read from the call, and the price is derived from the going range for work like this.",
-  "לא נקראה מהשיחה מורכבות שאפשר למקם בטווח מקובל.": "No complexity was read from the call that could be placed in a going range.",
+  "לא נקראה מהשיחה מורכבות שאפשר למקם בטווח מקובל — הוזכרו כלים, אבל אף אחד מהם לא הוזכר כשמשהו עובר דרכו.":
+    "No complexity was read from the call that could be placed in a going range — tools were named, but none of them came up with anything moving through it.",
   "העבודה הצפויה": "The work you expect",
   "המחיר נגזר מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם, בלי להישען על מספר של הלקוח.": "The price is derived from the work you expect to put in and your rate, without leaning on a number from the client.",
   "מחיר ייחוס שהלקוח נקב": "The reference price the client named",
