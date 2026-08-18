@@ -337,6 +337,7 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "לא נקראה מהשיחה מורכבות שאפשר למקם בטווח מקובל — הוזכרו כלים, אבל אף אחד מהם לא הוזכר כשמשהו עובר דרכו.":
     "No complexity was read from the call that could be placed in a going range — tools were named, but none of them came up with anything moving through it.",
   "העבודה הצפויה": "The work you expect",
+  "בחרתם את השיטה הזאת ידנית, אז הכלי לא יחליף אותה גם אם המספרים ישתנו.": "You picked this method yourself, so the tool will not switch it even if the numbers change.",
   "המחיר נגזר מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם, בלי להישען על מספר של הלקוח.": "The price is derived from the work you expect to put in and your rate, without leaning on a number from the client.",
   "מחיר ייחוס שהלקוח נקב": "The reference price the client named",
 });

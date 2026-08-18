@@ -617,6 +617,14 @@ Object.entries(METHODS).forEach(([key, m]) => {
   c.onclick = () => {
     methodPinned = true;   // an explicit choice is never overwritten by the tool
     setMethod(key);
+    /* And the sentence under it has to say so. autoMethod() is the only writer
+       of methodWhy and it returns early once a method is pinned, so choosing
+       one by hand changed the chip and the price and left the explanation
+       describing the method that was there before — the number said one thing
+       and the line under it said another, which is the single failure this
+       whole panel exists to prevent. */
+    const w = el('methodWhy');
+    if (w) w.textContent = tr('בחרתם את השיטה הזאת ידנית, אז הכלי לא יחליף אותה גם אם המספרים ישתנו.');
     recompute();
   };
   mc.appendChild(c);
