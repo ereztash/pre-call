@@ -34,53 +34,24 @@
    changes the form. The journey is what runs in three engines; running this in
    three would triple the CI time to re-answer a question it already answers.
 
-   Its own static server, like a11y.test.js and perf.test.js and journey.test.js
-   before it. A fourth copy is one more than a pattern should need, and
-   extracting a shared harness means editing three green browser suites — worth
-   doing, not worth doing in the same change that adds a suite. */
-const http = require('http');
+   The server, the playwright lookup and the one-profile-per-test rule live in
+   tools/page-harness.js, shared with the suite that does the same for
+   PRE-CALL. journey.test.js, a11y.test.js and perf.test.js still carry their
+   own copies and are left alone: they are green, and rewriting three passing
+   suites to share a file is churn with no behavioural gain. */
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
+const H = require('../tools/page-harness.js');
 
-const root = path.join(__dirname, '..');
-
-let playwright;
-try {
-  playwright = require('playwright');
-} catch (e) {
-  try {
-    playwright = require(path.join(process.env.PW_ROOT || '', 'node_modules', 'playwright'));
-  } catch (e2) {
-    console.log('\n  skipped — playwright not resolvable here.');
-    console.log('  install it, or set PW_ROOT to a directory that has it.\n');
-    process.exit(0);
-  }
+const root = H.root;
+const playwright = H.resolvePlaywright();
+if (!playwright) {
+  console.log('\n  skipped — playwright not resolvable here.');
+  console.log('  install it, or set PW_ROOT to a directory that has it.\n');
+  process.exit(0);
 }
-
-let pass = 0, fail = 0;
-const test = async (name, fn) => {
-  try { await fn(); pass++; console.log('  ok   ' + name); }
-  catch (e) { fail++; console.log('  FAIL ' + name + '\n       ' + e.message); }
-};
-
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-               '.css': 'text/css; charset=utf-8', '.json': 'application/json' };
-function serve() {
-  return new Promise(resolve => {
-    const srv = http.createServer((req, res) => {
-      const clean = decodeURIComponent(req.url.split('?')[0].split('#')[0]);
-      const rel = clean === '/' ? '/index.html' : clean;
-      const file = path.join(root, path.normalize(rel).replace(/^(\.\.[/\\])+/, ''));
-      if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-        res.writeHead(404); res.end('not found'); return;
-      }
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
-      res.end(fs.readFileSync(file));
-    });
-    srv.listen(0, '127.0.0.1', () => resolve({ srv, base: 'http://127.0.0.1:' + srv.address().port }));
-  });
-}
+const { test, state } = H.runner();
 
 /* ---------- fixtures ---------- */
 
@@ -136,7 +107,7 @@ async function readLocally(page, text) {
 /* ---------- the suite ---------- */
 
 (async () => {
-  const { srv, base } = await serve();
+  const { srv, base } = await H.serve();
   const engine = process.env.PW_ENGINE || 'chromium';
   let browser;
   try {
@@ -146,27 +117,7 @@ async function readLocally(page, text) {
     srv.close(); process.exit(0);
   }
   const errors = [];
-  /* A context each, not a page each. The page saves a draft to localStorage on
-     every apply and offers it back on the next load, which is the behaviour the
-     product wants and death to a suite that shares storage between tests: the
-     second test would open onto the first one's numbers and pass or fail on
-     them. Found the way it deserved to be found — a rejected row appeared to
-     reach the form, and it was the previous test's row. */
-  const contexts = [];
-  const fresh = async (opts) => {
-    /* Closed as we go rather than at the end. Thirty live contexts is thirty
-       live browser profiles, and the tail of this suite started timing out on
-       elements the head had no trouble with. */
-    while (contexts.length) { try { await contexts.pop().close(); } catch (e) {} }
-    const c = await browser.newContext({ viewport: { width: 1000, height: 900 }, ...(opts || {}) });
-    c.on('weberror', e => errors.push(String(e.error()).split('\n')[0]));
-    contexts.push(c);
-    const p = await c.newPage();
-    p.on('pageerror', e => errors.push('pageerror: ' + e.message));
-    await p.goto(base + '/post-call.html');
-    await p.waitForLoadState('domcontentloaded');
-    return p;
-  };
+  const { open: contexts, fresh } = H.profiles(browser, base, '/post-call.html', errors);
 
   console.log('\nreading a call, through the button that reads it');
 
@@ -1038,6 +989,6 @@ async function readLocally(page, text) {
   for (const c of contexts) await c.close();
   await browser.close();
   srv.close();
-  console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
-  process.exit(fail ? 1 : 0);
+  console.log('\n' + state.pass + ' passed, ' + state.fail + ' failed\n');
+  process.exit(state.fail ? 1 : 0);
 })();
