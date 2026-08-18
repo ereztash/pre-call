@@ -1188,5 +1188,34 @@ test('every file in the repository is either served on purpose or ignored on pur
     stray.join(', '));
 });
 
+/* Same inversion as the check above, applied to the suites themselves.
+   Six test files — 133 assertions, four of them older than the branch that
+   found this — sat in the repository passing locally and never once ran on a
+   push, because wiring a new suite into the workflow is a second step and
+   nothing failed when it was forgotten. A suite CI does not run is a suite
+   that reports green while rotting, which is worse than not having it.
+
+   So the workflow has to name every one of them. A suite that genuinely
+   should not run in CI belongs in EXEMPT with the reason, not in silence. */
+test('every test suite in the repository is run by the workflow', () => {
+  const workflow = read('.github/workflows/test.yml');
+  const EXEMPT = {};   // none yet; an entry here is a claim that needs a reason
+
+  const walk = d => fs.readdirSync(path.join(root, d), { withFileTypes: true })
+    .flatMap(e => e.name === '.git' || e.name === 'node_modules' ? []
+      : e.isDirectory() ? walk(path.join(d, e.name))
+      : [path.join(d, e.name)]);
+
+  const missing = walk('.').map(f => f.replace(/^\.\//, ''))
+    .filter(f => f.endsWith('.test.js'))
+    .filter(f => !EXEMPT[f])
+    .filter(f => !workflow.includes(f));
+
+  assert.deepStrictEqual(missing, [],
+    'these suites exist and never run on a push — add a step to ' +
+    '.github/workflows/test.yml, or an EXEMPT entry saying why not: ' +
+    missing.join(', '));
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

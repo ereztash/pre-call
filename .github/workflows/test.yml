@@ -35,10 +35,26 @@ jobs:
         run: node assets/draft.test.js
       - name: the guide — one instruction, plain words
         run: node assets/guide.test.js
+      - name: what the call established, and the next question worth asking
+        run: node assets/commitments.test.js
+      - name: the worked example, end to end
+        run: node assets/scenario.test.js
       - name: the proposal document
         run: node assets/proposal.test.js
       - name: the call transcript as input
         run: node assets/transcript.test.js
+      # Which evidence a call actually carried, and therefore which cues the
+      # engine is allowed to look for at all. The licence is the part worth
+      # pinning: below the value rung the quantitative cues are not merely
+      # unused, they are never read, and that is what stops a fee agreed in
+      # the room from coming back as the cost of an incident.
+      - name: the evidence ladder and what each rung may read
+        run: node assets/ladder.test.js
+      # Real speech has no digits in it. This converts spoken Hebrew numbers
+      # for matching only and never for a quote, so a misconversion changes
+      # what is found and never what is shown.
+      - name: spoken numbers, for matching and never for quoting
+        run: node assets/numerals.test.js
       - name: sending it out
         run: node assets/send.test.js
       - name: where the price came from
@@ -49,12 +65,22 @@ jobs:
         run: node assets/gate.test.js
       - name: backup and restore
         run: node assets/backup.test.js
+      # The journal is the only record of what the tool was worth, and it is
+      # also the thing participants are asked to export and send back. It has
+      # to hold statuses, counters and generated ids — and no client names.
+      - name: the journal, and that it carries no names
+        run: node assets/journal.test.js
       - name: who the proposal is from
         run: node assets/sender.test.js
       - name: chasing a proposal that went quiet
         run: node assets/followup.test.js
       - name: markup, CSP, print and telemetry contracts
         run: node assets/markup.test.js
+      # The landing pages make claims. Each one names the capability behind it
+      # and the test that holds it up, and a claim whose test stops existing
+      # fails here rather than staying on the page.
+      - name: the landing claims, against the capabilities behind them
+        run: node assets/landing.test.js
       # Every Hebrew string the product ships has to have an English one.
       # A missing entry is not an error at runtime — it is a Hebrew sentence
       # in the middle of an English page, which nothing else would catch.
