@@ -377,7 +377,15 @@ const renderLedger = guard('ledger', function (){
         <span class="deal-st st-${d.status}">${PC.STATUS_LABEL[d.status]}</span>
         ${due ? `<span class="deal-due due-${due.state}">${esc(due.label)}</span>` : ''}
         <span class="deal-meta">${tr('{price} · אומדן {hours} ש׳ · {date}', {
-          price: d.priceQuoted ? ils(d.priceQuoted) : '—', hours: d.estimatedHours || '—', date: d.created.slice(0, 10)
+          /* All three defended, which two of them already were. save() always
+             writes `created`, so the only way here without one is a record that
+             did not come from save(): a backup file from an older shape, or
+             storage edited by hand. Either way the row is one dash short of
+             complete — and before this it threw, the guard caught it, and the
+             entire ledger rendered as a failure box because one deal out of
+             thirty was missing one date. */
+          price: d.priceQuoted ? ils(d.priceQuoted) : '—', hours: d.estimatedHours || '—',
+          date: d.created ? String(d.created).slice(0, 10) : '—'
         })}</span>
       </div>
       ${movementLine(d.id, moves)}

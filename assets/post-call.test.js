@@ -14,6 +14,16 @@
    repository would stay green. That is the exact failure mode the journey file
    was written to catch, one altitude down.
 
+   With this file the same measurement reads 68 of 78. What it found on the way
+   there: a rate arriving in the field that means "what one mistake costs", a
+   system the operator confirmed reaching no chip at all, and one deal missing
+   one date turning the whole ledger into an error box. None of the three threw
+   anything a person would see.
+
+   The ten still dark are the clipboard, the print dialog, the file picker, the
+   FileReader error branch, and the two shims that only run when a module is
+   absent. A test for those would be asserting the harness.
+
    One engine. Nothing here is about rendering or about a browser quirk — it is
    about whether clicking a button reaches a function and whether that function
    changes the form. The journey is what runs in three engines; running this in
@@ -138,8 +148,12 @@ async function readLocally(page, text) {
      them. Found the way it deserved to be found — a rejected row appeared to
      reach the form, and it was the previous test's row. */
   const contexts = [];
-  const fresh = async () => {
-    const c = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+  const fresh = async (opts) => {
+    /* Closed as we go rather than at the end. Thirty live contexts is thirty
+       live browser profiles, and the tail of this suite started timing out on
+       elements the head had no trouble with. */
+    while (contexts.length) { try { await contexts.pop().close(); } catch (e) {} }
+    const c = await browser.newContext({ viewport: { width: 1000, height: 900 }, ...(opts || {}) });
     c.on('weberror', e => errors.push(String(e.error()).split('\n')[0]));
     contexts.push(c);
     const p = await c.newPage();
@@ -408,9 +422,475 @@ async function readLocally(page, text) {
     await p.close();
   });
 
+  console.log('\nstarting from a known process');
+
+  /* The template row is the other front door, and the faster one: one click
+     sets systems, typical numbers, and every scope decision for that kind of
+     job. Seven of the functions behind it were never entered by any test —
+     which for a path that rewrites the whole form at once is the least
+     comfortable place on the page to have no coverage. */
+
+  const templates = page => page.locator('#tplChips .tpl');
+  const scopeState = page => page.$$eval('#scopeBox .scope-g', gs => {
+    const out = {};
+    gs.forEach(g => {
+      const state = [...g.classList].find(c => /^scope-g-/.test(c)).replace('scope-g-', '');
+      g.querySelectorAll('.scope-row .smove').forEach(b => { out[b.dataset.i] = state; });
+    });
+    return out;
+  });
+
+  await test('one click fills the systems, the numbers and the scope, and prices it', async () => {
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(200);
+    const on = await chipsOn(p);
+    assert.ok(on.length >= 2, 'a template that names three systems selected ' + on.length);
+    assert.ok((await val(p, 'q_freq')).length > 0, 'the template left the volume empty');
+    assert.ok((await val(p, 'q_minutes')).length > 0, 'the template left the duration empty');
+    const price = await p.textContent('#s_price');
+    assert.ok(/\d/.test(price), 'a filled form produced no price: ' + JSON.stringify(price));
+    await p.close();
+  });
+
+  await test('the numbers say they are typical and not measured', async () => {
+    /* The whole template idea is defensible only with this sentence attached.
+       Without it the tool hands over a page of confident figures nobody
+       collected, which is the thing it argues against everywhere else. */
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(200);
+    const note = await p.textContent('#tplNote');
+    assert.ok(/לא נמדדו/.test(note), 'the template presented invented numbers as findings');
+    await p.close();
+  });
+
+  await test('the note names each row it moved, where it went, and why', async () => {
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(200);
+    const moves = await p.$$eval('#tplNote .tpl-move-moved', els => els.map(e => ({
+      row: e.querySelector('.tpl-move-t').textContent.trim(),
+      to: e.querySelector('.tpl-move-s').textContent.trim(),
+      why: e.querySelector('.tpl-move-w').textContent.trim()
+    })));
+    assert.ok(moves.length > 0, 'a template that moves scope rows explained none of them');
+    moves.forEach(m => {
+      assert.ok(m.row.length > 3, 'a move with no row name: ' + JSON.stringify(m));
+      assert.ok(m.to.length > 0, m.row + ' moved somewhere the note does not name');
+      assert.ok(m.why.length > 15, m.row + ' moved with a label instead of a reason: ' + m.why);
+    });
+    await p.close();
+  });
+
+  await test('the scope list agrees with the note that describes it', async () => {
+    /* Two renderings of one decision, and nothing but this makes them match:
+       the note reads the template's scope object and the list reads the state
+       the page is holding. A template that set one and not the other would
+       show a reason for a move that never happened. */
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(200);
+    const said = await p.$$eval('#tplNote .tpl-move-moved .tpl-move-t', els => els.map(e => e.textContent.trim()));
+    const labels = await p.$$eval('#scopeBox .scope-g', gs => {
+      const out = {};
+      gs.forEach(g => {
+        const state = g.querySelector('.scope-g-h').textContent.trim();
+        g.querySelectorAll('.scope-row').forEach(r => {
+          out[r.querySelector('.scope-t').childNodes[0].textContent.trim()] = state;
+        });
+      });
+      return out;
+    });
+    said.forEach(row => assert.ok(row in labels,
+      'the note explains moving "' + row + '" and the scope list does not show it at all'));
+    await p.close();
+  });
+
+  await test('a second template replaces the first instead of layering on it', async () => {
+    /* Written into applyTemplate as "applied over the defaults, never over
+       whatever the last template left". A template that only adds would leave
+       an operator who tried two of them with a scope belonging to neither. */
+    const p = await fresh();
+    await templates(p).nth(1).click();
+    await p.waitForTimeout(200);
+    const second = await scopeState(p);
+
+    const q = await fresh();
+    await templates(q).first().click();
+    await q.waitForTimeout(150);
+    await templates(q).nth(1).click();
+    await q.waitForTimeout(200);
+    const afterBoth = await scopeState(q);
+
+    assert.deepStrictEqual(afterBoth, second,
+      'picking a template after another one left a scope belonging to neither');
+    await p.close(); await q.close();
+  });
+
+  await test('the chosen template is the one shown as chosen', async () => {
+    const p = await fresh();
+    await templates(p).nth(1).click();
+    await p.waitForTimeout(200);
+    const pressed = await p.$$eval('#tplChips .tpl',
+      els => els.map(e => e.getAttribute('aria-pressed')));
+    assert.strictEqual(pressed.filter(x => x === 'true').length, 1,
+      'expected exactly one template marked chosen, got: ' + pressed.join(','));
+    assert.strictEqual(pressed[1], 'true', 'the mark is on a template nobody clicked');
+    await p.close();
+  });
+
+  await test('confirming the scope moves the operator on rather than staying put', async () => {
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(200);
+    const before = await p.textContent('#guideBar');
+    await p.click('[data-act="confirmscope"]');
+    await p.waitForTimeout(200);
+    assert.notStrictEqual(await p.textContent('#guideBar'), before,
+      'confirming the scope changed nothing the operator can see');
+    await p.close();
+  });
+
+  console.log('\ngetting the data out, and back in');
+
+  /* The product keeps everything in one browser and says so on every page, and
+     the backup is the entire answer to "so what happens when I clear my
+     cookies". pc-backup.js is tested in Node; every function that connects it
+     to a button was dark. A round trip through the actual controls is the only
+     thing that shows the two halves are connected. */
+
+  const seedDeal = page => page.evaluate(() => {
+    localStorage.setItem('postcall_deals_v1', JSON.stringify([{
+      id: 'D-TEST-1', client: 'בדיקה', status: 'sent',
+      estimatedHours: 24, priceQuoted: 7200, method: 'value', pricedBy: 'value'
+    }]));
+  });
+
+  /* Saved out rather than read where it lands: playwright deletes a download
+     when its context closes, and these contexts are closed as the suite moves
+     on. The file has to outlive the browser it came from, which is the whole
+     point of a backup anyway. */
+  const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'pc-backup-'));
+  const takeBackup = async () => {
+    const p = await fresh({ acceptDownloads: true });
+    await seedDeal(p);
+    await p.reload();
+    const [dl] = await Promise.all([
+      p.waitForEvent('download'),
+      p.click('[data-act="backup-export"]')
+    ]);
+    const dest = path.join(tmp, dl.suggestedFilename());
+    await dl.saveAs(dest);
+    return { page: p, file: dest, name: dl.suggestedFilename() };
+  };
+
+  await test('the export button produces a file with the deals in it', async () => {
+    const b = await takeBackup();
+    assert.ok(/\.json$/.test(b.name), 'the backup came down as ' + b.name);
+    const body = fs.readFileSync(b.file, 'utf8');
+    assert.ok(body.includes('D-TEST-1'), 'the backup does not contain the deal it was taken of');
+    await b.page.close();
+  });
+
+  await test('a backup taken on one machine restores on another', async () => {
+    /* Two contexts is two browsers as far as storage is concerned, which is
+       the situation the feature exists for. */
+    const { page: p1, file } = await takeBackup();
+    await p1.close();
+
+    const p2 = await fresh();
+    assert.strictEqual(await p2.evaluate(() => localStorage.getItem('postcall_deals_v1')), null,
+      'the second browser was not empty to begin with');
+    p2.on('dialog', d => d.accept());
+    await p2.setInputFiles('#backupFile', file);
+    await p2.waitForTimeout(1200);
+    const deals = await p2.evaluate(() => localStorage.getItem('postcall_deals_v1'));
+    assert.ok(deals && deals.includes('D-TEST-1'), 'the restore did not bring the deal across');
+    await p2.close();
+  });
+
+  await test('a file that is not a backup says so and destroys nothing', async () => {
+    /* The dangerous direction. An operator picking the wrong file must lose a
+       click, never a ledger. */
+    const junk = path.join(require('os').tmpdir(), 'not-a-backup.json');
+    fs.writeFileSync(junk, '{"hello":"world"}');
+    const p = await fresh();
+    await seedDeal(p);
+    await p.reload();
+    let asked = false;
+    p.on('dialog', d => { asked = true; d.accept(); });
+    await p.setInputFiles('#backupFile', junk);
+    await p.waitForTimeout(600);
+    assert.strictEqual(asked, false, 'a file that is not a backup got as far as asking to overwrite');
+    assert.ok(/גיבוי תקין/.test(await p.textContent('#backupMsg')),
+      'nothing on the screen said the file was rejected');
+    const deals = await p.evaluate(() => localStorage.getItem('postcall_deals_v1'));
+    assert.ok(deals && deals.includes('D-TEST-1'), 'a rejected file still cleared the ledger');
+    fs.unlinkSync(junk);
+    await p.close();
+  });
+
+  await test('restoring over existing work says what it is about to overwrite', async () => {
+    const { page: p1, file } = await takeBackup();
+    await p1.close();
+
+    const p2 = await fresh();
+    await p2.evaluate(() => localStorage.setItem('postcall_deals_v1', JSON.stringify([{ id: 'OTHER', status: 'sent' }])));
+    await p2.reload();
+    let message = '';
+    p2.on('dialog', d => { message = d.message(); d.dismiss(); });
+    await p2.setInputFiles('#backupFile', file);
+    await p2.waitForTimeout(600);
+    assert.ok(/ידרוס/.test(message),
+      'the operator was asked to overwrite without being told what: ' + JSON.stringify(message));
+    const still = await p2.evaluate(() => localStorage.getItem('postcall_deals_v1'));
+    assert.ok(still.includes('OTHER'), 'saying no to the overwrite overwrote anyway');
+    await p2.close();
+  });
+
+  await test('one record missing a field does not take the whole ledger down', async () => {
+    /* Found by accident and worth keeping on purpose. A seeded deal without
+       `created` — which save() always writes, and which a restored file from an
+       older shape need not carry — made the row renderer throw. The error
+       boundary caught it and the entire ledger became a failure box, on one
+       missing date in one deal out of however many. */
+    const p = await fresh();
+    await p.evaluate(() => localStorage.setItem('postcall_deals_v1', JSON.stringify([
+      { id: 'FULL', client: 'שלמה', status: 'sent', priceQuoted: 5000,
+        estimatedHours: 20, created: '2026-02-02T00:00:00.000Z' },
+      { id: 'THIN', client: 'חסר' }
+    ])));
+    await p.reload();
+    await p.waitForTimeout(300);
+    assert.strictEqual(await p.locator('#errBoundary').isVisible(), false,
+      'a record missing a field put the whole page into its failure state');
+    const box = await p.textContent('#ledgerBox');
+    assert.ok(/שלמה/.test(box), 'the complete deal disappeared along with the incomplete one');
+    assert.ok(/חסר/.test(box), 'the incomplete deal was dropped rather than shown short');
+    await p.close();
+  });
+
+  console.log('\ndeals that happened before the tool existed');
+
+  /* The tool's advice is worth what its track record says, and a new operator
+     has no track record inside it — only outside it. This is the form that
+     lets them put the last few jobs in, and its whole value is refusing the
+     entries that would poison the calibration. All of it was dark. */
+
+  const addPast = async (p, { client, quoted, closed, lost }) => {
+    /* Behind a disclosure on purpose — entering past deals is a one-time job,
+       not part of the flow — so it has to be opened before it can be used. */
+    await p.click('#retroDrawer summary');
+    await p.waitForTimeout(80);
+    if (client !== undefined) await p.fill('#rp_client', client);
+    if (quoted !== undefined) await p.fill('#rp_quoted', String(quoted));
+    if (closed !== undefined) await p.fill('#rp_closed', String(closed));
+    await p.click(lost ? '[data-act="retrolost"]' : '[data-act="retroadd"]');
+    await p.waitForTimeout(150);
+    return p.textContent('#retroFlag');
+  };
+
+  await test('a past deal goes in and comes back as a row in the ledger', async () => {
+    const p = await fresh();
+    const said = await addPast(p, { client: 'מאפייה', quoted: 8000, closed: 7000 });
+    assert.ok(/מאפייה/.test(said), 'nothing confirmed the deal was added: ' + JSON.stringify(said));
+    const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('postcall_deals_v1') || '[]'));
+    assert.strictEqual(stored.length, 1, 'the past deal did not reach storage');
+    assert.strictEqual(stored[0].outcome.closedPrice, 7000);
+    assert.ok(/מאפייה/.test(await p.textContent('#ledgerBox')), 'the ledger does not show it');
+    await p.close();
+  });
+
+  await test('the form empties itself so the next one can be typed straight in', async () => {
+    /* Three deals is three, and a form that keeps the last client name is a
+       form that records the same job twice. */
+    const p = await fresh();
+    await addPast(p, { client: 'מאפייה', quoted: 8000, closed: 7000 });
+    assert.strictEqual(await val(p, 'rp_client'), '');
+    assert.strictEqual(await val(p, 'rp_quoted'), '');
+    await p.close();
+  });
+
+  await test('a deal with no price is refused, and says which number is missing', async () => {
+    const p = await fresh();
+    const said = await addPast(p, { client: 'בלי מחיר' });
+    assert.ok(/המחיר שנקבת/.test(said), 'the refusal did not name the missing number: ' + said);
+    const stored = await p.evaluate(() => localStorage.getItem('postcall_deals_v1'));
+    assert.ok(!stored || JSON.parse(stored).length === 0, 'a deal with no price was recorded anyway');
+    await p.close();
+  });
+
+  await test('a deal that closed above what was quoted is questioned, not swallowed', async () => {
+    /* It is not impossible, it is unlikely — and a single reversed pair moves
+       every discount figure the track record reports. */
+    const p = await fresh();
+    const said = await addPast(p, { client: 'הפוך', quoted: 5000, closed: 9000 });
+    assert.ok(/שווה לבדוק/.test(said), 'a closed price above the quote went in unremarked: ' + said);
+    await p.close();
+  });
+
+  await test('a deal that never closed is recorded without inventing a price for it', async () => {
+    const p = await fresh();
+    const said = await addPast(p, { client: 'לא נסגרה', quoted: 6000, lost: true });
+    assert.ok(/לא נסגרה/.test(said), 'the loss was not confirmed: ' + said);
+    const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('postcall_deals_v1') || '[]'));
+    assert.strictEqual(stored.length, 1, 'the lost deal was not recorded');
+    assert.notStrictEqual(stored[0].status, 'won', 'a deal that never closed was recorded as won');
+    await p.close();
+  });
+
+  console.log('\nstarting over');
+
+  /* The button only exists once something is saved, which is right — "a new
+     proposal instead" is meaningless with nothing to replace. So the state has
+     to be built before the control can be reached. */
+  const withSavedDeal = async () => {
+    const p = await fresh();
+    await seedDeal(p);
+    await p.reload();
+    return p;
+  };
+
+  await test('starting a new proposal over unsaved work asks first, and means it', async () => {
+    const p = await withSavedDeal();
+    await p.fill('#q_freq', '40');
+    await p.waitForTimeout(700);   // the draft saves on a debounce
+    p.on('dialog', d => d.dismiss());
+    await p.click('[data-act="newdeal"]');
+    await p.waitForTimeout(300);
+    assert.strictEqual(await val(p, 'q_freq'), '40', 'saying no to clearing the form cleared it');
+    await p.close();
+  });
+
+  await test('and clears it when the answer is yes', async () => {
+    const p = await withSavedDeal();
+    await p.fill('#q_freq', '40');
+    await p.waitForTimeout(700);
+    p.on('dialog', d => d.accept());
+    await p.click('[data-act="newdeal"]');
+    await p.waitForTimeout(400);
+    assert.strictEqual(await val(p, 'q_freq'), '', 'saying yes left the old numbers in place');
+    await p.close();
+  });
+
+  await test('an untouched form starts a new proposal without asking anything', async () => {
+    /* A confirm dialog for a decision with no consequence is how people learn
+       to dismiss confirm dialogs. */
+    const p = await withSavedDeal();
+    let asked = false;
+    p.on('dialog', d => { asked = true; d.accept(); });
+    await p.click('[data-act="newdeal"]');
+    await p.waitForTimeout(300);
+    assert.strictEqual(asked, false, 'clearing an empty form asked for confirmation');
+    await p.close();
+  });
+
+  console.log('\nthe rest of the controls a person actually presses');
+
+  await test('a restored draft can be thrown away, and says so before it is', async () => {
+    /* The draft fills the form on load without being asked, which is right and
+       is also exactly why the way out has to work: a form that filled itself is
+       indistinguishable from a form showing the wrong client, and the operator
+       is about to send whatever is on it. */
+    const p = await fresh();
+    await p.fill('#q_freq', '40');
+    await p.fill('#q_minutes', '9');
+    await p.waitForTimeout(700);
+    await p.reload();
+    await p.waitForTimeout(300);
+    assert.ok(await p.locator('#draftNote').isVisible(), 'an unfinished draft came back unannounced');
+    assert.strictEqual(await val(p, 'q_freq'), '40', 'the draft did not come back at all');
+    await p.click('[data-act="discard"]');
+    await p.waitForTimeout(300);
+    assert.strictEqual(await val(p, 'q_freq'), '', 'throwing the draft away kept the numbers');
+    await p.reload();
+    await p.waitForTimeout(300);
+    assert.strictEqual(await p.locator('#draftNote').isVisible(), false,
+      'the discarded draft came back on the next load');
+    await p.close();
+  });
+
+  await test('the scope reasons open and close, and the button keeps the keyboard', async () => {
+    /* One control for nineteen rows rather than a disclosure triangle per row,
+       which is a decision the design file argues for — so the one control has
+       to work in both directions. And the re-render replaces the button that
+       was just pressed: without moving focus back, a keyboard user is returned
+       to the top of the document by their own click. */
+    const p = await fresh();
+    await templates(p).first().click();
+    await p.waitForTimeout(200);
+    const shown = () => p.evaluate(() => document.querySelector('#scopeBox').classList.contains('show-why'));
+    assert.strictEqual(await shown(), false, 'the reasons started out open');
+    const label = await p.textContent('#scopeWhyT');
+
+    await p.click('#scopeWhyT');
+    await p.waitForTimeout(200);
+    assert.strictEqual(await shown(), true, 'the reasons did not open');
+    assert.notStrictEqual(await p.textContent('#scopeWhyT'), label,
+      'the button still offers to do what it has already done');
+    assert.strictEqual(await p.evaluate(() => document.activeElement && document.activeElement.id),
+      'scopeWhyT', 'the button that was pressed lost the keyboard to the re-render');
+
+    await p.click('#scopeWhyT');
+    await p.waitForTimeout(200);
+    assert.strictEqual(await shown(), false, 'the toggle only went one way');
+    await p.close();
+  });
+
+  await test('an optional step can be skipped, and the guide moves on', async () => {
+    /* One step is optional — what it costs them when something falls over —
+       and the guide deliberately will not block on it: once nothing required
+       is missing the instruction becomes "send", and the optional question is
+       offered alongside it rather than in front of it. So it appears only
+       after every required step is answered, which is exactly the state a real
+       operator is in when they decide to skip it. */
+    const p = await fresh();
+    await p.fill('#q_process', 'הקלדת הזמנות');
+    await p.fill('#q_freq', '30');
+    await p.fill('#q_minutes', '8');
+    await p.locator('#sysChips button').first().click();
+    await p.fill('#q_client', 'מאפייה');
+    await p.click('[data-act="confirmscope"]');
+    await p.waitForTimeout(400);
+
+    /* The suggestion is folded away while the guide is pinned — the pinned bar
+       is deliberately short, so it carries the instruction and not the
+       optional extra. Scrolling back to it is what a person does to act on it,
+       so the test does that rather than reaching into a collapsed element. */
+    await p.evaluate(() => window.scrollTo(0, 0));
+    await p.waitForFunction(
+      () => !document.querySelector('#guideBar').classList.contains('stuck'), null, { timeout: 5000 });
+    const skip = p.locator('[data-act="skip"][data-step]:visible');
+    assert.ok(await skip.count(),
+      'every required step was answered and the optional one was never offered — ' +
+      'the guide is now at: ' + (await p.textContent('#guideBar')).slice(0, 60));
+    const step = await skip.first().getAttribute('data-step');
+    const before = await p.textContent('#guideBar');
+    await skip.first().click();
+    await p.waitForTimeout(300);
+    assert.notStrictEqual(await p.textContent('#guideBar'), before,
+      'skipping ' + step + ' left the guide where it was');
+    await p.close();
+  });
+
   console.log('\nnothing threw');
   await test('no error anywhere in the panel', () => {
     assert.deepStrictEqual(errors, []);
+  });
+  await test('and nothing was caught quietly either', async () => {
+    /* pageerror only sees what reached the window. The product wraps its own
+       renderers in an error boundary, so a throw inside one of them is a
+       console line and a box on the screen and nothing else — which is how a
+       ledger that rendered as a failure state passed a suite watching for
+       uncaught errors. The boundary's own surface is the thing to read. */
+    const p = await fresh();
+    await readLocally(p, CALL);
+    await p.click('[data-act="trapply"]');
+    await p.waitForTimeout(250);
+    assert.strictEqual(await p.locator('#errBoundary').isVisible(), false,
+      'a renderer failed and only the boundary knew: ' + await p.textContent('#errBoundary'));
+    await p.close();
   });
 
   for (const c of contexts) await c.close();
