@@ -776,6 +776,48 @@ test('the README maps every module the product ships', () => {
     'these modules ship and the README\'s map does not mention them: ' + missing.join(', '));
 });
 
+/* docs/design-persona.md is where the product's taste is written down, and it
+   had gone stale in the worst possible direction: it still said every threshold
+   was violated and that the audit "reports and does not fail the build", months
+   after the redesign closed all four faults and the audit started failing it.
+   A design document that describes a product two versions old is worse than no
+   document, because it is read as current.
+
+   The thresholds are the checkable part. Each one is an opinion with a
+   practitioner behind it, and the doc argues them — so if a number moves in
+   tools/design-audit.js and the doc keeps quoting the old one, the argument is
+   about something that is no longer enforced. */
+test('the design document quotes the thresholds the audit actually enforces', () => {
+  const doc = read('docs/design-persona.md');
+  const src = read('tools/design-audit.js');
+  const rules = src.slice(src.indexOf('const RULES = {'), src.indexOf('\n};', src.indexOf('const RULES = {')));
+
+  /* name -> how that number is written for a reader. A rule with no entry here
+     fails below rather than being skipped, so adding a metric to the audit
+     forces a decision about how the document says it. */
+  const SHOWN = {
+    borderShare:     v => '≤' + (v * 100) + '%',
+    accentHues:      v => '≤' + v,
+    bodySizeCluster: v => v + '×',
+    backgrounds:     v => '≤' + v,
+    fillChroma:      v => '≤' + v,
+    valueJump:       v => '≤' + v
+  };
+
+  const found = [...rules.matchAll(/(\w+):\s*\{[\s\S]*?(?:max|minRatio):\s*([\d.]+)/g)]
+    .map(m => [m[1], parseFloat(m[2])]);
+  assert.ok(found.length >= 6, 'the RULES block stopped parsing — ' + found.length + ' rules read');
+
+  const wrong = found.filter(([name, value]) => {
+    if (!SHOWN[name]) return true;                 // a new metric nobody documented
+    const line = doc.split('\n').find(l => l.includes('`' + name + '`'));
+    return !line || !line.includes(SHOWN[name](value));
+  });
+  assert.deepStrictEqual(wrong.map(([n, v]) => n + '=' + v), [],
+    'the audit enforces these and docs/design-persona.md does not quote them by ' +
+    'that name and number');
+});
+
 /* The one page whose entire job is to be factually complete. It names the
    storage keys and says how many there are, and both go stale the moment a
    module starts writing a new one — silently, because nothing else on the site
