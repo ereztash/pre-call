@@ -328,8 +328,21 @@ const BUDGETS = {
      Found by a person looking at a screenshot, which is the part worth
      recording: the design audit reported "distinct surfaces 1 (max 4)" and
      called it ok, because every rule in that file is a ceiling. There is a
-     floor now. */
-  'post-call.html':     169 * 1024
+     floor now.
+
+     A sixteenth raise, 169 -> 170KB, for 135 bytes after a trim. It buys the
+     offer under the price: when the ladder holds a price below what the form
+     would support, the panel now says which rung it is resting on, what the
+     other reading would come to, and what taking it costs. The measurement
+     that made it necessary is that the same numbers priced 2.9x apart
+     depending only on whether a transcript had been pasted first — the ladder
+     decided once, from the call, and the editable form it governs was never
+     re-read.
+
+     The alternative price itself is free: compute() has always returned all
+     four methods on every keystroke and shown one. What is paid for here is
+     the sentence that makes taking it a decision rather than a discovery. */
+  'post-call.html':     170 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

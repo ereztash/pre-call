@@ -614,21 +614,24 @@ Object.entries(METHODS).forEach(([key, m]) => {
   c.className = 'chip' + (key === 'value' ? ' on' : '');
   c.textContent = m.name; c.dataset.k = key;
   c.setAttribute('aria-pressed', String(key === 'value'));
-  c.onclick = () => {
-    methodPinned = true;   // an explicit choice is never overwritten by the tool
-    setMethod(key);
-    /* And the sentence under it has to say so. autoMethod() is the only writer
-       of methodWhy and it returns early once a method is pinned, so choosing
-       one by hand changed the chip and the price and left the explanation
-       describing the method that was there before — the number said one thing
-       and the line under it said another, which is the single failure this
-       whole panel exists to prevent. */
-    const w = el('methodWhy');
-    if (w) w.textContent = tr('בחרתם את השיטה הזאת ידנית, אז הכלי לא יחליף אותה גם אם המספרים ישתנו.');
-    recompute();
-  };
+  c.onclick = () => pinMethod(key);
   mc.appendChild(c);
 });
+/* One place, because two callers set this now — the chips and the offer under
+   the price — and the thing that must not drift between them is the sentence.
+   autoMethod() is the only other writer of methodWhy and it returns early once
+   a method is pinned, so a caller that forgot this line would change the chip,
+   the hint and the price and leave the explanation describing the method that
+   was there before. The number saying one thing and the line under it saying
+   another is the single failure this panel exists to prevent. */
+function pinMethod(key){
+  methodPinned = true;   // an explicit choice is never overwritten by the tool
+  setMethod(key);
+  const w = el('methodWhy');
+  if (w) w.textContent = tr('בחרתם את השיטה הזאת ידנית, אז הכלי לא יחליף אותה גם אם המספרים ישתנו.');
+  recompute();
+}
+
 function setMethod(key){
   mc.dataset.sel = key;
   [...mc.children].forEach(x => { const sel = x.dataset.k === key;
@@ -737,6 +740,46 @@ function provenanceWarning(m){
   return '';
 }
 
+/* What the call refused, and what the form would have allowed.
+
+   The ladder is right to hold: numbers typed after a call that carried none
+   are the operator's own. But it decided once and then went quiet, so the
+   same numbers priced 2.9x lower for having pasted a transcript first, and
+   nothing on screen said why. The call still wins; it now says so and shows
+   the other reading.
+
+   The offer is a trade and not a number, deliberately. A button that only
+   revealed a bigger figure would be pressed every time and the ladder would
+   be decoration — so what it costs sits on the same line as what it pays, and
+   pressing it makes the claim the operator's own. That is what q_provenance
+   has always been for, asked where the question actually arises.
+
+   Nothing is computed for this: compute() already returns all four methods on
+   every keystroke and throws three away. */
+function ladderHold(m){
+  if (methodPinned || !trLadder || !trLadder.method || !mc) return '';
+  const alt = PC.model.pickMethod(guideState());
+  if (!alt || alt.method === mc.dataset.sel) return '';
+  const other = m.M[alt.method];
+  if (!other || !(other.value > 0) || !(m.price > 0)) return '';
+  /* Within a tenth of each other the choice does not change what gets sent,
+     and interrupting a priced screen for that is noise. */
+  const gap = other.value / m.price;
+  if (gap > 0.9 && gap < 1.1) return '';
+  const p = el('q_provenance') ? el('q_provenance').value : '';
+  return '<div class="tri-offer"><b>' +
+    tr('המחיר נשען על מה שהשיחה נשאה: {rung}.', { rung: esc(trLadder.label || '') }) + '</b> ' +
+    tr('על המספרים שבטופס אפשר לבנות {price} לפי {method}, אבל הם לא נאמרו בשיחה שקראתי.',
+       { price: ils(other.value), method: esc(PC.model.METHOD_LABEL[alt.method] || alt.method) }) + ' ' +
+    (p === 'mine'
+      ? tr('סימנת שהמספרים שלך ולא שלו, אז פסקת ההחזר לא תיכנס למסמך בכל מקרה.')
+      : p === 'unprompted'
+      ? tr('סימנת שהוא נקב בהם בעצמו — הלחיצה הופכת את זה לטענה שלך, לא של הכלי.')
+      : tr('לפני שתלחץ, סמן מאיפה המספרים הגיעו — זה מה שקובע אם אפשר לצטט אותם לו.')) +
+    '<div class="tri-act"><button type="button" class="ghost" data-act="usemine">' +
+    tr('תמחר לפי מה שבטופס') + '</button></div></div>';
+}
+
 const recompute = guard('recompute', function (){
   autoMethod();          // before the model reads it
   const m = model();
@@ -814,6 +857,7 @@ const recompute = guard('recompute', function (){
         tr('המחיר שלך תלוי בו יותר מאשר בכל השאר. בקש ממנו דוגמה אחת קונקרטית לפני שאתה שולח.') +
         '</div>' : '') +
       provenanceWarning(m) +
+      ladderHold(m) +
       (m.M.cost && m.M.market && Math.max(m.M.cost.value, m.M.market.value) /
         Math.min(m.M.cost.value, m.M.market.value) >= 2
         ? '<div class="tri-warn">' +
@@ -1643,6 +1687,7 @@ const ACTIONS = {
   unlock:  tryUnlock,
   askkey:  askForKeyAhead,
   laterkey: dismissKeyAhead,
+  usemine: () => pinMethod(PC.model.pickMethod(guideState()).method),
   newdeal: confirmNewDeal,
   discard: discardDraft,
   confirmscope: confirmScope,

@@ -830,6 +830,106 @@ async function readLocally(page, text) {
     await p.close();
   });
 
+  console.log('\nwhen the call says less than the form does');
+
+  /* The ladder decides what a price may rest on, and it decided once, from the
+     transcript, and then went quiet. An operator who did exactly what the panel
+     told them to do — "there is nothing here to fill in from the call itself" —
+     got a price built on cost while the form in front of them held everything
+     value pricing needs. Same numbers, 2.9x apart, depending only on whether a
+     transcript had been pasted first. */
+
+  const SOFT_CALL = SOFT;
+  const fillByHand = async (p) => {
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(150);
+    await p.fill('#q_process', 'הקלדת הזמנות מהמייל');
+    await p.fill('#q_freq', '30');
+    await p.fill('#q_minutes', '8');
+    await p.fill('#q_err_freq', '4');
+    await p.fill('#q_err_cost', '500');
+    await p.selectOption('#q_provenance', 'unprompted');
+    await p.locator('#sysChips button').first().click();
+    await p.waitForTimeout(600);
+    return (await p.textContent('#s_price')).trim();
+  };
+
+  await test('a call that carried nothing still prices on the call, and says so', async () => {
+    const p = await fresh();
+    await readLocally(p, SOFT_CALL);
+    const priced = await fillByHand(p);
+    const offer = p.locator('.tri-offer');
+    assert.ok(await offer.count(), 'the price was held down and nothing on screen said why');
+    const text = await offer.first().textContent();
+    assert.ok(/נשען על מה שהשיחה נשאה/.test(text), 'the note does not say what the price rests on');
+    assert.ok(/₪/.test(text), 'the note does not show what the other reading would be');
+    assert.ok(await p.locator('.tri-offer [data-act="usemine"]').count(),
+      'the note explains the trade and offers no way to take it');
+    assert.ok(priced.length > 1, 'no price at all');
+    await p.close();
+  });
+
+  await test('the offer is a trade — it names what the choice costs', async () => {
+    /* A button that only revealed a bigger number would be pressed every time
+       and the ladder would be decoration. */
+    const p = await fresh();
+    await readLocally(p, SOFT_CALL);
+    await fillByHand(p);
+    const text = await p.locator('.tri-offer').first().textContent();
+    assert.ok(/לא נאמרו בשיחה/.test(text), 'the note does not say the numbers were absent from the call');
+    assert.ok(/טענה שלך/.test(text),
+      'marked unprompted, the note does not say pressing makes the claim the operator\'s');
+    await p.close();
+  });
+
+  await test('taking the offer changes the price and the sentence under it', async () => {
+    const p = await fresh();
+    await readLocally(p, SOFT_CALL);
+    const held = await fillByHand(p);
+    await p.click('.tri-offer [data-act="usemine"]');
+    await p.waitForTimeout(600);
+    const taken = (await p.textContent('#s_price')).trim();
+    assert.notStrictEqual(taken, held, 'the offer was taken and the price did not move');
+    const why = await p.textContent('#methodWhy');
+    assert.ok(/ידנית/.test(why),
+      'the price moved and the line explaining it still describes the tool\'s own choice: ' + why);
+    assert.strictEqual(await p.locator('.tri-offer').count(), 0,
+      'the offer is still on screen after it was taken');
+    await p.close();
+  });
+
+  await test('the same numbers with no transcript are priced the same as the taken offer', async () => {
+    /* The property the whole thing is for: once the operator has said the
+       numbers are the client's, pasting a transcript earlier must not change
+       what the work is worth. */
+    const a = await fresh();
+    await readLocally(a, SOFT_CALL);
+    await fillByHand(a);
+    await a.click('.tri-offer [data-act="usemine"]');
+    await a.waitForTimeout(600);
+    const afterOffer = (await a.textContent('#s_price')).trim();
+    await a.close();
+
+    const b = await fresh();
+    const neverPasted = await fillByHand(b);
+    await b.close();
+
+    assert.strictEqual(afterOffer, neverPasted,
+      'pasting a transcript first still changes the price after the operator overrode it: ' +
+      afterOffer + ' vs ' + neverPasted);
+  });
+
+  await test('a call that carried the numbers makes no offer at all', async () => {
+    /* Nothing to decide when the ladder and the form agree. */
+    const p = await fresh();
+    await readLocally(p, CALL);
+    await p.click('[data-act="trapply"]');
+    await p.waitForTimeout(600);
+    assert.strictEqual(await p.locator('.tri-offer').count(), 0,
+      'the tool offered an alternative to a reading nobody disputed');
+    await p.close();
+  });
+
   console.log('\nthe one paid door, opened by hand');
 
   /* Three actions put the proposal in front of the client — copy, PDF, send —

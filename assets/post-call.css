@@ -266,6 +266,15 @@
   .tri-b{font-size:var(--fs-xs);color:var(--muted);flex:1 0 100%}
   .tri-warn{border-inline-start:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
             padding:var(--sp-4) var(--sp-4);border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-3)}
+  /* An offer, not a warning — so not the red of .tri-warn. The tool is not
+     saying something is wrong; it is saying it declined to price on numbers
+     the call did not carry, and showing what the other reading would be.
+     --charcoal-2 rather than --cu-95 because the dark ramp remaps the first
+     and mirrors the second onto the page colour. */
+  .tri-offer{border-inline-start:3px solid var(--copper-dim);background:var(--charcoal-2);
+             color:var(--ink);padding:var(--sp-4);border-radius:var(--r-md);
+             font-size:var(--fs-xs);margin-top:var(--sp-3)}
+  .tri-act{margin-top:var(--sp-3)}
   .flag{border-inline-start:3px solid var(--red);background:var(--rd-95);color:var(--rd-27);
         padding:var(--sp-4) var(--sp-5);border-radius:var(--r-md);font-size:var(--fs-xs);margin-top:var(--sp-4)}
   .ok{border-inline-start:3px solid var(--turq);background:var(--charcoal-2);color:var(--tq-21);
