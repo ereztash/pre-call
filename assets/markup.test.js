@@ -753,6 +753,29 @@ test('the README counts the test packages it actually has', () => {
     'the README promises ' + said[0] + ' browser suites and there are ' + browser);
 });
 
+/* The README carries a map of the source tree, and a map is only worth
+   anything if nothing is missing from it. Two of the most consequential
+   modules on this branch — the evidence ladder and the spoken-number reader —
+   were absent from it for as long as they had existed, along with PRE-CALL's
+   own shell. Nothing noticed, because a map has no failing state: it just
+   quietly describes a smaller product than the one in the directory.
+
+   Found by being asked whether the README was updated, which is not a
+   mechanism. This is. */
+test('the README maps every module the product ships', () => {
+  const readme = read('README.md');
+  /* The English dictionaries are one layer, not seven files, and the README
+     explains the layer where it explains pc-i18n.js. Listing them
+     individually would be seven lines that say the same thing. */
+  const EXEMPT = f => /^en-.*\.js$/.test(f);
+  const missing = fs.readdirSync(path.join(root, 'assets'))
+    .filter(f => f.endsWith('.js') && !f.endsWith('.test.js'))
+    .filter(f => !EXEMPT(f))
+    .filter(f => !readme.includes('assets/' + f));
+  assert.deepStrictEqual(missing, [],
+    'these modules ship and the README\'s map does not mention them: ' + missing.join(', '));
+});
+
 /* The one page whose entire job is to be factually complete. It names the
    storage keys and says how many there are, and both go stale the moment a
    module starts writing a new one — silently, because nothing else on the site
