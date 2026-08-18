@@ -63,6 +63,8 @@ jobs:
         run: node assets/viz.test.js
       - name: the payment gate
         run: node assets/gate.test.js
+      - name: user action labels match their outcomes
+        run: node tools/action-contract.test.js
       - name: backup and restore
         run: node assets/backup.test.js
       # The journal is the only record of what the tool was worth, and it is
