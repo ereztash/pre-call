@@ -418,9 +418,24 @@
      Same rule as everywhere else in this file: it proposes. A system name
      found in a sentence is a candidate with the sentence attached, not a fact,
      and the two signals are reasons to ask rather than answers. */
+  /* Sales, ERP and automation tools — and, until the corpus was read, nothing
+     that records time. The sharpest hole in the list: the value method is
+     built on `minutes`, and a time tracker is the one system holding that
+     answer already measured. The single relevant one in twelve real calls was
+     Toggl, said in Hebrew as תוגל.
+
+     Transliterations sit beside the Latin spellings because speech-to-text
+     writes what it hears — but only where the Hebrew is long enough to survive
+     it. "ויקס" was here for one measurement: three matches across the twelve
+     calls, two of them inside garbled speech mentioning no website builder,
+     and it moved a whole call onto the market rung. */
   const PLATFORMS = ['Priority', 'SAP', 'Salesforce', 'HubSpot', 'Pipedrive', 'Zapier',
                      'Make', 'n8n', 'Airtable', 'Notion', 'Slack', 'Jira', 'Stripe',
-                     'Shopify', 'WooCommerce', 'Monday', 'Zoho', 'Dynamics', 'Odoo'];
+                     'Shopify', 'WooCommerce', 'Monday', 'Zoho', 'Dynamics', 'Odoo',
+                     'Toggl', 'תוגל', 'Clockify', 'Harvest', 'Hubstaff', 'Timely',
+                     'שעון נוכחות',
+                     'Fireberry', 'פיירברי', 'Wix', 'Cardcom', 'קארדקום',
+                     'Tranzila', 'טרנזילה', 'חשבשבת', 'ריווחית'];
 
   /* Naming a system is not the same as having one in a process, and the market
      rung was reading it that way. Measured on twelve real discovery calls: a
@@ -570,7 +585,7 @@
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
                          candidates, provenance, heuristics, observe, toState,
                          withSpeakers, ANCHOR_RE, FREQ_RE: () => FREQ_RE,
-                         FLOW_RE, systemInFlow };
+                         FLOW_RE, systemInFlow, PLATFORMS };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
 })(typeof window !== 'undefined' ? window : globalThis);

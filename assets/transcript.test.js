@@ -290,5 +290,47 @@ test('the example fills every field the form needs for a full document', () => {
   assert.ok(s.systems.length >= 2);
 });
 
+test('the tools that record time are in the vocabulary, because minutes is priced from them', () => {
+  /* The list held sales, ERP and automation tools and nothing that measures
+     time — while the value method is built on `minutes`, and a time tracker is
+     the one system that holds that answer already measured. Across twelve real
+     calls the single genuinely in-scope system anybody named was Toggl, said
+     in Hebrew, by a prospect explaining that everything she does is already
+     logged and detailed. The product could not see it. */
+  const seen = T.observe('לקוח: אני משתמש בתוגל אצלי הכל מתועד ומדוקדק.').systems.map(s => s.value);
+  assert.ok(seen.indexOf('תוגל') !== -1, 'a time tracker named out loud is still invisible: ' + seen);
+  assert.ok(T.observe('לקוח: אנחנו על Clockify.').systems.length >= 1, 'Latin spelling missed');
+});
+
+test('a transliteration that collides with ordinary Hebrew is a candidate, never a fact', () => {
+  /* The first version of this test made the rule about length, and its own
+     rule then failed on the one entry that works: "תוגל" is four letters.
+     Length was the wrong variable. What matters is whether the string is a
+     substring of ordinary speech, and that has to be checked per word rather
+     than derived from a count.
+
+     "ויקס" was in the list for exactly one measurement. It matched three times
+     across the twelve real calls, two of them inside garbled speech mentioning
+     no website builder, and one of those moved a whole call onto the market
+     rung. Removed; the Latin spelling stays.
+
+     "תוגל" is kept with its ambiguity written down rather than hidden: it is
+     also a Hebrew verb, and this sentence proves the collision is real. It is
+     kept because observe() proposes candidates with the sentence attached and
+     never applies them — the cost of this one is a glance, and the benefit is
+     the only in-scope system anybody named in twelve calls. */
+  const verb = T.observe('לקוח: התוכנית תוגל בשנה הבאה.').systems.map(s => s.value);
+  assert.ok(verb.indexOf('תוגל') !== -1,
+    'the known collision stopped happening — if the matcher got smarter, say so here');
+
+  /* What must hold regardless: a candidate carries the sentence it came from,
+     so the operator can see in one line that this is a verb and not a tool. */
+  const rows = T.observe('לקוח: התוכנית תוגל בשנה הבאה.').systems;
+  assert.ok(rows[0].quote && rows[0].quote.indexOf('תוגל') !== -1,
+    'a proposed system arrived without the sentence that produced it');
+  assert.ok(rows[0].verified !== false || rows[0].source,
+    'a proposed system arrived without a source');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

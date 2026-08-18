@@ -45,6 +45,17 @@ const EXEMPT = {
        'month') are already added alongside them as separate, untranslated
        keys in the same object, so both languages work at once. */
     (s) => s === 'יום' || s === 'שבוע' || s === 'חודש',
+    /* PLATFORMS: the Hebrew spellings of system names, which exist because
+       speech-to-text writes what it hears. They are the input side of a
+       matcher, and what reaches the screen is not this string as a label —
+       it is the name of a system the call named, quoted back for the
+       operator to confirm or reject. Translating "חשבשבת" would mean an
+       English interface could no longer find it in a Hebrew transcript,
+       which is the one place it is ever going to be written.
+
+       Bounded to list membership, so a Hebrew error or label added to this
+       file still fails. Deleting an entry removes its exemption with it. */
+    (s) => new Set(require('./pc-transcript.js').PLATFORMS).has(s),
   ],
   'assets/pc-numerals.js': [
     /* The number words themselves. This whole file is a lookup from what a

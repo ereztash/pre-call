@@ -85,14 +85,38 @@
     defaultMargin: 30
   };
 
-  // Converted from published US ranges for this vertical — starting points for
-  // an Israeli market, not measurements of it.
+  /* Converted from published US ranges for this vertical — starting points for
+     an Israeli market, not measurements of it.
+
+     That sentence stood alone for months. It now has one Israeli number beside
+     it, and the comparison is not flattering. Published Israeli consulting
+     prices per project run 2,600–5,000 for a small business, 4,500–9,500 for a
+     medium one and 5,000–15,000 for a large one. Against that, `פשוט` sits
+     about where it should and `מורכב` is borderline, while the top two tiers
+     price above the entire published range including large businesses — the
+     floor of `ארגוני` is 1.67× the ceiling of the biggest Israeli project
+     price anybody publishes.
+
+     Both are marked `unpriced` rather than deleted. They may well be right for
+     an automation project sold to a company, which is the vertical the ranges
+     came from and which the `vertical: true` flag on the market rung already
+     says this method needs behind it. What they are not is checked against
+     anything in the market this product is sold into, and a tier that says so
+     is worth more than a tier that quietly does not.
+
+     Source is a commercial directory rather than a survey, so treat it as an
+     order of magnitude. One source is not a benchmark; it is one more than
+     zero, which is what this table had. */
   const MARKET_TIERS = [
     { name: tr('פשוט'),      max: 2, simpleOnly: true, lo: 1500,  hi: 4000  },
     { name: tr('מורכב'),     max: 3,                   lo: 4000,  hi: 11000 },
-    { name: tr('רב-מערכתי'), max: 5,                   lo: 11000, hi: 25000 },
-    { name: tr('ארגוני'),    max: Infinity,            lo: 25000, hi: 45000 }
+    { name: tr('רב-מערכתי'), max: 5,                   lo: 11000, hi: 25000, unpriced: true },
+    { name: tr('ארגוני'),    max: Infinity,            lo: 25000, hi: 45000, unpriced: true }
   ];
+
+  /* The published Israeli ceiling for a consulting project of any size. Kept
+     next to the table so the claim above can be asserted rather than believed. */
+  const IL_PROJECT_CEILING = 15000;
 
   function marketTier(systemCount, integration) {
     if (!systemCount) return null;
@@ -230,7 +254,8 @@
   }
 
   root.PC = root.PC || {};
-  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier, METHOD_LABEL, pickMethod };
+  root.PC.model = { compute, ils, round, EFFORT, PRICE, MARKET_TIERS, marketTier,
+                    METHOD_LABEL, pickMethod, IL_PROJECT_CEILING };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.model;
 })(typeof window !== 'undefined' ? window : globalThis);
