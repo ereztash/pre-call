@@ -343,6 +343,8 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "סימנת שהוא נקב בהם בעצמו — הלחיצה הופכת את זה לטענה שלך, לא של הכלי.": "You marked them as figures he gave himself — pressing this makes that your claim rather than the tool\'s.",
   "לפני שתלחץ, סמן מאיפה המספרים הגיעו — זה מה שקובע אם אפשר לצטט אותם לו.": "Before you press this, mark where the numbers came from — that is what decides whether they can be quoted back to him.",
   "תמחר לפי מה שבטופס": "Price on what is in the form",
+  "המחיר נגזר מהמספר שהלקוח עצמו נקב, מותאם להיקף כאן. זו לא עבודה דומה שעשית — זה מה שהוא חושב שזה עולה, וזה מחזיק בשיחה בדיוק כל עוד הוא עומד מאחוריו.": "The price derives from the figure the client named himself, adjusted to the scope here. This is not similar work you have done — it is what he thinks it costs, and it holds in the room exactly as long as he stands behind it.",
+  "המחיר שהלקוח נקב (₪)": "The price the client named (₪)",
   "בחרתם את השיטה הזאת ידנית, אז הכלי לא יחליף אותה גם אם המספרים ישתנו.": "You picked this method yourself, so the tool will not switch it even if the numbers change.",
   "המחיר נגזר מהעבודה שאתם צפויים להשקיע ומהתעריף שלכם, בלי להישען על מספר של הלקוח.": "The price is derived from the work you expect to put in and your rate, without leaning on a number from the client.",
   "מחיר ייחוס שהלקוח נקב": "The reference price the client named",

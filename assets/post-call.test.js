@@ -830,6 +830,57 @@ async function readLocally(page, text) {
     await p.close();
   });
 
+  console.log('\none field, two facts');
+
+  /* c_last holds either what the operator charged for a job like this one or a
+     reference price the client named. The engine prices both the same way and
+     that is fine; what was not fine is that three of the four surfaces the
+     operator reads described the first while holding the second. */
+  const ANCHOR_CALL = [
+    'ספר לי איך העסק נראה היום.',
+    'אני צלם. פרויקט פה ופרויקט שם, בלי שום דבר קבוע.',
+    'ומה זה שווה לך, לדעתך?',
+    'אני מסתכל על זה כמו פגישה עם יועץ מס, זה 300 שקל לפגישה.'
+  ].join('\n');
+
+  await test('a price the client named is not described as work the operator did', async () => {
+    const p = await fresh();
+    await readLocally(p, ANCHOR_CALL);
+    await p.click('[data-act="trapply"]');
+    await p.waitForTimeout(600);
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(200);
+    assert.strictEqual(await val(p, 'c_last'), '300', 'the figure the client named never reached the field');
+
+    const label = (await p.locator('label[for="c_last"]').first().textContent()).trim();
+    const hint = (await p.textContent('#methodHint')).trim();
+    assert.ok(!/גבית/.test(label),
+      'the field holding the client\'s number is labelled as money the operator charged: ' + label);
+    assert.ok(!/דורש היסטוריה/.test(hint),
+      'the hint promises accuracy from history the operator does not have: ' + hint);
+    assert.ok(/הלקוח/.test(label) && /הלקוח/.test(hint),
+      'neither label says whose number this is');
+    await p.close();
+  });
+
+  await test('and a comparable job of the operator\'s own still reads as one', async () => {
+    /* The other meaning has to survive the fix. */
+    const p = await fresh();
+    await p.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    await p.waitForTimeout(200);
+    /* the field only appears once the method that uses it is chosen */
+    await p.locator('#methodChips button', { hasText: 'עסקה דומה' }).first().click();
+    await p.waitForTimeout(400);
+    await p.fill('#c_last', '6000');
+    await p.waitForTimeout(300);
+    const label = (await p.locator('label[for="c_last"]').first().textContent()).trim();
+    assert.ok(/גבית/.test(label),
+      'a number the operator typed about their own past work is described as the client\'s: ' + label);
+    assert.ok(/דורש היסטוריה/.test((await p.textContent('#methodHint')).trim()),
+      'the hint stopped warning that this method needs history');
+    await p.close();
+  });
+
   console.log('\nwhen the call says less than the form does');
 
   /* The ladder decides what a price may rest on, and it decided once, from the

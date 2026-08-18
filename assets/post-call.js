@@ -632,11 +632,38 @@ function pinMethod(key){
   recompute();
 }
 
+/* c_last holds one number and two facts. Usually it is what the operator
+   charged for a job like this one — their own history, which is what the
+   method called "a comparable deal" describes and what its hint promises
+   ("accurate when you really did something similar. Requires history").
+
+   But the transcript panel lands a reference price the CLIENT named in the
+   same field, because the engine prices both the same way: one known number
+   adjusted to the scope here. That part is right. What was wrong is that
+   three of the four surfaces the operator reads kept describing the first
+   meaning while holding the second — the field label said "what you charged",
+   the hint promised reliability from history there was none of, and only the
+   sentence under the price said whose number it actually was.
+
+   So the labels follow the evidence. appliedCites is the confirmed extraction,
+   so an anchor row in it is the operator having agreed that this figure came
+   out of the client's mouth. */
+function anchorFromClient(){
+  return appliedCites.some(c => c.key === 'anchor');
+}
+
 function setMethod(key){
   mc.dataset.sel = key;
   [...mc.children].forEach(x => { const sel = x.dataset.k === key;
     x.classList.toggle('on', sel); x.setAttribute('aria-pressed', String(sel)); });
-  el('methodHint').textContent = METHODS[key].hint;
+  const clientAnchor = key === 'comparable' && anchorFromClient();
+  el('methodHint').textContent = clientAnchor
+    ? tr('המחיר נגזר מהמספר שהלקוח עצמו נקב, מותאם להיקף כאן. זו לא עבודה דומה שעשית — זה מה שהוא חושב שזה עולה, וזה מחזיק בשיחה בדיוק כל עוד הוא עומד מאחוריו.')
+    : METHODS[key].hint;
+  const cl = document.querySelector('label[for="c_last"]');
+  if (cl) cl.textContent = clientAnchor
+    ? tr('המחיר שהלקוח נקב (₪)')
+    : tr('כמה גבית על העבודה הדומה האחרונה (₪)');
   show('m_comparable_in', key === 'comparable');
   show('m_cost_in', key === 'cost');
 }
