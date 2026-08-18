@@ -222,7 +222,14 @@ function probe() {
     if (e === document.body || e.offsetHeight < 24) continue;
     const s = getComputedStyle(e);
     if (!opaque(s.backgroundColor)) continue;
-    if (['Top', 'Right', 'Bottom', 'Left'].some(d => parseFloat(s['border' + d + 'Width']) > 0)) continue;
+    /* Exempt only a border that paints, the same rule borderShare uses above.
+       The first version exempted any nonzero WIDTH — and the commit that added
+       this check also gave .card a 1px transparent edge, so the cards whose
+       collapse into the page background is the reason this rule exists would
+       have been skipped by it. A guard that cannot see the fault it was
+       written for is worse than no guard. */
+    if (['Top', 'Right', 'Bottom', 'Left'].some(d =>
+        parseFloat(s['border' + d + 'Width']) > 0 && !isClear(s['border' + d + 'Color']))) continue;
     flat.push({ sel: label(e), bg: s.backgroundColor, under: behind(e) });
   }
   return { total: vis.length, bordered, bg, size, hues, fills, flat,

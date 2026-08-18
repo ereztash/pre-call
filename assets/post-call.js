@@ -645,11 +645,16 @@ function pinMethod(key){
    the hint promised reliability from history there was none of, and only the
    sentence under the price said whose number it actually was.
 
-   So the labels follow the evidence. appliedCites is the confirmed extraction,
-   so an anchor row in it is the operator having agreed that this figure came
-   out of the client's mouth. */
+   So the labels follow the evidence — all of it. The first version asked only
+   whether an anchor row survived confirmation, which is not the same question:
+   heard() narrows to the client's lines only when the transcript carries
+   speaker labels, and none of the twelve real ones do. On an unlabelled call
+   the row comes back speaker 'unknown', and the operator can mark it 'seller'
+   on the row itself. Either way the label would have asserted that the client
+   named the price on evidence that says nobody knows who did — which is the
+   exact claim-beyond-evidence this file spends its length preventing. */
 function anchorFromClient(){
-  return appliedCites.some(c => c.key === 'anchor');
+  return appliedCites.some(c => c.key === 'anchor' && c.speaker === 'client');
 }
 
 function setMethod(key){
@@ -798,10 +803,17 @@ function ladderHold(m){
     tr('המחיר נשען על מה שהשיחה נשאה: {rung}.', { rung: esc(trLadder.label || '') }) + '</b> ' +
     tr('על המספרים שבטופס אפשר לבנות {price} לפי {method}, אבל הם לא נאמרו בשיחה שקראתי.',
        { price: ils(other.value), method: esc(PC.model.METHOD_LABEL[alt.method] || alt.method) }) + ' ' +
+    /* One line per answer, and the instruction to answer only for the one
+       state that has not. Falling through to "mark where the numbers came
+       from" told an operator who had already marked it to go and mark it. */
     (p === 'mine'
       ? tr('סימנת שהמספרים שלך ולא שלו, אז פסקת ההחזר לא תיכנס למסמך בכל מקרה.')
       : p === 'unprompted'
       ? tr('סימנת שהוא נקב בהם בעצמו — הלחיצה הופכת את זה לטענה שלך, לא של הכלי.')
+      : p === 'prompted'
+      ? tr('סימנת שהוא נקב בהם אחרי ששאלת, אז הכלי יסמן את זה במסמך בכל מקרה.')
+      : p === 'none'
+      ? tr('סימנת שלא היה מספר בשיחה, אז המספרים האלה הם שלך והמסמך יגיד את זה.')
       : tr('לפני שתלחץ, סמן מאיפה המספרים הגיעו — זה מה שקובע אם אפשר לצטט אותם לו.')) +
     '<div class="tri-act"><button type="button" class="ghost" data-act="usemine">' +
     tr('תמחר לפי מה שבטופס') + '</button></div></div>';
