@@ -819,6 +819,58 @@ test('the design document quotes the thresholds the audit actually enforces', ()
     'that name and number');
 });
 
+/* Sixteen file headers moved to docs/modules/ and left a pointer behind, and
+   this is the guard that shipped with them rather than after them.
+
+   The split is by what a comment is for. A note above a statement has to be
+   unavoidable at the moment of editing — it exists to stop somebody reverting
+   the line beneath it — so moving it behind a link is the one change that
+   destroys it. A forty-line block at the top of a file is not explaining a
+   statement, it is explaining the file, which is orientation you read before
+   editing and can follow a link to. 311 of the 540 comment blocks in the
+   shipped assets are the first kind and stayed where they are.
+
+   Prose that lives away from its code drifts, and this repository has measured
+   its own rate: the README's package count, the README's file map, and
+   docs/design-persona.md all went stale before anyone noticed, and each needed
+   a test built for it afterwards. Three assertions here, and the third is the
+   one that matters — it keeps the 21-line rule mechanical instead of
+   aspirational, so a long header written next year fails the build with the
+   name of the file it belongs in. */
+test('the file headers and docs/modules stay in step', () => {
+  const MAX_HEADER_LINES = 21;
+  const shipped = fs.readdirSync(path.join(root, 'assets'))
+    .filter(f => (f.endsWith('.js') || f.endsWith('.css')) && !f.endsWith('.test.js'));
+
+  const leading = src => (/^\s*\/\*[\s\S]*?\*\//.exec(src) || [''])[0];
+  const pointed = new Set();
+  const problems = [];
+
+  for (const f of shipped) {
+    const src = read('assets/' + f);
+    const head = leading(src);
+    if (!head) continue;
+    const lines = head.trim().split('\n').length;
+    const to = /Why it works this way: (docs\/modules\/[\w.-]+\.md)/.exec(head);
+    if (to) {
+      pointed.add(path.basename(to[1]));
+      if (!fs.existsSync(path.join(root, to[1])))
+        problems.push('assets/' + f + ' points at ' + to[1] + ', which does not exist');
+    }
+    if (lines >= MAX_HEADER_LINES)
+      problems.push('assets/' + f + ' has a ' + lines + '-line header — that is a document, ' +
+        'and it belongs in docs/modules/' + f.replace(/\.(js|css)$/, '') + '.md with a pointer here');
+  }
+
+  const orphans = fs.readdirSync(path.join(root, 'docs/modules'))
+    .filter(f => f.endsWith('.md') && f !== 'README.md')
+    .filter(f => !pointed.has(f));
+  orphans.forEach(f => problems.push('docs/modules/' + f + ' describes a module that no longer ' +
+    'ships, or whose pointer was removed — nothing in assets/ links to it'));
+
+  assert.deepStrictEqual(problems, [], '\n       ' + problems.join('\n       '));
+});
+
 /* The one page whose entire job is to be factually complete. It names the
    storage keys and says how many there are, and both go stale the moment a
    module starts writing a new one — silently, because nothing else on the site

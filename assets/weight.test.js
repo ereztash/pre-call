@@ -15,10 +15,32 @@
    Budgeted on compressed bytes, because that is what the user pays. This
    file used to budget on raw bytes and the difference is not a rounding
    error: post-call.html is 321KB written and 95KB over the wire, so the
-   old ceiling overstated a visitor's cost by 3.4x. It also made the wrong
-   thing expensive — a third of what this project ships is comments, and
-   they compress to almost nothing, so budgeting raw quietly taxed the
-   documentation and let a real dependency in under the same number.
+   old ceiling overstated a visitor's cost by 3.4x.
+
+   A correction, because the sentence that used to follow was measured and
+   is false. It said comments "compress to almost nothing", and therefore
+   that budgeting raw quietly taxed the documentation. Stripped with a
+   tokenizer that respects strings, templates and regex literals, and each
+   result handed to `new vm.Script()` so the measurement is of a file that
+   still parses — a stripper that ate a quote would show up as a syntax
+   error, not a smaller number:
+
+     code    470.7K raw -> 130.4K wire   3.61x
+     prose   240.2K raw ->  83.1K wire   2.89x
+
+   Prose compresses WORSE than code, and it is 39% of the compressed asset
+   weight. Both halves of the old claim were wrong, and the second one was
+   load-bearing: it was the reason nobody looked at what the ceiling was
+   actually holding.
+
+   Which is why there are two ceilings now. Under one combined number a
+   paragraph of documentation and a first dependency look identical — the
+   thing this file says at the top it exists to catch is the dependency, and
+   it had no way to tell them apart. CODE below is the machine only. The
+   total stays budgeted too, because prose is not free and the visitor pays
+   for it either way; what changes is that a failure now names which half
+   moved, which is the whole of "somebody should say out loud whether they
+   meant to".
 
    Raw weight is still reported on every run. It is the honest signal for
    "is this file getting out of hand as a thing to read", which is a real
@@ -26,6 +48,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const vm = require('vm');
 const assert = require('assert');
 
 const root = path.join(__dirname, '..');
@@ -54,10 +77,83 @@ function pageWeight(page) {
     ...[...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]),
     ...[...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(m => m[1])
   ];
-  const parts = assets.map(a => ({ f: a, bytes: size(a), wire: wire(a) }));
+  const parts = assets.map(a => ({ f: a, bytes: size(a), wire: wire(a), code: codeWire(a) }));
   const total = parts.reduce((s, p) => s + p.bytes, 0) + size(page);
   const overWire = parts.reduce((s, p) => s + p.wire, 0) + wire(page);
-  return { total, overWire, parts, assets };
+  const code = parts.reduce((s, p) => s + p.code, 0) +
+    zlib.brotliCompressSync(Buffer.from(strip(html, 'html'))).length;
+  return { total, overWire, code, prose: overWire - code, parts, assets };
+}
+
+/* The machine only: the same bytes with every comment removed.
+
+   A stripper that eats a quote would measure a file that is not the file, so
+   the JS path is a tokenizer rather than a regex — it walks strings, template
+   literals and regex literals and only treats / / and / * as a comment where
+   a comment can actually start — and every stripped result is handed to the
+   parser before its size is believed. A silent failure here would not look
+   like a failure, it would look like the code getting smaller. */
+function strip(src, kind) {
+  if (kind === 'html') return src.replace(/<!--[\s\S]*?-->/g, '');
+  if (kind === 'css') {
+    let out = '', i = 0;
+    while (i < src.length) {
+      const c = src[i];
+      if (c === '"' || c === "'") {                       // url("...") may hold anything
+        const q = c; out += c; i++;
+        while (i < src.length) {
+          if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
+          out += src[i]; if (src[i] === q) { i++; break; } i++;
+        }
+        continue;
+      }
+      if (c === '/' && src[i + 1] === '*') {
+        i += 2; while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++;
+        i += 2; continue;
+      }
+      out += c; i++;
+    }
+    return out;
+  }
+  let out = '', i = 0;
+  /* A / starts a regex literal only where a value may begin. After an
+     identifier or a ) it is division, and treating it as a regex would
+     swallow the rest of the line. */
+  const prev = () => { for (let j = out.length - 1; j >= 0; j--) if (!/\s/.test(out[j])) return out[j]; return ''; };
+  while (i < src.length) {
+    const c = src[i], d = src[i + 1];
+    if (c === '/' && d === '/') { while (i < src.length && src[i] !== '\n') i++; continue; }
+    if (c === '/' && d === '*') { i += 2; while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++; i += 2; continue; }
+    if (c === '"' || c === "'" || c === '`') {
+      const q = c; out += c; i++;
+      while (i < src.length) {
+        if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
+        out += src[i]; if (src[i] === q) { i++; break; } i++;
+      }
+      continue;
+    }
+    if (c === '/' && '(,=:[!&|?{};+-*%~^<>'.includes(prev())) {
+      out += c; i++;
+      while (i < src.length) {
+        if (src[i] === '\\') { out += src[i] + src[i + 1]; i += 2; continue; }
+        if (src[i] === '[') { while (i < src.length && src[i] !== ']') { out += src[i]; i++; } }
+        out += src[i]; if (src[i] === '/') { i++; break; } i++;
+      }
+      while (i < src.length && /[a-z]/.test(src[i])) { out += src[i]; i++; }
+      continue;
+    }
+    out += c; i++;
+  }
+  return out;
+}
+
+const codeCache = {};
+function codeWire(f) {
+  if (codeCache[f]) return codeCache[f];
+  const kind = f.endsWith('.css') ? 'css' : 'js';
+  const stripped = strip(fs.readFileSync(path.join(root, f), 'utf8'), kind);
+  if (kind === 'js') new vm.Script(stripped, { filename: f });   // throws if the stripper broke it
+  return (codeCache[f] = zlib.brotliCompressSync(Buffer.from(stripped)).length);
 }
 
 /* brotli, which every browser this product supports has accepted for
@@ -380,6 +476,39 @@ for (const [page, budget] of Object.entries(BUDGETS)) {
   });
 }
 
+/* The machine-only half of the ceiling above: the same page with every
+   comment stripped and the result reparsed, so a raise here can only mean
+   new code — a library, a parser, a feature — never a paragraph. Comments
+   are not free, which is why BUDGETS above still bounds the total; they
+   were just never what this file was built to catch. A long explanation
+   cannot make a page slow. A dependency can, silently, in a commit that
+   looks like a two-line diff, and under one combined number the two were
+   indistinguishable.
+
+   Set the same way the ceilings above are: current measured code weight,
+   rounded up to the next whole KB. Room for the next commit, not a target
+   to grow into. */
+const CODE_BUDGETS = {
+  'index.html':              9 * 1024,
+  'privacy.html':            10 * 1024,
+  'accessibility.html':      10 * 1024,
+  'post-call-landing.html':  5 * 1024,
+  'product-landing.html':    6 * 1024,
+  'pre-call.html':           29 * 1024,
+  'post-call.html':          98 * 1024
+};
+
+console.log('\nper-page code weight, comments stripped and the result reparsed');
+for (const [page, budget] of Object.entries(CODE_BUDGETS)) {
+  test(page + ' code stays under ' + kb(budget) + 'KB over the wire', () => {
+    const w = measured[page] || pageWeight(page);
+    assert.ok(w.code <= budget,
+      page + ' is ' + kb(w.code) + 'KB of code compressed — prose is a separate ' +
+      kb(w.prose) + 'KB of the ' + kb(w.overWire) + 'KB total — over the ' + kb(budget) +
+      'KB code budget. Raise it deliberately or trim the code, not the comments.');
+  });
+}
+
 /* Raw weight is not budgeted, and it is still worth seeing: it is what a
    person reading this repository has to wade through, which is a real
    cost even though it is not the visitor's. */
@@ -388,7 +517,8 @@ test('the raw-to-wire ratio is reported, not assumed', () => {
     const w = measured[page] || pageWeight(page);
     console.log('       ' + page.padEnd(17) + kb(w.overWire).toString().padStart(6) + 'KB wire   ' +
       kb(w.total).toString().padStart(6) + 'KB raw   ' +
-      Math.round(w.overWire / w.total * 100) + '%');
+      Math.round(w.overWire / w.total * 100) + '%   (code ' + kb(w.code) + 'KB, prose ' +
+      kb(w.prose) + 'KB)');
   });
 });
 
