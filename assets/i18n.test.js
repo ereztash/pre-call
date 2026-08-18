@@ -57,6 +57,17 @@ const EXEMPT = {
        file still fails. Deleting an entry removes its exemption with it. */
     (s) => new Set(require('./pc-transcript.js').PLATFORMS).has(s),
   ],
+  'assets/pc-catalog.js': [
+    /* SYSTEM_OF keys, which are the same product names one file down and are
+       exempt for the same reason: they are what a transcript says, not what a
+       screen shows. The values are the chip labels and those do go through
+       tr(), which is the half a reader ever sees.
+
+       Bounded to the transcript vocabulary rather than to this object, so a
+       product name here that no reader could ever produce is a mistake this
+       still catches. */
+    (s) => new Set(require('./pc-transcript.js').PLATFORMS).has(s),
+  ],
   'assets/pc-numerals.js': [
     /* The number words themselves. This whole file is a lookup from what a
        transcript says to a digit, so its Hebrew is the input side of a parser

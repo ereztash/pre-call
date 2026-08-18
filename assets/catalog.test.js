@@ -162,5 +162,54 @@ test('watch rows are rows the template left alone', () => {
   });
 });
 
+/* ---------- from what a call named to what the form can hold ----------
+
+   The chip row is categories and a transcript names products, and until the
+   panel was driven by a real click nothing connected them except a shared
+   word. That worked for מורנינג, whose product name is inside its chip label,
+   and silently failed for everything else: the row was proposed, confirmed,
+   and dropped without a message. These are the rules that replaced it. */
+console.log('\nwhich chip a named product belongs to');
+test('a product inside a chip label still finds it by the word they share', () => {
+  assert.strictEqual(C.chipFor('מורנינג'), 'חשבונית ירוקה / מורנינג');
+  assert.strictEqual(C.chipFor('Monday'), 'Monday / Asana');
+});
+test('a product with a category lands on that category, not on "other"', () => {
+  assert.strictEqual(C.chipFor('חשבשבת'), 'ERP');
+  assert.strictEqual(C.chipFor('Salesforce'), 'CRM');
+  assert.strictEqual(C.chipFor('טרנזילה'), 'מערכת סליקה');
+});
+test('the automation platform is not one of the client\'s systems', () => {
+  /* Naming Zapier in a discovery call is answering "what would you build it
+     in". Counting it would raise the system count the market tier is keyed
+     on, which prices the work by the tool used to do it. */
+  ['Zapier', 'Make', 'n8n'].forEach(p =>
+    assert.strictEqual(C.chipFor(p), null, p + ' was counted as a system the client has'));
+});
+test('a product the catalog has never heard of still lands somewhere', () => {
+  assert.strictEqual(C.chipFor('QuickBooks'), 'אחר');
+  assert.strictEqual(C.chipFor(''), 'אחר');
+});
+test('every chip a mapping names is a chip that exists', () => {
+  /* Renaming a chip would otherwise leave the map pointing at a label nothing
+     renders, and the failure would be the silent one all over again. */
+  Object.entries(C.SYSTEM_OF).forEach(([product, chip]) => {
+    if (chip === null) return;
+    assert.ok(C.SYSTEMS.includes(chip),
+      product + ' maps to "' + chip + '", which is not one of the chips');
+  });
+});
+test('the vocabulary the reader can find is the vocabulary this can place', () => {
+  /* Not a coverage rule — "other" is a legitimate answer and time trackers
+     genuinely have no category. What it forbids is a product being findable
+     and then landing nowhere, which is the state that produced the bug. */
+  const T = require('./pc-transcript.js');
+  T.PLATFORMS.forEach(p => {
+    const chip = C.chipFor(p);
+    assert.ok(chip === null || C.SYSTEMS.includes(chip),
+      p + ' can be found in a transcript and has nowhere to go: ' + chip);
+  });
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail ? 1 : 0);

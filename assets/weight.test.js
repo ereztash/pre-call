@@ -290,8 +290,27 @@ const BUDGETS = {
      module post-call.html loads is referenced from another module, so there is
      no orphan to delete and no cheap win. The 283 unreachable functions are
      inside modules that are genuinely loaded. That is a decomposition job, not
-     a deletion, and it is still not done. */
-  'post-call.html':     166 * 1024
+     a deletion, and it is still not done.
+
+     A fourteenth raise, 166 -> 168KB, for 1,234 bytes. It buys the map from a
+     product name to the chip that carries it. The chip row is twelve
+     categories, a transcript names products, and the only thing joining them
+     was a word they happened to share — which works for מורנינג, whose product
+     name sits inside its chip label, and fails for everything else. Failed
+     silently: the panel proposed the system, the operator confirmed it, and no
+     chip moved and nothing said why.
+
+     Found by the first test that clicks the confirm button rather than calling
+     the function behind it, which is the same measurement that produced the
+     new suite: 47 of post-call.js's 77 functions were entered by the whole
+     journey, and 30 were never entered once. Silent no-ops are what lives in
+     the gap between a tested engine and an untested wire.
+
+     Not raised for the prose. The trim that avoided the previous raise is
+     still in force — this is the map, the lookup, and the reason each entry is
+     where it is, which is the part that stops the next person from moving
+     חשבשבת onto the invoicing chip without knowing it turns off a warning. */
+  'post-call.html':     168 * 1024
 };
 
 console.log('\nper-page transfer weight, compressed as it is served');

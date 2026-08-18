@@ -282,7 +282,18 @@
       /* Weakest cue here by a distance. Every figure in a discovery call that
          carries a currency word matches it — the hourly rate this same
          transcript states, most of all. */
-      confidence: 0.55 },
+      confidence: 0.55,
+      /* So it does not read one. A figure stated per unit of time is a rate,
+         and a rate is not what one incident costs — at any rung, which is why
+         this lives on the cue and not in the licence. It had to: the licence
+         switches `anchor` off on a value-rung call, so the sentence that names
+         an hourly rate has no cue left that would claim it correctly, and the
+         weakest cue in the file picks it up unopposed. Measured on a labelled
+         call stating both an hourly rate and a per-incident cost, errCost came
+         back as the rate and the incident sentence went unread.
+         ANCHOR_RE rather than a second expression, for the reason given above
+         it: two ways to say "this is a rate" would drift. */
+      veto: ANCHOR_RE },
     /* A rate, not a count, and the noun in the middle is optional because in a
        real call it is in the question rather than in the answer:
 
@@ -377,8 +388,14 @@
            ביום" is what speech-to-text returns and no cue could see it. The
            quote stays the original sentence, so `verified` still means what it
            says: this text is in the transcript, word for word. */
-        const m = numeric(line).match(cue.re);
-        if (!m || seen.has(cue.key)) continue;
+        if (seen.has(cue.key)) break;
+        const said = numeric(line);
+        /* A line the cue is not allowed to read even when it matches. Skips the
+           line and keeps looking, so the same cue can still be filled from a
+           sentence that does mean what it says. */
+        if (cue.veto && cue.veto.test(said)) continue;
+        const m = said.match(cue.re);
+        if (!m) continue;
         const n = parseFloat(m[1].replace(/,/g, ''));
         if (!isFinite(n) || n <= 0) continue;
         seen.add(cue.key);

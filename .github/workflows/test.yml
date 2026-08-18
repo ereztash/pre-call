@@ -142,6 +142,12 @@ jobs:
         run: npm install --no-save playwright@1.62.1 axe-core@4.13.0 && npx playwright install --with-deps chromium firefox webkit
       - name: the journey — entry page through to a priced proposal
         run: node assets/journey.test.js
+      # post-call.js is 47% of the code and had nothing of its own. Coverage
+      # taken while the journey ran: 47 of its 77 functions entered, 30 never.
+      # This drives the panel that reads a call — the part whose engine is
+      # tested everywhere and whose wiring was tested nowhere.
+      - name: the page's own wiring, driven by clicking it
+        run: node assets/post-call.test.js
       - name: accessibility — axe-core on every page, in every state
         env:
           A11Y_REQUIRED: '1'

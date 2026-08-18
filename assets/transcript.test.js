@@ -152,6 +152,27 @@ test('finds numbers next to a unit word, with the sentence around them', () => {
 test('marks itself as a guess so it is never mistaken for an extraction', () => {
   T.heuristics('זה לוקח 8 דקות').forEach(h => assert.strictEqual(h.guessed, true));
 });
+/* An hourly rate and a per-incident cost, in that order, on a call that has
+   both. The incident cue is "a number beside a currency word" and nothing
+   more, so it used to take whichever came first and stop — which on this call
+   is the rate, and the sentence that actually names what a mistake costs went
+   unread. Neither number is wrong; the label on one of them was.
+
+   The ladder cannot help here: at the value rung it licenses errCost and
+   switches `anchor` off, so the one cue that would have recognised the rate
+   correctly is not looking. The refusal has to sit on the cue. */
+test('an hourly rate is not the cost of an incident, and the real one is still found', () => {
+  const tx = 'לקוח: מי שעושה את זה עולה לי 90 שקל לשעה.\n' +
+             'לקוח: כשיש טעות המשלוח חוזר וזה 500 שקל בכל פעם.';
+  const cost = T.heuristics(tx).find(x => x.key === 'errCost');
+  assert.ok(cost, 'the incident cue skipped the line it should have read');
+  assert.strictEqual(cost.value, 500, 'read the rate as the cost of an incident');
+  assert.ok(cost.quote.includes('טעות'), 'quoted a sentence that is not about a mistake');
+});
+test('a call that states only a rate fills nothing from the incident cue', () => {
+  assert.ok(!T.heuristics('לקוח: אני משלם לה 90 שקל לשעה.').some(x => x.key === 'errCost'),
+    'a rate with no incident anywhere in the call still became one');
+});
 test('an empty or wordless transcript yields nothing', () => {
   assert.deepStrictEqual(T.heuristics(''), []);
   assert.deepStrictEqual(T.heuristics('שיחה בלי שום מספר בכלל'), []);

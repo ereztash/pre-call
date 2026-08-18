@@ -727,11 +727,24 @@ test('privacy.html has balanced div tags', () => {
    this catches. */
 test('the README counts the test packages it actually has', () => {
   const readme = read('README.md');
-  const inNode = SCRIPTS.length && fs.readdirSync(path.join(root, 'assets'))
-    .filter(f => f.endsWith('.test.js') && !/^(journey|a11y|perf)\./.test(f)).length;
-  const browser = fs.readdirSync(path.join(root, 'assets'))
-    .filter(f => /^(journey|a11y|perf)\.test\.js$/.test(f)).length;
-  const words = { 'שתי': 2, 'שלוש': 3, 'ארבע': 4 };
+  /* Which side a suite counts on is not a property of its name. This was a
+     hardcoded list of three filenames, and the first browser suite added under
+     a fourth name was counted as running in Node — precisely the claim the
+     sentence exists to make, and precisely the one it would have got wrong.
+
+     The split the README describes is the split the workflow already has: one
+     job that installs nothing and one that installs browsers. Reading it from
+     there means the two cannot disagree, because there is only one of them. */
+  const workflow = read('.github/workflows/test.yml');
+  const cut = workflow.indexOf('\n  journey:');
+  assert.ok(cut > 0, 'the workflow no longer has a job named journey — re-pin this');
+  /* Unique, because a11y.test.js runs three times up there — dark theme and
+     English are the same package under different environments, not three. */
+  const ran = half => new Set((half.match(/run: node \S+\.test\.js/g) || [])
+    .map(s => s.replace('run: node ', '')));
+  const inNode = SCRIPTS.length && ran(workflow.slice(0, cut)).size;
+  const browser = ran(workflow.slice(cut)).size;
+  const words = { 'שתי': 2, 'שלוש': 3, 'ארבע': 4, 'חמש': 5 };
   assert.ok(new RegExp('ב-' + inNode + ' חבילות').test(readme),
     'the README does not say ' + inNode + ' Node packages');
   const said = Object.entries(words).find(([w]) => new RegExp(w + ' חבילות שכן דורשות דפדפן').test(readme));
