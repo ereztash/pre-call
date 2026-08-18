@@ -241,6 +241,143 @@ async function journey(engineName, base) {
     await busy.close();
   });
 
+  /* --- the loop, driven rather than seeded ---
+
+     Every other ledger test here writes postcall_deals_v1 straight into
+     localStorage and then checks what renders. That covers the read path and
+     leaves the write path — the loop the product is built around — never
+     executed: price a call, save it as a deal, report what it actually took,
+     and let the comparison against the locked estimate turn the effort table
+     from fitted-backwards into measured. pc-ledger.js is 663 lines with no
+     suite of its own precisely because it is DOM and could not be reached
+     from Node, and v8 coverage put 83% of it, and of deals.js, pc-history.js
+     and pc-followup.js, outside every entry route.
+
+     This drives it through the buttons a person would press. */
+  await test(label('a call priced, saved, won and reported comes back as a claim the tool may now make'), async () => {
+    const loop = await ctx.newPage();
+    await loop.goto(base + '/post-call.html');
+    /* Taking the document out of the page is what the key is for, and sending
+       is one of those exits — so the loop cannot be driven at all without one.
+       A locally valid key from tools/mint-key.js is enough: rehydrateKey()
+       unlocks on the checksum and the server round-trip returns no verdict
+       here, which it is written to treat as "leave it as it was". */
+    await loop.evaluate(() => {
+      localStorage.clear();
+      localStorage.setItem('postcall_key', 'PC-C2B3-3F3A');
+    });
+    await loop.goto(base + '/post-call.html');
+    await loop.waitForTimeout(400);
+
+    /* a process with a quantity and a duration is what the value method needs */
+    await loop.fill('#q_client', 'מסעדה');
+    await loop.fill('#q_process', 'כל הזמנה שנכנסת בוואטסאפ מוקלדת ידנית לגיליון');
+    await loop.fill('#q_freq', '40');
+    await loop.fill('#q_minutes', '8');
+    await loop.waitForTimeout(500);
+
+    const priced = await loop.evaluate(() => {
+      const m = (typeof model === 'function') ? model() : null;
+      return m && m.price > 0 ? m.price : null;
+    });
+    assert.ok(priced, 'the form did not reach a price, so nothing downstream is being tested');
+
+    await loop.click('[data-act="save"]');
+    await loop.waitForTimeout(400);
+    const saved = await loop.evaluate(() => PC.deals.list().length);
+    assert.strictEqual(saved, 1, 'pressing save did not put a deal in the ledger');
+
+    const id = await loop.evaluate(() => PC.deals.list()[0].id);
+
+    /* sent, and then the offer that only exists because it was sent: the
+       document carries an expiry and the ledger offers a reminder before it
+       runs out. The only way in is picking a send route — marking sent is a
+       side effect of sending, never a button of its own, which is why writing
+       this test found ACTIONS.sent sitting in the dispatch table with no
+       markup anywhere that could reach it. `copy` is the route that does not
+       open a window. */
+    await loop.click('[data-act="send"]');
+    await loop.waitForTimeout(300);
+    await loop.click('[data-route="copy"]');
+    await loop.waitForTimeout(400);
+    const sent = await loop.evaluate(() => ({
+      status: PC.deals.list()[0].status,
+      sentAt: !!PC.deals.list()[0].sentAt,
+      offer:  (document.getElementById('draftNote') || {}).textContent || '',
+      ics:    document.querySelectorAll('[data-status="__ics"]').length
+    }));
+    assert.strictEqual(sent.status, 'sent', 'the sent button did not move the deal');
+    assert.ok(sent.sentAt, 'nothing recorded when it went out, so no reminder can be dated');
+    assert.ok(sent.ics > 0,
+      'a proposal went out and the ledger offered no reminder before it expires: ' + sent.offer);
+
+    /* mark it won, then report what it actually took */
+    await loop.click(`[data-deal="${id}"][data-status="won"]`);
+    await loop.waitForTimeout(300);
+    assert.strictEqual(await loop.evaluate(() => PC.deals.list()[0].status), 'won',
+      'the status button did not move the deal');
+
+    const reported = await loop.evaluate(id => {
+      const h = document.getElementById('oc_hours_' + id);
+      const p = document.getElementById('oc_price_' + id);
+      if (!h || !p) return 'no outcome controls rendered for a won deal';
+      h.value = '30'; p.value = String(PC.deals.list()[0].priceQuoted);
+      document.querySelector(`[data-deal="${id}"][data-status="__outcome"]`).click();
+      return null;
+    }, id);
+    assert.strictEqual(reported, null, reported || '');
+    await loop.waitForTimeout(300);
+
+    const done = await loop.evaluate(() => ({
+      hours: PC.deals.list()[0].outcome && PC.deals.list()[0].outcome.actualHours,
+      est:   PC.deals.list()[0].estimatedHours,
+      delivered: PC.history.deliveries(PC.deals.list()).length
+    }));
+    assert.strictEqual(Number(done.hours), 30, 'the reported hours never reached the record');
+    assert.ok(done.est > 0, 'the estimate was not locked at save time, so nothing can be compared to it');
+    assert.strictEqual(done.delivered, 1,
+      'the loop ran and produced no measured delivery, which is the only thing that ' +
+      'can turn the effort table from fitted-backwards into measured');
+    await loop.close();
+  });
+
+  /* One delivery crosses nothing, and that is correct: MIN_DELIVERIES is 5,
+     because an estimate cannot be called accurate from a single job. So the
+     part worth pinning is that the loop leads somewhere — that the fifth one
+     makes the tool able to say something the fourth could not. Four are
+     seeded and the fifth is driven, so the announcement path runs for real. */
+  await test(label('the fifth delivery is the one that lets the tool say something new'), async () => {
+    const five = await ctx.newPage();
+    await five.goto(base + '/post-call.html');
+    await five.evaluate(() => {
+      const mk = i => ({ id: 'seed' + i, client: 'c' + i, status: 'won',
+        estimatedHours: 24, priceQuoted: 5000, method: 'value', pricedBy: 'value',
+        outcome: { actualHours: 26 + i, closedPrice: 5000, at: '2026-0' + (i + 1) + '-01' } });
+      localStorage.setItem('postcall_deals_v1',
+        JSON.stringify([mk(0), mk(1), mk(2), mk(3)]));
+    });
+    await five.goto(base + '/post-call.html#ledger');
+    await five.waitForTimeout(500);
+
+    const gained = await five.evaluate(() => {
+      const snap = () => PC.history.report(PC.deals.list(), PC.model.METHOD_LABEL,
+                                           PC.PROVENANCE_LABEL, PC.deals.priceHold());
+      const before = snap();
+      const list = PC.deals.list();
+      list.push({ id: 'fifth', client: 'c5', status: 'won', estimatedHours: 24,
+        priceQuoted: 5000, method: 'value', pricedBy: 'value',
+        outcome: { actualHours: 30, closedPrice: 5000, at: '2026-05-01' } });
+      localStorage.setItem('postcall_deals_v1', JSON.stringify(list));
+      return { crossed: PC.history.crossed(before, snap()).map(String),
+               delivered: PC.history.deliveries(PC.deals.list()).length };
+    });
+    assert.strictEqual(gained.delivered, 5, 'the fifth delivery was not counted');
+    assert.ok(gained.crossed.length > 0,
+      'five measured deliveries and the tool still cannot say anything it could not before — ' +
+      'the ledger leads nowhere');
+    await five.close();
+  });
+
   // --- situation: chasing sent proposals ---
   await test(label('"what happened to my proposals" lands on the ledger, not the top of a form'), async () => {
     const fresh = await ctx.newPage();

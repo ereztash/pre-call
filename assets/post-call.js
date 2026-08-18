@@ -1623,7 +1623,12 @@ const ACTIONS = {
   copy:    () => requireKey(copyProposal),
   print:   () => requireKey(() => window.print()),
   save:    saveCurrentDeal,
-  sent:    markSent,
+  /* `sent` used to sit here and nothing in the product could reach it: no
+     markup anywhere carries data-act="sent". Marking a deal sent is a side
+     effect of picking a send route, never a button of its own — sendVia()
+     calls markSent() because asking the operator to remember a second click
+     is how a follow-up list goes stale. Found by writing the first test that
+     drives the ledger through its buttons instead of seeding localStorage. */
   unlock:  tryUnlock,
   askkey:  askForKeyAhead,
   laterkey: dismissKeyAhead,
