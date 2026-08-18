@@ -173,6 +173,40 @@ test('a call that states only a rate fills nothing from the incident cue', () =>
   assert.ok(!T.heuristics('לקוח: אני משלם לה 90 שקל לשעה.').some(x => x.key === 'errCost'),
     'a rate with no incident anywhere in the call still became one');
 });
+/* The forms a review found after the first version of this shipped. It used
+   ANCHOR_RE as the veto, which is the expression deciding whether a number may
+   SET a price — deliberately narrow, and therefore blind to an English rate
+   and to the Hebrew construct form. Both put 90 in the field that means "what
+   one mistake costs", and both then stopped the cue looking, so the real
+   figure later in the same call went unread. */
+const RATE_FORMS = [
+  ['English, per hour', 'Client: the person doing it costs me 90 ILS per hour.\n' +
+                        'Client: when it breaks it is 500 shekels each time.'],
+  ['English, a day',    'Client: it is 200 shekels a day.\n' +
+                        'Client: each mistake costs 500 shekels.'],
+  ['Hebrew, construct', 'לקוח: זה עולה לי 90 שקל לשעת עבודה.\nלקוח: כל טעות עולה 500 שקל.'],
+  ['Hebrew, per month', 'לקוח: אני משלם על זה 90 שקל לחודש.\nלקוח: כל טעות עולה 500 שקל.']
+];
+test('a rate is refused in every form the extractor claims to read', () => {
+  RATE_FORMS.forEach(([name, tx]) => {
+    const cost = T.heuristics(tx).find(x => x.key === 'errCost');
+    assert.ok(cost, name + ': the incident cue found nothing at all');
+    assert.strictEqual(cost.value, 500, name + ': read the rate as the cost of an incident');
+  });
+});
+test('the veto matches everything the anchor does, and more', () => {
+  /* The property that lets these be two expressions instead of one. The anchor
+     asks "may this set a price"; the veto asks "must the weak cue leave this
+     alone". The second question must never have the narrower answer — a
+     sentence tight enough to price from is certainly a rate. */
+  const FORMS = ['300 שקל לפגישה', '300 ש"ח לשעה', '1,200 ₪ לחודש', '90 NIS לשעה',
+                 '450 שקלים למפגש', '80 ILS ליום', '250 שק לשיחה', '600 ₪ לשבוע'];
+  const anchors = FORMS.filter(f => T.ANCHOR_RE.test(f));
+  assert.ok(anchors.length > 3, 'these fixtures stopped being anchor forms — this proves nothing now');
+  anchors.forEach(f => assert.ok(T.RATE_RE.test(f),
+    'the anchor reads "' + f + '" as a rate and the veto does not — that gap is ' +
+    'exactly where an hourly rate becomes the cost of a mistake'));
+});
 test('an empty or wordless transcript yields nothing', () => {
   assert.deepStrictEqual(T.heuristics(''), []);
   assert.deepStrictEqual(T.heuristics('שיחה בלי שום מספר בכלל'), []);

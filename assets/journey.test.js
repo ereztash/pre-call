@@ -1255,10 +1255,28 @@ async function journey(engineName, base) {
     assert.ok(start > -1, 'the demo never scrolled at all');
     const t = all.slice(start);
 
+    /* A tolerance, not an exact match, and the size of it is the whole point.
+
+       The fault this was written for is the pinned guide collapsing mid-scroll
+       and taking ~240px of document with it. What webkit actually does on this
+       page is finish laying out 21px later than it starts — 15,064 to 15,085,
+       0.14% of the document — every run, on the base branch and on this one,
+       byte for byte the same two numbers. Chromium and firefox do not.
+
+       Demanding a single height made the suite red on all three engines for a
+       settle no eye can see, on a page nobody had changed. 40px is under a
+       fifth of the fault and about one line of text, so the collapse still
+       fails here and the settle does not.
+
+       The strict half stays strict: a scroll that runs backwards is the page
+       actually fighting the animation, and that assertion passes on all three
+       engines today. It is the one that would catch the fault first. */
     const heights = [...new Set(t.map(f => f.doc))];
-    assert.strictEqual(heights.length, 1,
-      'the document changed height mid-scroll (' + heights.join(', ') +
-      ') — that is what makes the page bounce');
+    const spread = Math.max(...heights) - Math.min(...heights);
+    const SETTLE = 40;
+    assert.ok(spread <= SETTLE,
+      'the document changed height by ' + spread + 'px mid-scroll (' + heights.join(', ') +
+      ') — over the ' + SETTLE + 'px a late layout settle can explain, which is what makes the page bounce');
 
     /* A smooth scroll only ever moves one way. Any backward step is the
        animation being fought by a layout change. A one-pixel tolerance

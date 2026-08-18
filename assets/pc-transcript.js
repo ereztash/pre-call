@@ -271,6 +271,30 @@
 
   const ANCHOR_RE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שק|\bNIS\b|\bILS\b)\s*ל(?:פגישה|מפגש|שיחה|שעה|חודש|שבוע|יום)/i;
 
+  /* Every way a rate can be said, which is deliberately more than ANCHOR_RE
+     recognises. They answer different questions and the costs are not
+     symmetric:
+
+       ANCHOR_RE asks "may this number set a price". A reference price the
+       client named has to be in a tight, unmistakable form, because being
+       wrong means pricing the work off a misread sentence. Narrow is right.
+
+       RATE_RE asks "must this cue keep its hands off this line". Being wrong
+       in the strict direction costs one weak cue not filling one field, which
+       the operator fills by hand. Being wrong in the loose direction puts an
+       hourly rate in the box labelled "what one mistake costs" and prices the
+       proposal from it. Liberal is right.
+
+     The first version used ANCHOR_RE for both, on the reasoning that two ways
+     to say "this is a rate" would drift apart. That was the wrong worry — they
+     are two different questions — and the review that caught it named the two
+     forms it let through: "90 ILS per hour", and "90 שקל לשעת עבודה", where
+     the construct form שעת is not the שעה ANCHOR_RE lists. Both reproduced,
+     both returned 90 as the cost of an incident, and both suppressed the real
+     figure later in the call. The drift worry is answered by a test instead:
+     RATE_RE must match everything ANCHOR_RE matches. */
+  const RATE_RE = /(\d[\d,]*)\s*(?:₪|ש\s*₪|ש["״']?ח|שקלים|שקל|שח|שק|\bNIS\b|\bILS\b|\bshekels?\b)\s*(?:ל(?:שע(?:ה|ת)|פגיש(?:ה|ת)|מפגש|שיחה|חודש|שבוע|יום)|(?:\/|\bper\b|\ban?\b)\s*(?:hours?|hrs?|days?|weeks?|months?|sessions?|meetings?|calls?)\b)/i;
+
   const CUES = [
     { key: 'anchor', re: ANCHOR_RE, label: tr('מחיר ייחוס שהלקוח נקב'),
       /* Higher than errCost by a distance, and for the reason errCost is low:
@@ -290,10 +314,8 @@
          an hourly rate has no cue left that would claim it correctly, and the
          weakest cue in the file picks it up unopposed. Measured on a labelled
          call stating both an hourly rate and a per-incident cost, errCost came
-         back as the rate and the incident sentence went unread.
-         ANCHOR_RE rather than a second expression, for the reason given above
-         it: two ways to say "this is a rate" would drift. */
-      veto: ANCHOR_RE },
+         back as the rate and the incident sentence went unread. */
+      veto: RATE_RE },
     /* A rate, not a count, and the noun in the middle is optional because in a
        real call it is in the question rather than in the answer:
 
@@ -601,7 +623,7 @@
      be the one deciding whether a rung rests on the operator's own words. */
   root.PC.transcript = { FIELDS, UNIT_VALUES, buildPrompt, parseExtraction,
                          candidates, provenance, heuristics, observe, toState,
-                         withSpeakers, ANCHOR_RE, FREQ_RE: () => FREQ_RE,
+                         withSpeakers, ANCHOR_RE, RATE_RE, FREQ_RE: () => FREQ_RE,
                          FLOW_RE, systemInFlow, PLATFORMS };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.PC.transcript;
