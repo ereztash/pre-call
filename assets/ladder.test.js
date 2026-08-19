@@ -365,12 +365,17 @@ test('the licence is still the guard on a stray figure that is not a rate', () =
     'the unguarded reading changed — the licence may no longer be what prevents this');
 });
 
-test('the value rung licenses exactly the three cues its formula needs', () => {
+/* freqUnit joined the list when the period word stopped being discarded. It is
+   not a fourth independent cue — it is emitted from the same match as freq and
+   cannot appear without it — but it is licensed by name rather than exempted
+   here, so this assertion stays a literal set comparison. The moment a row can
+   come out without being named in LICENCE, this test stops meaning anything. */
+test('the value rung licenses exactly the cues its formula needs', () => {
   const v = L.assess({ text: AUTOMATION, systems: ['WhatsApp'] });
-  assert.deepStrictEqual([...v.licence].sort(), ['errCost', 'freq', 'minutes']);
+  assert.deepStrictEqual([...v.licence].sort(), ['errCost', 'freq', 'freqUnit', 'minutes']);
   const rows = T.heuristics(AUTOMATION, v.licence);
   assert.deepStrictEqual([...new Set(rows.map(r => r.key))].sort(),
-    ['errCost', 'freq', 'minutes'], 'the rung licensed cues it did not read, or read cues it did not license');
+    ['errCost', 'freq', 'freqUnit', 'minutes'], 'the rung licensed cues it did not read, or read cues it did not license');
 });
 
 test('a rung licenses only cues that feed the method it names', () => {

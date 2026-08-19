@@ -142,6 +142,14 @@ jobs:
         run: npm install --no-save playwright@1.62.1 axe-core@4.13.0 && npx playwright install --with-deps chromium firefox webkit
       - name: the journey — entry page through to a priced proposal
         run: node assets/journey.test.js
+      # The same walk at the size most people arrive at. This product is a
+      # link pasted into WhatsApp, and until it was tried by hand the whole
+      # flow had only ever run at 1000x900 — the phone-sized contexts inside
+      # journey.test.js are single-purpose checks, none of which walks the
+      # route. It passed at 390x844 first time; this step is what keeps it
+      # passing, on all three engines, webkit included.
+      - name: the same journey, at the size a phone arrives with
+        run: PW_VIEWPORT=390x844 node assets/journey.test.js
       # post-call.js is 47% of the code and had nothing of its own. Coverage
       # taken while the journey ran: 47 of its 77 functions entered, 30 never.
       # This drives the panel that reads a call — the part whose engine is

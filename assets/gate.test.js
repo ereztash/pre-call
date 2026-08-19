@@ -214,15 +214,30 @@ test('an unconfirmed shaped key stays out when no one can vouch for it', async (
   }
 });
 
-test('a revoked key is locked and cleared on the next daily check', async () => {
+/* This used to assert the key was erased as well as refused, and the erase was
+   wrong for a reason that only shows up on the day enforcement is switched on.
+
+   POSTCALL_KEYS is unset today, so /api/license answers not_configured and the
+   in-page checksum decides. Any key sold in that window is in no list. The
+   first recheck after the variable is finally set refuses all of them — which
+   is correct — and the old behaviour then deleted them from the buyer's
+   browser, leaving somebody who paid with nothing to quote when they wrote to
+   ask why. Nothing in this repository records issued keys; mint-key.js says
+   explicitly to keep that ledger somewhere private, so the copy in the buyer's
+   own storage may be the only one either side can see.
+
+   Refusing access is the point. Destroying the receipt is not. */
+test('a revoked key is locked but not destroyed on the next daily check', async () => {
   const p = page({ store: { postcall_key: GOOD, postcall_key_ok_at: stamp(2 * DAY) },
                    remote: false });
   p.run('rehydrateKey()');
   assert.strictEqual(p.read('unlocked'), true, 'optimistic first');
   await settle();
   assert.strictEqual(p.read('unlocked'), false, 'and corrected once the server answers');
-  assert.strictEqual(p.store.postcall_key, undefined);
-  assert.strictEqual(p.store.postcall_key_ok_at, undefined);
+  assert.strictEqual(p.store.postcall_key, GOOD,
+    'the buyer lost the only evidence of what they paid for');
+  assert.strictEqual(p.store.postcall_key_ok_at, undefined,
+    'the confirmation stamp must go — that claim is no longer true');
 });
 
 test('a stale confirmation is rechecked; a fresh one is not', async () => {

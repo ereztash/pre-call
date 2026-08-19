@@ -130,7 +130,7 @@
     FIELDS.forEach(f => {
       const got = fields && fields[f.key];
       if (!got || typeof got !== 'object') return;
-      let value = got.value;
+      let value = got.value, display = null;
       if (value === null || value === undefined || value === '') return;
       if (f.kind === 'list') {
         if (!Array.isArray(value) || !value.length) return;
@@ -141,8 +141,14 @@
         if (!isFinite(n) || n <= 0) return;
         value = n;
       } else if (f.kind === 'unit') {
-        value = UNIT_VALUES[clean(value)] || UNIT_VALUES[clean(value).toLowerCase()] || null;
+        /* Keep the word as well as the number. The form wants 365; a person
+           reviewing the row wants "יום" — and this path used to hand the
+           review panel a bare 365, which is not a thing anybody said and not
+           a thing anybody can check. */
+        const said = clean(value);
+        value = UNIT_VALUES[said] || UNIT_VALUES[said.toLowerCase()] || null;
         if (!value) return;
+        display = said;
       } else {
         value = clean(value);
         if (!value) return;
@@ -157,7 +163,7 @@
 
       out.push({
         key: f.key, target: f.target, kind: f.kind, label: f.label,
-        value, quote,
+        value, display, quote,
         speaker: spoken,
         /* Whether the quote is actually in the transcript. A model that
            paraphrases has invented the evidence, and evidence that cannot be
@@ -298,9 +304,35 @@
        that one and accepts the answer, which is the right way round: a
        frequency is a quantity per unit of time, and a quantity with no unit of
        time is a backlog. */
+    /* The period is the second capture group, and it used to be discarded.
+
+       This regex has always REQUIRED the period word — that is the whole
+       argument in the comment above, and it is why a backlog is refused. It
+       then threw the word away, and q_freq_unit kept the form's default of
+       שבוע. So "ארבעים הזמנות ביום" and "ארבעים הזמנות בחודש" produced the
+       same annual figure, and the daily one priced at 1/7 of what the client
+       had described: 365/52 = 7.02x, measured end to end at ₪4,710 against
+       ₪33,090 on one real scenario.
+
+       Nothing could catch it downstream, either. The review row read
+       "כמה פעמים: 40" with no unit in it, so the operator was confirming a
+       number whose meaning had already been decided for them, invisibly. A
+       figure that carries its quote but not its unit is exactly the kind of
+       half-provenance this file exists to refuse — so the unit is now its own
+       row, with the same sentence under it. */
     { key: 'freq',
-      re: FREQ_RE = /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|חשבוניות|טפסים|\btimes?\b|\borders?\b|\bleads?\b|\brequests?\b|\binvoices?\b)?\s*(?:ביום|ליום|בשבוע|לשבוע|בחודש|לחודש|\b(?:a|per)\s+(?:day|week|month)\b)/i,
-      label: tr('כמה פעמים'), confidence: 0.85 }
+      re: FREQ_RE = /(\d+)\s*(?:פעמים|הזמנות|לידים|פניות|בקשות|חשבוניות|טפסים|\btimes?\b|\borders?\b|\bleads?\b|\brequests?\b|\binvoices?\b)?\s*(ביום|ליום|בשבוע|לשבוע|בחודש|לחודש|\b(?:a|per)\s+(?:day|week|month)\b)/i,
+      label: tr('כמה פעמים'), confidence: 0.85,
+      /* Both spellings of each Hebrew preposition, and the English forms the
+         same regex admits. Keyed on what the sentence actually said rather
+         than on UI language, for the reason UNIT_VALUES gives above. */
+      unitOf: p => {
+        const s = String(p || '').toLowerCase();
+        if (/יום|day/.test(s))  return 'יום';
+        if (/שבוע|week/.test(s)) return 'שבוע';
+        if (/חודש|month/.test(s)) return 'חודש';
+        return null;
+      } }
   ];
 
   /* One vocabulary for who spoke, because there is one question downstream —
@@ -408,6 +440,24 @@
                    verified: true,
                    confidence: cue.confidence,
                    guessed: true });
+
+        /* A second row from the same match, when the cue carries a period.
+           Emitted here rather than as its own CUE because it is not an
+           independent finding — it is the other half of this one, and a unit
+           without the quantity it belongs to is meaningless. It goes through
+           the same review as every other row: same sentence, same accept or
+           reject, and rejecting it leaves the form's default standing, which
+           is the honest outcome of an operator saying "that is not what I
+           heard". */
+        if (cue.unitOf && m[2] && allowed('freqUnit')) {
+          const word = cue.unitOf(m[2]);
+          if (word && UNIT_VALUES[word]) {
+            out.push({ key: 'freqUnit', target: 'q_freq_unit', kind: 'unit',
+                       label: tr('לכל'), value: UNIT_VALUES[word], display: word,
+                       quote: line, speaker, verified: true,
+                       confidence: cue.confidence, guessed: true });
+          }
+        }
       }
     });
     return out;
