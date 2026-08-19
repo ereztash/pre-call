@@ -134,6 +134,35 @@ test('nothing extracted at all is not treated as unprompted', () => {
   assert.strictEqual(T.provenance([], '').value, 'mine',
     'silence must never be read as the client having volunteered a figure');
 });
+test('a transcript labelled with names reads unknown, not the operator\'s own', () => {
+  /* What Zoom, Teams and Otter actually export: the speaker's name at the head
+     of the turn, never their role. Before this, a client stating a figure out
+     loud under her own name came back "no figure in the call was said by the
+     client" — the opposite answer, at the same confidence, on the only kind of
+     transcript anybody outside this repo has. */
+  const t = 'דנה כהן: היום נכנסות בערך 40 הזמנות ביום.\nארז: וכמה זמן לוקח כל אחת?\nדנה כהן: איזה 8 דקות.';
+  const c = T.heuristics(t);
+  assert.ok(c.length, 'the fixture must yield figures or the reading means nothing');
+  const p = T.provenance(c, t);
+  assert.strictEqual(p.value, 'unknown');
+  assert.ok(/מי אמר/.test(p.why), 'the reading has to ask, not report');
+});
+test('marking who spoke resolves it — the row buttons are the way out', () => {
+  const t = 'דנה כהן: היום נכנסות בערך 40 הזמנות ביום.';
+  const c = T.heuristics(t);
+  c.forEach(x => { x.speaker = 'client'; });        // what whoPicker() writes
+  assert.strictEqual(T.provenance(c, t).value, 'unprompted');
+});
+test('one unplaced figure is enough to block the claim', () => {
+  /* mine is a claim about every number in the call, not about most of them. A
+     single line nobody placed might be the client's, and refusing to conclude
+     over it is the same rule the licence table holds one layer down. */
+  const src = 'מוכר: נניח ארבעים ביום';
+  const c = T.candidates({ freq: cite(40, 'נניח ארבעים ביום', 'מוכר') }, src);
+  assert.strictEqual(T.provenance(c, src).value, 'mine', 'the seller-only case must not drift');
+  c.push({ key: 'minutes', kind: 'number', value: 8, quote: 'איזה 8 דקות', speaker: 'unknown' });
+  assert.strictEqual(T.provenance(c, src).value, 'unknown');
+});
 test('the worked example lands on prompted, which is the interesting case', () => {
   // the volume figure in it appears only after the seller asks for it
   const c = T.candidates(T.parseExtraction(EX.EXTRACTION), EX.TRANSCRIPT);

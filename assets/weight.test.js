@@ -550,7 +550,13 @@ const CODE_BUDGETS = {
   'post-call-landing.html':  5 * 1024,
   'product-landing.html':    6 * 1024,
   'pre-call.html':           28 * 1024,
-  'post-call.html':          84 * 1024
+  /* Raised from 84KB on 19-08, deliberately and for eight lines: the fourth
+     provenance reading, `unknown`, and the branch that renders it. What it
+     buys is that a transcript labelled the way every real one is — Zoom and
+     Teams head a turn with the speaker's name, not their role — stops coming
+     back "no figure in the call was said by the client" about a client who
+     said one out loud. A wrong answer costs more than a kilobyte. */
+  'post-call.html':          85 * 1024
 };
 
 console.log('\nper-page code weight, comments stripped and the result reparsed');

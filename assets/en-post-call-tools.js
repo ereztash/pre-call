@@ -23,6 +23,7 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "המשפט המדויק מהתמלול": "the exact sentence from the transcript",
   "מוכר": "seller",
   "אף מספר בשיחה לא נאמר על ידי הלקוח": "No number in the call was said by the client",
+  "לא ידוע מי אמר את המספרים — סמנו בכל שורה מי דיבר": "Who said the numbers is unknown — mark the speaker on each row",
   "המספר נאמר אחרי שאלה שכיוונה אליו": "The number came right after a question aimed at it",
   "הלקוח נקב במספר מעצמו": "The client named the number on their own",
   "להלן תמלול של שיחת מכירה בין נותן שירות אוטומציה ללקוח פוטנציאלי. המשימה שלך היא חילוץ בלבד. אל תעריך, אל תשלים ואל תנחש — אם משהו לא נאמר, החזר null. לכל ערך שאתה מחלץ, החזר גם את הציטוט המדויק שממנו לקחת אותו ומי אמר אותו. החזר JSON יחיד, בתוך בלוק": "Below is a transcript of a sales call between an automation service provider and a potential client.\n\nYour task is extraction only. Do not evaluate, do not fill in gaps, and do not guess — if something was not said, return null.\nFor every value you extract, also return the exact quote you took it from and who said it.\n\nReturn a single JSON object, inside a",

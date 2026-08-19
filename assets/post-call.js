@@ -396,6 +396,11 @@ const renderReview = guard('transcript', function (){
         ? tr('זה המצב החזק ביותר — המחיר יישען על מה שהוא עצמו אמר.')
         : prov.value === 'prompted'
         ? tr('הכלי יסמן את זה, כי מספר שנאמר אחרי שאלה עשוי למדוד את השאלה ולא את העסק.')
+        /* The one branch that asks for something instead of reporting. Every
+           other reading is finished; this one is the screen saying it cannot
+           tell yet, and the buttons that answer it are on the rows above. */
+        : prov.value === 'unknown'
+        ? tr('התמלול לא אומר מי דיבר — לחצו על השורות למעלה, והשורה הזו תתעדכן.')
         : tr('הכלי לא ייתן למספר הזה להיכנס למסמך כהצדקה.')) + '</div>' +
     '<div class="tr-acts"><button type="button" class="act" data-act="trapply">' + tr('מלא את הטופס') + '</button>' +
     '<span class="hint-p">' + tr('אפשר לשנות הכול אחר כך.') + '</span></div>';
@@ -417,7 +422,13 @@ function applyExtraction(){
 
   // the one field the transcript answers better than the operator can
   const prov = PC.transcript.provenance(keep, trText());
-  if (el('q_provenance')) el('q_provenance').value = prov.value;
+  /* 'unknown' is a reading, not a ledger value. PROVENANCE in deals.js has no
+     such entry, so assigning it would leave the select on whatever it held
+     while this line reads as though it set it — and the ledger would carry a
+     stale answer with a fresh call's authority. The form already has the word
+     for not knowing, and it is the one the field opens on: unset. */
+  if (el('q_provenance'))
+    el('q_provenance').value = prov.value === 'unknown' ? 'unset' : prov.value;
 
   show('customRateWrap', el('q_role').value === 'custom');
   renderScope(); recompute(); renderGuide(); saveDraft();

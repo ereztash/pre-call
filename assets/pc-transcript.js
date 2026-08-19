@@ -197,7 +197,28 @@
   function provenance(cands, transcript) {
     const numeric = cands.filter(c => c.kind === 'number' && c.key !== 'errFreq');
     const fromClient = numeric.filter(c => c.speaker === 'client');
-    if (!fromClient.length) return { value: 'mine', why: tr('אף מספר בשיחה לא נאמר על ידי הלקוח') };
+    if (!fromClient.length) {
+      /* 'mine' is a claim, not a default. It says the client named no figure,
+         and the tool acts on it — the number is refused as justification in
+         the document. Saying that about a line nobody attributed is the same
+         unbacked assertion this file exists to keep out of a price.
+
+         And it is not an edge case, it is the only case that occurs. Zoom,
+         Teams and Otter head a turn with the speaker's name; speakerOf() reads
+         roles — לקוח, יועץ, first-person אני — so every line of a real export
+         comes back 'unknown'. Measured on one call in three labellings: under
+         role labels the reading is 'prompted'; the same words under names came
+         back 'mine', "no figure in the call was said by the client", about a
+         client who had just said one out loud. Not a missing answer — the
+         opposite answer, at the same confidence.
+
+         So an unattributed figure blocks the claim instead of feeding it. Any
+         number still unknown might be the client's, and whoPicker() is already
+         on every row waiting to be told which. */
+      if (numeric.some(c => c.speaker !== 'client' && c.speaker !== 'seller'))
+        return { value: 'unknown', why: tr('לא ידוע מי אמר את המספרים — סמנו בכל שורה מי דיבר') };
+      return { value: 'mine', why: tr('אף מספר בשיחה לא נאמר על ידי הלקוח') };
+    }
 
     const src = String(transcript || '').replace(/\s+/g, ' ');
     const steered = fromClient.some(c => {

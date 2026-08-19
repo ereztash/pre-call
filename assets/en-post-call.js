@@ -207,6 +207,7 @@ if (typeof PC !== 'undefined' && PC.i18n) PC.i18n.reg({
   "להסיר": "Remove",
   "מאיפה הגיעו המספרים:": "Where the numbers came from:",
   "זה המצב החזק ביותר — המחיר יישען על מה שהוא עצמו אמר.": "This is the strongest case — the price will rest on what they said themselves.",
+  "התמלול לא אומר מי דיבר — לחצו על השורות למעלה, והשורה הזו תתעדכן.": "The transcript does not say who spoke — use the rows above and this line will update.",
   "הכלי יסמן את זה, כי מספר שנאמר אחרי שאלה עשוי למדוד את השאלה ולא את העסק.": "The tool will flag this, because a number said after a question may measure the question, not the business.",
   "הכלי לא ייתן למספר הזה להיכנס למסמך כהצדקה.": "The tool won't let this number enter the document as justification.",
   "מלא את הטופס": "Fill the form",
